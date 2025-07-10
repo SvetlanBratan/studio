@@ -55,10 +55,10 @@ const prompt = ai.definePrompt({
   Consider the player's current stats, opponent stats, and the duel rules to provide a strategic suggestion.
 
   Player Stats:
-  {{playerStats}}
+  {{{json playerStats}}}
 
   Opponent Stats:
-  {{opponentStats}}
+  {{{json opponentStats}}}
 
   Duel Rules:
   {{duelRules}}
