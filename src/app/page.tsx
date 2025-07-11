@@ -255,6 +255,7 @@ export default function Home() {
                 } else {
                     turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
                 }
+                target.isDodging = false;
             }
             finalDamage = Math.round(finalDamage);
 
@@ -262,7 +263,7 @@ export default function Home() {
 
             if (target.shield.hp > 0) {
                 let damageToShield = finalDamage;
-                if(spellElement && spellElement !== 'neutral' && target.shield.element && target.shield.element !== 'Эфир') {
+                if(spellElement && spellElement !== 'physical' && target.shield.element && target.shield.element !== 'Эфир') {
                     const attackElement = ELEMENTS[spellElement];
                     const shieldElement = ELEMENTS[target.shield.element];
                     if (attackElement && shieldElement) {
@@ -280,12 +281,12 @@ export default function Home() {
 
                 if (target.shield.element === 'Эфир' && isSpell) {
                     turnLog.push(`Эфирный щит ${target.name} полностью поглощает магический урон.`);
-                    return; // No damage to shield or player
+                    return;
                 }
 
                 const absorbedDamage = Math.min(target.shield.hp, damageToShield);
                 target.shield.hp -= absorbedDamage;
-                const remainingDamage = finalDamage - Math.round(absorbedDamage / (damageToShield / finalDamage)); // Adjust remaining damage based on shield interaction
+                const remainingDamage = finalDamage - Math.round(absorbedDamage / (damageToShield / finalDamage)); 
 
                 turnLog.push(`Щит ${target.name} поглощает ${absorbedDamage} урона.`);
                 if (target.shield.hp <= 0) {
@@ -342,7 +343,7 @@ export default function Home() {
                 
                 const defenderElements = opponent.elementalKnowledge;
 
-                if (element && element !== 'neutral' && defenderElements.length > 0) {
+                if (element && element !== 'physical' && defenderElements.length > 0) {
                     const mainAttackerElement = ELEMENTS[element];
                     const mainDefenderElement = ELEMENTS[defenderElements[0]];
 
@@ -395,8 +396,8 @@ export default function Home() {
                 case 'shield':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
                     activePlayer.shield.hp += RULES.BASE_SHIELD_VALUE;
-                    activePlayer.shield.element = (action.payload?.element === 'neutral' ? null : action.payload?.element) || null;
-                    const shieldType = activePlayer.shield.element ? `${activePlayer.shield.element} щит` : "щит";
+                    activePlayer.shield.element = (action.payload?.element === 'physical' ? null : action.payload?.element) || null;
+                    const shieldType = activePlayer.shield.element ? `${activePlayer.shield.element} щит` : "Физический щит";
                     turnLog.push(`${activePlayer.name} создает ${shieldType} прочностью ${RULES.BASE_SHIELD_VALUE}.`);
                     break;
                 case 'dodge':
@@ -566,9 +567,6 @@ export default function Home() {
                     break;
             }
         });
-
-        // Reset dodge state for the opponent after the turn ends
-        opponent.isDodging = false;
         
         activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.PASSIVE_OM_REGEN);
         turnLog.push(`${activePlayer.name} восстанавливает ${RULES.PASSIVE_OM_REGEN} ОМ пассивно.`);

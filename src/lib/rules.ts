@@ -135,7 +135,7 @@ export const getActionLabel = (type: ActionType, payload?: any): string => {
 
   let label = labels[type] || type;
 
-  if ((type.includes('spell') || type === 'shield') && payload?.element) {
+  if ((type.includes('spell') || type === 'shield') && payload?.element && payload.element !== 'physical') {
     label += ` (${payload.element})`;
   }
 
