@@ -181,6 +181,12 @@ export default function Home() {
         }
         
         activePlayer.penalties.forEach(p => {
+            const isPoisonEffect = RULES.POISON_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')));
+            if (isPoisonEffect && activePlayer.bonuses.includes('Иммунитет к ядам')) {
+                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} имеет иммунитет к яду, урон от "${p}" не получен.`);
+                 return;
+            }
+
             if (RULES.DOT_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')))) {
                 let damage = RULES.DOT_DAMAGE;
                 if (activePlayer.bonuses.includes('Скидка к урону от яда (3)')) {
@@ -371,6 +377,19 @@ export default function Home() {
                         activePlayer.od -= cost;
                         activePlayer.cooldowns.item = RULES.COOLDOWNS.item;
                         turnLog.push(`${activePlayer.name} использует предмет. Затраты ОД: ${cost}${odPenalty > 0 ? ` (включая штраф ${odPenalty})` : ''}.`);
+                        
+                        if (activePlayer.inventory.length > 0) {
+                            const item = activePlayer.inventory[0];
+                            if (item.type === 'heal') {
+                                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + item.amount);
+                                turnLog.push(`${activePlayer.name} использует "${item.name}" и восстанавливает ${item.amount} ОЗ.`);
+                            }
+                             if (item.type === 'damage') {
+                                applyDamage(opponent, item.amount, false);
+                                turnLog.push(`${activePlayer.name} использует "${item.name}" и наносит ${item.amount} урона.`);
+                            }
+                            activePlayer.inventory.shift();
+                        }
                      }
                     break;
                 case 'prayer':
