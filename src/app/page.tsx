@@ -102,6 +102,55 @@ export default function Home() {
         let opponent = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player2 } : { ...prevDuel.player1 };
         
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield };
+        
+        // Filter out expired penalties and check for turn-skipping effects
+        let turnSkipped = false;
+        const turnSkipEffects = ['Окаменение', 'Под гипнозом', 'Обездвижен'];
+        
+        activePlayer.penalties = activePlayer.penalties.map(p => {
+            const match = p.match(/(.+) \((\d+)\)$/);
+            if (match) {
+                const name = match[1].trim();
+                const duration = parseInt(match[2], 10) - 1;
+                
+                if (turnSkipEffects.includes(name) && !turnSkipped) {
+                    turnSkipped = true;
+                    turnLog.push(`${activePlayer.name} пропускает ход из-за эффекта "${name}"!`);
+                }
+
+                if (duration > 0) {
+                    return `${name} (${duration})`;
+                }
+                return ''; // Mark for removal
+            }
+            return p;
+        }).filter(p => p !== '');
+
+        if (turnSkipped) {
+            const newTurn: Turn = {
+                turnNumber: prevDuel.currentTurn,
+                playerId: activePlayer.id,
+                playerName: activePlayer.name,
+                actions: [{type: 'rest', payload: {name: 'Пропуск хода'}}],
+                log: turnLog,
+                startStats: startStats,
+                endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield },
+            };
+            
+            setLog(turnLog);
+
+            return {
+                ...prevDuel,
+                player1: prevDuel.activePlayerId === 'player1' ? activePlayer : opponent,
+                player2: prevDuel.activePlayerId === 'player2' ? activePlayer : opponent,
+                turnHistory: [...prevDuel.turnHistory, newTurn],
+                currentTurn: prevDuel.currentTurn + 1,
+                activePlayerId: prevDuel.activePlayerId === 'player1' ? 'player2' : 'player1',
+                winner: undefined,
+                log: turnLog,
+            };
+        }
+
 
         // 1. Cooldowns tick down
         for (const key in activePlayer.cooldowns) {
@@ -119,21 +168,6 @@ export default function Home() {
                 turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
             }
         });
-        
-        // Filter out expired penalties
-        activePlayer.penalties = activePlayer.penalties.map(p => {
-            const match = p.match(/(.+) \((\d+)\)$/);
-            if (match) {
-                const name = match[1];
-                const duration = parseInt(match[2], 10) - 1;
-                if (duration > 0) {
-                    return `${name} (${duration})`;
-                }
-                return ''; // Mark for removal
-            }
-            return p;
-        }).filter(p => p !== '');
-
 
         // 3. Execute actions
         actions.forEach(action => {
@@ -463,3 +497,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
