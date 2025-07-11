@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -21,7 +22,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     if (actions.length >= RULES.MAX_ACTIONS_PER_TURN) return;
 
     if (type.startsWith('racial_')) {
-      const abilityName = type.split('_')[1];
+      const abilityName = type.substring(7); // remove "racial_"
       const ability = playerRaceInfo?.activeAbilities.find(a => a.name === abilityName);
       if (ability) {
         setActions([...actions, { type: 'racial_ability', payload: { name: ability.name, description: ability.description } }]);
@@ -56,7 +57,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
   const racialAbilities = playerRaceInfo?.activeAbilities.map(ability => ({
     value: `racial_${ability.name}`,
     label: `${ability.name}`,
-    disabled: false, // You might want to add cooldowns or cost checks here later
+    disabled: player.cooldowns[ability.name] > 0 || (ability.cost?.om ?? 0) > player.om || (ability.cost?.od ?? 0) > player.od,
   })) || [];
 
   return (
@@ -96,7 +97,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
                     <SelectLabel>Расовые способности</SelectLabel>
                     {racialAbilities.map(opt => (
                         <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
-                            {opt.label}
+                            {opt.label} {opt.disabled ? `(КД: ${player.cooldowns[opt.value.substring(7)]})` : ''}
                         </SelectItem>
                     ))}
                  </SelectGroup>

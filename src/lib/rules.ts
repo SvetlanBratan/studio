@@ -1,4 +1,5 @@
-import type { ReserveLevel, FaithLevel, ActionType, Race } from "@/types/duel";
+
+import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility } from "@/types/duel";
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
 
@@ -29,15 +30,15 @@ export const RESERVE_LEVELS: Record<ReserveLevel, number> = {
 };
 
 export const RACES: Race[] = [
-  { name: 'Алахоры', passiveBonuses: ['+3 урона при попадании (металлическая кровь)'], activeAbilities: [{ name: 'Кислотное распыление', description: '-10 ОЗ врагу (раз в 3 хода)'}] },
-  { name: 'Алариены', passiveBonuses: ['+3 исцеления/ход'], activeAbilities: [{ name: 'Дар сладости', description: 'восстановить +15 ОЗ раз в 4 хода'}] },
-  { name: 'Амфибии', passiveBonuses: ['+2 урона и +2 исцеления/ход'], activeAbilities: [{ name: 'Брызг из жабр', description: 'ослепление на 1 ход (раз в 5 ходов)'}] },
+  { name: 'Алахоры', passiveBonuses: ['+3 урона при попадании (металлическая кровь)'], activeAbilities: [{ name: 'Кислотное распыление', description: '-10 ОЗ врагу', cooldown: 3}] },
+  { name: 'Алариены', passiveBonuses: ['+3 исцеления/ход'], activeAbilities: [{ name: 'Дар сладости', description: 'восстановить +15 ОЗ', cooldown: 4}] },
+  { name: 'Амфибии', passiveBonuses: ['+2 урона и +2 исцеления/ход'], activeAbilities: [{ name: 'Брызг из жабр', description: 'ослепление на 1 ход', cooldown: 5}] },
   { name: 'Антаресы', passiveBonuses: ['+к инициативе, -10 ОД при дезориентации'], activeAbilities: [{ name: 'Всплеск приторной силы', description: 'бафф на +10 ОЗ/ОМ'}] },
   { name: 'Антропоморфы', passiveBonuses: ['+2 исцеления/ход'], activeAbilities: [{ name: 'Инстинкт зверя', description: '+10 к урону, -10 ОД'}] },
   { name: 'Арахнии', passiveBonuses: ['+1 исцеления, +1 ОМ'], activeAbilities: [{ name: 'Паутина', description: 'замедление врага, -10 ОД'}] },
-  { name: 'Арахниды', passiveBonuses: ['Иммунитет к ядам'], activeAbilities: [{ name: 'Ядовитый дым', description: 'отравление -5 ОЗ/ход (3 хода)'}] },
+  { name: 'Арахниды', passiveBonuses: ['Иммунитет к ядам'], activeAbilities: [{ name: 'Ядовитый дым', description: 'отравление -5 ОЗ/ход (3 хода)', cooldown: 4}] },
   { name: 'Аспиды', passiveBonuses: ['+1 урона космической магией'], activeAbilities: [{ name: 'Кислотное дыхание', description: '-15 ОЗ в радиусе 5м'}] },
-  { name: 'Астролоиды', passiveBonuses: ['+3 исцеления/ход'], activeAbilities: [{ name: 'Призыв звезды', description: 'метеорит на -20 ОЗ, 1/3 хода'}, {name: 'Танец лепестков', description: '+10 ОЗ'}] },
+  { name: 'Астролоиды', passiveBonuses: ['+3 исцеления/ход'], activeAbilities: [{ name: 'Призыв звезды', description: 'метеорит на -20 ОЗ', cooldown: 3}, {name: 'Танец лепестков', description: '+10 ОЗ'}] },
   { name: 'Бабочки', passiveBonuses: ['Копирование последнего действия врага, абсолютно все действия отзеркаливаются, не тратит ОЗ и ОМ'], activeAbilities: [] },
   { name: 'Безликие', passiveBonuses: ['+5 к физической атаке'], activeAbilities: [{ name: 'Пронзающий удар', description: '+20 ОЗ физурона'}] },
   { name: 'Белояры', passiveBonuses: ['+4 урона/исцеления если влюблены'], activeAbilities: [{ name: 'Песня влюблённого', description: '-10 ОЗ врагу, +10 ОЗ себе'}] },
@@ -52,7 +53,7 @@ export const RACES: Race[] = [
   { name: 'Джинны', passiveBonuses: ['+10 ОЗ при ОЗ <50'], activeAbilities: [{ name: 'Элементальная вспышка', description: 'случайный урон 15-25'}] },
   { name: 'Домовые', passiveBonuses: ['+5 урона магией, +10 ОМ/ход'], activeAbilities: [{ name: 'Забота дома', description: '+15 ОЗ и снятие одного эффекта'}] },
   { name: 'Драконы', passiveBonuses: ['+3 исцеления при природе'], activeAbilities: [{ name: 'Драконий выдох', description: '-20 ОЗ врагу огнём/льдом/кислотой'}] },
-  { name: 'Дриады', passiveBonuses: ['+2 ОЗ при контакте с цветами'], activeAbilities: [{ name: 'Корнеплетение', description: 'обездвиживание врага (раз в 4 хода)'}] },
+  { name: 'Дриады', passiveBonuses: ['+2 ОЗ при контакте с цветами'], activeAbilities: [{ name: 'Корнеплетение', description: 'обездвиживание врага', cooldown: 4}] },
   { name: 'Дриды', passiveBonuses: ['+4 урона/ход ночью'], activeAbilities: [{ name: 'Цветочный нектар', description: '+10 ОЗ и +5 ОМ'}] },
   { name: 'Дроу', passiveBonuses: ['Шанс отравить врага (15%)'], activeAbilities: [{ name: 'Теневая стрела', description: '-15 ОЗ, +5 к уклонению'}] },
   { name: 'Инсектоиды', passiveBonuses: ['+2 ОМ/ход в группе'], activeAbilities: [{ name: 'Кислотный укус', description: '-10 ОЗ и яд -3/ход'}] },
@@ -172,7 +173,7 @@ export const RULES = {
     battle_magic: { household: 1, small: 5, medium: 10, strong: 15 },
   } as Record<'vulnerability' | 'battle_magic', Record<RitualType, number>>,
 
-  DOT_EFFECTS: ['Отравление', 'Горение', 'Ожог'],
+  DOT_EFFECTS: ['Отравление', 'Горение', 'Ожог', 'Отравление (3)', 'Отравление (2)', 'Отравление (1)'],
   DOT_DAMAGE: 8,
 
   PASSIVE_OM_REGEN: 25,

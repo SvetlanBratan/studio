@@ -1,3 +1,4 @@
+
 export type ReserveLevel =
   | 'Неофит'
   | 'Адепт'
@@ -28,10 +29,7 @@ export interface InventoryItem {
     amount: number;
 }
 
-export interface Race {
-  name: string;
-  passiveBonuses: string[];
-  activeAbilities: {
+export interface RaceAbility {
     name: string;
     description: string;
     cost?: {
@@ -39,7 +37,13 @@ export interface Race {
       od?: number;
       oz?: number;
     };
-  }[];
+    cooldown?: number;
+}
+
+export interface Race {
+  name: string;
+  passiveBonuses: string[];
+  activeAbilities: RaceAbility[];
 }
   
 export interface CharacterStats {

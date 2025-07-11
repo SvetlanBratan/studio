@@ -119,6 +119,21 @@ export default function Home() {
                 turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
             }
         });
+        
+        // Filter out expired penalties
+        activePlayer.penalties = activePlayer.penalties.filter(p => !p.endsWith('(0)'));
+        activePlayer.penalties = activePlayer.penalties.map(p => {
+            const match = p.match(/(.*) \((\d+)\)$/);
+            if (match) {
+                const name = match[1];
+                const duration = parseInt(match[2], 10) - 1;
+                if (duration > 0) {
+                    return `${name} (${duration})`;
+                }
+            }
+            return p;
+        }).filter(p => !p.endsWith('(0)'));
+
 
         // 3. Execute actions
         actions.forEach(action => {
@@ -196,9 +211,39 @@ export default function Home() {
                     }
                     break;
                 case 'racial_ability':
-                    // Basic implementation placeholder.
-                    // This will need to be expanded with specific logic for each ability.
-                    turnLog.push(`${activePlayer.name} использует "${action.payload.name}": ${action.payload.description}`);
+                    const abilityName = action.payload.name;
+                    turnLog.push(`${activePlayer.name} использует "${abilityName}".`);
+                    
+                    const playerRace = RACES.find(r => r.name === activePlayer.race);
+                    const ability = playerRace?.activeAbilities.find(a => a.name === abilityName);
+
+                    if (ability) {
+                         if (ability.cooldown) {
+                             activePlayer.cooldowns[abilityName] = ability.cooldown;
+                         }
+
+                         // Apply costs
+                         if(ability.cost?.om) activePlayer.om -= ability.cost.om;
+                         if(ability.cost?.od) activePlayer.od -= ability.cost.od;
+                         if(ability.cost?.oz) activePlayer.oz -= ability.cost.oz;
+
+                         // Hardcoded effects for now
+                         switch(abilityName) {
+                            case 'Кислотное распыление': // Алахоры
+                                 opponent.oz -= 10;
+                                 turnLog.push(`${opponent.name} получает 10 урона от кислоты.`);
+                                 break;
+                            case 'Дар сладости': // Алариены
+                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
+                                 turnLog.push(`${activePlayer.name} восстанавливает 15 ОЗ.`);
+                                 break;
+                            case 'Ядовитый дым': // Арахниды
+                                opponent.penalties.push('Отравление (3)');
+                                turnLog.push(`${opponent.name} отравлен на 3 хода.`);
+                                break;
+                            // Add more abilities here in the future
+                         }
+                    }
                     break;
             }
         });
@@ -367,5 +412,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
