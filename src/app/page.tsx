@@ -211,7 +211,6 @@ export default function Home() {
             const calculateDamage = (spellType: 'household' | 'small' | 'medium' | 'strong'): number => {
                 let damage = RULES.RITUAL_DAMAGE[activePlayer.reserve]?.[spellType] ?? 0;
                 
-                // Примерный расчет бонусов. Логику уязвимостей нужно будет уточнить
                 if (opponent.penalties.includes('Уязвимость')) {
                     damage += RULES.DAMAGE_BONUS.vulnerability[spellType];
                 }
@@ -221,33 +220,50 @@ export default function Home() {
                 return damage;
             };
 
+            const applyDamage = (target: CharacterStats, amount: number) => {
+                if (target.shield > 0) {
+                    const damageToShield = Math.min(target.shield, amount);
+                    target.shield -= damageToShield;
+                    const remainingDamage = amount - damageToShield;
+
+                    turnLog.push(`Щит ${target.name} поглощает ${damageToShield} урона.`);
+                    if (target.shield <= 0) {
+                        turnLog.push(`Щит ${target.name} был уничтожен.`);
+                    }
+
+                    if (remainingDamage > 0) {
+                        target.oz -= remainingDamage;
+                        turnLog.push(`${target.name} получает ${remainingDamage} урона, пробившего щит.`);
+                    }
+                } else {
+                    target.oz -= amount;
+                    turnLog.push(`${target.name} получает ${amount} урона.`);
+                }
+            };
+            
             let damageDealt = 0;
 
             switch(action.type) {
                 case 'strong_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.strong;
                     damageDealt = calculateDamage('strong');
-                    opponent.oz -= damageDealt;
+                    applyDamage(opponent, damageDealt);
                     activePlayer.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
-                    turnLog.push(`${opponent.name} получает ${damageDealt} урона.`);
                     break;
                 case 'medium_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
                     damageDealt = calculateDamage('medium');
-                    opponent.oz -= damageDealt;
-                    turnLog.push(`${opponent.name} получает ${damageDealt} урона.`);
+                    applyDamage(opponent, damageDealt);
                     break;
                 case 'small_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.small;
                     damageDealt = calculateDamage('small');
-                    opponent.oz -= damageDealt;
-                    turnLog.push(`${opponent.name} получает ${damageDealt} урона.`);
+                    applyDamage(opponent, damageDealt);
                     break;
                 case 'household_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.household;
                     damageDealt = calculateDamage('household');
-                    opponent.oz -= damageDealt;
-                    turnLog.push(`${opponent.name} получает ${damageDealt} урона.`);
+                    applyDamage(opponent, damageDealt);
                     break;
                 case 'shield':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
@@ -325,8 +341,7 @@ export default function Home() {
                          // Hardcoded effects for now
                          switch(abilityName) {
                             case 'Кислотное распыление':
-                                 opponent.oz -= 10;
-                                 turnLog.push(`${opponent.name} получает 10 урона от кислоты.`);
+                                 applyDamage(opponent, 10);
                                  break;
                             case 'Дар сладости':
                                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
@@ -341,38 +356,35 @@ export default function Home() {
                                 turnLog.push(`${opponent.name} отравлен на 3 хода.`);
                                 break;
                             case 'Призыв звезды':
-                                opponent.oz -= 20;
-                                turnLog.push(`${opponent.name} получает 20 урона от метеорита.`);
+                                applyDamage(opponent, 20);
                                 break;
                             case 'Танец лепестков':
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
                                 turnLog.push(`${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Песня влюблённого':
-                                opponent.oz -= 10;
+                                applyDamage(opponent, 10);
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
-                                turnLog.push(`${opponent.name} получает 10 урона, а ${activePlayer.name} восстанавливает 10 ОЗ.`);
+                                turnLog.push(`${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Укус': // Бракованные пересмешники
-                                opponent.oz -= 10;
+                                applyDamage(opponent, 10);
                                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + 10);
-                                turnLog.push(`${opponent.name} получает 10 урона, а ${activePlayer.name} восстанавливает 10 ОМ.`);
+                                turnLog.push(`${activePlayer.name} восстанавливает 10 ОМ.`);
                                 break;
                              case 'Окаменение взглядом':
                                 opponent.penalties.push('Окаменение (1)');
                                 turnLog.push(`${opponent.name} частично окаменел и теряет одно действие в следующем ходу.`);
                                 break;
                              case 'Драконий выдох':
-                                 opponent.oz -= 20;
-                                 turnLog.push(`${opponent.name} получает 20 урона от дыхания дракона.`);
+                                 applyDamage(opponent, 20);
                                  break;
                              case 'Корнеплетение':
                                  opponent.penalties.push('Обездвижен (1)');
                                  turnLog.push(`${opponent.name} обездвижен на 1 ход.`);
                                  break;
                              case 'Теневая стрела':
-                                 opponent.oz -= 15;
-                                 turnLog.push(`${opponent.name} получает 15 урона от теневой стрелы.`);
+                                 applyDamage(opponent, 15);
                                  break;
                             case 'Коса конца':
                                  opponent.oz = 0;
