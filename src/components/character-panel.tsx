@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -327,3 +328,5 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
     </TooltipProvider>
   );
 }
+
+    

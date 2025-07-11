@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -9,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { getFaithLevelFromString, getOmFromReserve, RESERVE_LEVELS, FAITH_LEVELS, RULES, RACES } from '@/lib/rules';
-import { User, Dices, PlusCircle, Trash2, Package } from 'lucide-react';
+import { User, Dices, PlusCircle, Trash2 } from 'lucide-react';
+import { Textarea } from './ui/textarea';
 
 interface DuelSetupProps {
   initialPlayer1: CharacterStats;
@@ -87,27 +89,39 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Резерв</Label>
-          <Select value={player.reserve} onValueChange={handleReserveChange}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {Object.keys(RESERVE_LEVELS).map(level => (
-                <SelectItem key={level} value={level}>{level}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Label htmlFor={`elementalKnowledge-${player.id}`}>Знания стихий</Label>
+            <Textarea
+              id={`elementalKnowledge-${player.id}`}
+              value={player.elementalKnowledge}
+              onChange={(e) => handleInputChange('elementalKnowledge', e.target.value)}
+              placeholder="Пример: Магия огня (Мастер), Магия воды (Адепт)"
+            />
         </div>
-        <div className="space-y-2">
-          <Label>Вера</Label>
-           <Select value={player.faithLevelName} onValueChange={handleFaithChange}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {Object.keys(FAITH_LEVELS).map(level => (
-                <SelectItem key={level} value={level}>{level}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+            <Label>Резерв</Label>
+            <Select value={player.reserve} onValueChange={handleReserveChange}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                {Object.keys(RESERVE_LEVELS).map(level => (
+                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+            </div>
+            <div className="space-y-2">
+            <Label>Вера</Label>
+            <Select value={player.faithLevelName} onValueChange={handleFaithChange}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                {Object.keys(FAITH_LEVELS).map(level => (
+                    <SelectItem key={level} value={level}>{level}</SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+            </div>
         </div>
+
         <div className="space-y-2">
             <div className="flex justify-between items-center">
                 <Label>Инвентарь</Label>
@@ -172,3 +186,5 @@ export default function DuelSetup({ initialPlayer1, initialPlayer2, onDuelStart 
     </div>
   );
 }
+
+    

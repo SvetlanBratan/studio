@@ -148,16 +148,25 @@ export default function Home() {
             turnLog.push(`${activePlayer.name} частично окаменел и теряет одно действие: "${getActionLabel(lostAction!.type, lostAction!.payload)}".`);
         }
         
-        if (turnSkipped) {
-            // Apply DoT effects even if turn is skipped
-            activePlayer.penalties.forEach(p => {
-                if (RULES.DOT_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')))) {
-                    const damage = RULES.DOT_DAMAGE;
-                    activePlayer.oz -= damage;
-                    turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
-                }
-            });
+        // 1. Cooldowns tick down
+        for (const key in activePlayer.cooldowns) {
+            const typedKey = key as keyof typeof activePlayer.cooldowns;
+            if (activePlayer.cooldowns[typedKey] > 0) {
+                activePlayer.cooldowns[typedKey]--;
+            }
+        }
+        
+        // 2. Apply penalties (like poison/burn)
+        activePlayer.penalties.forEach(p => {
+            if (RULES.DOT_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')))) {
+                const damage = RULES.DOT_DAMAGE;
+                activePlayer.oz -= damage;
+                turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
+            }
+        });
 
+        if (turnSkipped) {
+            // DoT effects are already applied above, so just log and switch turn
             const newTurn: Turn = {
                 turnNumber: prevDuel.currentTurn,
                 playerId: activePlayer.id,
@@ -185,23 +194,6 @@ export default function Home() {
                 log: turnLog,
             };
         }
-
-        // 1. Cooldowns tick down
-        for (const key in activePlayer.cooldowns) {
-            const typedKey = key as keyof typeof activePlayer.cooldowns;
-            if (activePlayer.cooldowns[typedKey] > 0) {
-                activePlayer.cooldowns[typedKey]--;
-            }
-        }
-        
-        // 2. Apply penalties (like poison/burn)
-        activePlayer.penalties.forEach(p => {
-            if (RULES.DOT_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')))) {
-                const damage = RULES.DOT_DAMAGE;
-                activePlayer.oz -= damage;
-                turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
-            }
-        });
 
         // 3. Execute actions
         actions.forEach(action => {
@@ -569,3 +561,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

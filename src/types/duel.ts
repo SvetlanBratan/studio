@@ -1,4 +1,5 @@
 
+
 export type ReserveLevel =
   | 'Неофит'
   | 'Адепт'
@@ -44,6 +45,12 @@ export interface Race {
   name: string;
   passiveBonuses: string[];
   activeAbilities: RaceAbility[];
+}
+
+export interface Element {
+    name: string;
+    strongAgainst: string[];
+    weakTo: string[];
 }
   
 export interface CharacterStats {
@@ -101,3 +108,5 @@ export interface DuelState {
   winner?: string;
   log: string[];
 }
+
+    

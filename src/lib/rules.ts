@@ -1,5 +1,5 @@
 
-import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType } from "@/types/duel";
+import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element } from "@/types/duel";
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
 
@@ -140,6 +140,26 @@ export const getActionLabel = (type: ActionType, payload?: any): string => {
   return labels[type] || type;
 }
 
+export const ELEMENTS: Record<string, Element> = {
+    'Огонь': { name: 'Огонь', weakTo: ['Вода', 'Лёд', 'Кровь'], strongAgainst: ['Растения', 'Металл', 'Лёд'] },
+    'Вода': { name: 'Вода', weakTo: ['Земля', 'Металл'], strongAgainst: ['Огонь', 'Кровь'] },
+    'Лёд': { name: 'Лёд', weakTo: ['Лава', 'Свет'], strongAgainst: ['Огонь', 'Земля'] },
+    'Земля': { name: 'Земля', weakTo: ['Воздух', 'Звук'], strongAgainst: ['Молния', 'Кровь'] },
+    'Воздух': { name: 'Воздух', weakTo: ['Камень', 'Звук'], strongAgainst: ['Земля', 'Пыль'] },
+    'Молния': { name: 'Молния', weakTo: ['Земля'], strongAgainst: ['Вода', 'Эфир'] },
+    'Свет': { name: 'Свет', weakTo: ['Тьма', 'Кровь'], strongAgainst: ['Смерть', 'Проклятья'] },
+    'Тьма': { name: 'Тьма', weakTo: ['Свет', 'Жизнь'], strongAgainst: ['Энергия', 'Ментал'] },
+    'Жизнь': { name: 'Жизнь', weakTo: ['Смерть'], strongAgainst: ['Проклятия', 'Яды'] },
+    'Смерть': { name: 'Смерть', weakTo: ['Жизнь', 'Свет'], strongAgainst: ['Живые', 'Лёгкие ткани'] },
+    'Растения': { name: 'Растения', weakTo: ['Огонь', 'Лава'], strongAgainst: ['Земля', 'Вода'] },
+    'Лава': { name: 'Лава', weakTo: ['Воздух'], strongAgainst: ['Лёд', 'Металл', 'Растения'] },
+    'Звук': { name: 'Звук', weakTo: ['Металл', 'Эфир'], strongAgainst: ['Молния', 'Воздух'] },
+    'Кровь': { name: 'Кровь', weakTo: ['Свет', 'Жизнь'], strongAgainst: ['Живые цели'] },
+    'Металл': { name: 'Металл', weakTo: ['Огонь'], strongAgainst: ['Земля'] },
+    'Эфир': { name: 'Эфир', weakTo: [], strongAgainst: [] }, // Нейтральная
+    'Божественная': { name: 'Божественная', weakTo: [], strongAgainst: [] }, // Вне круга
+};
+
 
 export const RULES = {
   STARTING_OZ: 200,
@@ -205,3 +225,5 @@ export const RULES = {
 
   DODGE_VS_STRONG_SPELL_DMG_REDUCTION: 20,
 };
+
+    
