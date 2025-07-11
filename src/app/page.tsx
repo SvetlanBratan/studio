@@ -63,6 +63,14 @@ const initialDuelState: DuelState = {
 export default function Home() {
   const [duel, setDuel] = useState<DuelState>(initialDuelState);
 
+  const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
+    setDuel(prevDuel => ({
+      ...prevDuel,
+      player1: prevDuel.player1.id === updatedCharacter.id ? updatedCharacter : prevDuel.player1,
+      player2: prevDuel.player2.id === updatedCharacter.id ? updatedCharacter : prevDuel.player2,
+    }));
+  };
+
   const handleTurnSubmit = (turnData: Omit<Turn, 'turnNumber' | 'startStats' | 'endStats'>) => {
     setDuel(prevDuel => {
       const activePlayer = prevDuel.activePlayerId === 'player1' ? prevDuel.player1 : prevDuel.player2;
@@ -141,8 +149,8 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 flex flex-col gap-8">
-              <CharacterPanel character={duel.player1} isActive={duel.activePlayerId === 'player1'} />
-              <CharacterPanel character={duel.player2} isActive={duel.activePlayerId === 'player2'} />
+              <CharacterPanel character={duel.player1} isActive={duel.activePlayerId === 'player1'} onUpdate={handleCharacterUpdate} />
+              <CharacterPanel character={duel.player2} isActive={duel.activePlayerId === 'player2'} onUpdate={handleCharacterUpdate} />
             </div>
 
             <div className="lg:col-span-2 flex flex-col gap-8">
