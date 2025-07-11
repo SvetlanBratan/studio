@@ -122,6 +122,23 @@ export default function Home() {
         let turnSkipped = false;
         const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен'];
         let petrificationCount = 0;
+        
+        // Passive regen and effects at start of turn
+        activePlayer.bonuses.forEach(bonus => {
+            const healMatch = bonus.match(/\+(\d+) исцеления\/ход/);
+            if (healMatch) {
+                const healAmount = parseInt(healMatch[1], 10);
+                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + healAmount);
+                turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${healAmount} ОЗ.`);
+            }
+            const omMatch = bonus.match(/\+(\d+) ОМ\/ход/);
+            if (omMatch) {
+                const omAmount = parseInt(omMatch[1], 10);
+                activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omAmount);
+                turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omAmount} ОМ.`);
+            }
+        });
+
 
         activePlayer.penalties = activePlayer.penalties.map(p => {
             const match = p.match(/(.+) \((\d+)\)$/);
@@ -308,7 +325,7 @@ export default function Home() {
             };
             
             const applyEffect = (target: CharacterStats, effect: string) => {
-                if (!target.penalties.includes(effect)) {
+                if (!target.penalties.some(p => p.startsWith(effect.split(' (')[0]))) {
                     target.penalties.push(effect);
                 }
             };
@@ -458,7 +475,7 @@ export default function Home() {
                                 if (activePlayer.bonuses.includes('+3 к восстановлению ОМ при укусе')) {
                                     const omRestored = 3;
                                     activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omRestored);
-                                    turnLog.push(`Пассивный бонус (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omRestored} ОМ от укуса.`);
+                                    turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omRestored} ОМ от укуса.`);
                                 }
                                 break;
                              case 'Окаменение взглядом':
