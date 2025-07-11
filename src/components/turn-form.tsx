@@ -64,6 +64,8 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     setActions([]);
   };
 
+  const hasPrayerAction = actions.some(a => a.type === 'prayer');
+
   const actionOptions: {value: ActionType, label: string, disabled: boolean}[] = [
     { value: 'strong_spell', label: 'Сильный ритуал', disabled: player.cooldowns.strongSpell > 0 || player.om < RULES.RITUAL_COSTS.strong },
     { value: 'medium_spell', label: 'Средний ритуал', disabled: player.om < RULES.RITUAL_COSTS.medium },
@@ -72,7 +74,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     { value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: player.om < RULES.RITUAL_COSTS.medium },
     { value: 'dodge', label: 'Уворот', disabled: player.od < RULES.NON_MAGIC_COSTS.dodge },
     { value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < RULES.NON_MAGIC_COSTS.use_item || player.inventory.length === 0 },
-    { value: 'prayer', label: 'Молитва', disabled: player.cooldowns.prayer > 0 || player.od < RULES.NON_MAGIC_COSTS.prayer },
+    { value: 'prayer', label: 'Молитва', disabled: player.cooldowns.prayer > 0 || player.od < RULES.NON_MAGIC_COSTS.prayer || hasPrayerAction },
     { value: 'remove_effect', label: 'Снять с себя эффект', disabled: player.penalties.length === 0 },
     { value: 'rest', label: 'Отдых', disabled: false },
   ];
