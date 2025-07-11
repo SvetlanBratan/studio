@@ -120,7 +120,8 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
                                 {Object.values(ELEMENTS).map((element) => (
                                 <CommandItem
                                     key={element.name}
-                                    onSelect={() => handleElementsChange(element.name)}
+                                    value={element.name}
+                                    onSelect={handleElementsChange}
                                 >
                                     {element.name}
                                     <span className="ml-auto">

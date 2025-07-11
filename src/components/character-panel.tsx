@@ -282,7 +282,8 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
                                     {Object.values(ELEMENTS).map((element) => (
                                     <CommandItem
                                         key={element.name}
-                                        onSelect={() => handleElementsChange(element.name)}
+                                        value={element.name}
+                                        onSelect={handleElementsChange}
                                     >
                                         {element.name}
                                         <span className="ml-auto">
