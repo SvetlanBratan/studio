@@ -91,12 +91,13 @@ export default function Home() {
     });
   };
 
-  const executeTurn = (actions: Action[]) => {
+  const executeTurn = (turnActions: Action[]) => {
     if (!duel) return;
 
     setDuel(prevDuel => {
         if (!prevDuel) return null;
 
+        let actions = [...turnActions];
         const turnLog: string[] = [];
         let activePlayer = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player1 } : { ...prevDuel.player2 };
         let opponent = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player2 } : { ...prevDuel.player1 };
@@ -105,28 +106,54 @@ export default function Home() {
         
         // Filter out expired penalties and check for turn-skipping effects
         let turnSkipped = false;
-        const turnSkipEffects = ['Окаменение', 'Под гипнозом', 'Обездвижен'];
-        
+        const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен'];
+        let petrificationCount = 0;
+
         activePlayer.penalties = activePlayer.penalties.map(p => {
             const match = p.match(/(.+) \((\d+)\)$/);
             if (match) {
                 const name = match[1].trim();
                 const duration = parseInt(match[2], 10) - 1;
-                
-                if (turnSkipEffects.includes(name) && !turnSkipped) {
+
+                if (simpleTurnSkipEffects.includes(name)) {
                     turnSkipped = true;
                     turnLog.push(`${activePlayer.name} пропускает ход из-за эффекта "${name}"!`);
+                }
+                if (name === 'Окаменение') {
+                    petrificationCount++;
                 }
 
                 if (duration > 0) {
                     return `${name} (${duration})`;
                 }
+                turnLog.push(`Эффект "${name}" закончился для ${activePlayer.name}.`);
                 return ''; // Mark for removal
             }
             return p;
         }).filter(p => p !== '');
 
+        if (petrificationCount >= 2) {
+            turnSkipped = true;
+            turnLog.push(`${activePlayer.name} полностью окаменел и пропускает ход!`);
+        } else if (petrificationCount === 1) {
+            if (actions.length > 0) {
+                const lostAction = actions.pop(); // Remove one action
+                turnLog.push(`${activePlayer.name} частично окаменел и теряет одно действие: "${getActionLabel(lostAction!.type, lostAction!.payload)}".`);
+            } else {
+                 turnLog.push(`${activePlayer.name} частично окаменел, но не планировал действий.`);
+            }
+        }
+        
         if (turnSkipped) {
+            // Apply DoT effects even if turn is skipped
+            activePlayer.penalties.forEach(p => {
+                if (RULES.DOT_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')))) {
+                    const damage = RULES.DOT_DAMAGE;
+                    activePlayer.oz -= damage;
+                    turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
+                }
+            });
+
             const newTurn: Turn = {
                 turnNumber: prevDuel.currentTurn,
                 playerId: activePlayer.id,
@@ -150,7 +177,6 @@ export default function Home() {
                 log: turnLog,
             };
         }
-
 
         // 1. Cooldowns tick down
         for (const key in activePlayer.cooldowns) {
