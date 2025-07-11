@@ -40,14 +40,35 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
   const handleRaceChange = (raceName: string) => {
     const selectedRace = RACES.find(r => r.name === raceName);
     if (selectedRace) {
-      onUpdate({ ...player, race: selectedRace.name, bonuses: [...selectedRace.passiveBonuses] });
+      let updatedPlayer = { ...player, race: selectedRace.name, bonuses: [...selectedRace.passiveBonuses] };
+
+      // Reset specific stats that might be affected by race change
+      updatedPlayer.od = RULES.STARTING_OD;
+
+      // Apply race-specific penalties/bonuses
+      if (raceName === 'Кунари') {
+          updatedPlayer.od -= 5;
+      }
+      if (['Кордеи', 'Драконы'].includes(raceName)) {
+          // This bonus is added to maxOz as well to reflect it's a permanent increase for the battle
+          updatedPlayer.oz = (player.maxOz - 50) + 50; // Recalculate based on original base
+          updatedPlayer.maxOz = (player.maxOz - 50) + 50;
+      } else if (player.race === 'Кордеи' || player.race === 'Драконы') {
+          // If changing FROM a race with OZ bonus, remove it
+          updatedPlayer.oz = player.oz - 50;
+          updatedPlayer.maxOz = player.maxOz - 50;
+      }
+
+
+      onUpdate(updatedPlayer);
     }
   };
 
-  const handleElementsChange = (element: string) => {
-    const newElements = player.elementalKnowledge.includes(element)
-      ? player.elementalKnowledge.filter(e => e !== element)
-      : [...player.elementalKnowledge, element];
+
+  const handleElementsChange = (elementName: string) => {
+    const newElements = player.elementalKnowledge.includes(elementName)
+      ? player.elementalKnowledge.filter(e => e !== elementName)
+      : [...player.elementalKnowledge, elementName];
     onUpdate({ ...player, elementalKnowledge: newElements });
   };
 
@@ -205,7 +226,27 @@ export default function DuelSetup({ initialPlayer1, initialPlayer2, onDuelStart 
   const [player2, setPlayer2] = useState<CharacterStats>(initialPlayer2);
 
   const handleStart = () => {
-    onDuelStart(player1, player2);
+    const p1Race = RACES.find(r => r.name === player1.race);
+    let p1Final = {...player1};
+    if (p1Race) {
+      if (p1Race.name === 'Кунари') p1Final.od -= 5;
+      if (['Кордеи', 'Драконы'].includes(p1Race.name)) {
+        p1Final.oz += 50;
+        p1Final.maxOz += 50;
+      }
+    }
+
+    const p2Race = RACES.find(r => r.name === player2.race);
+    let p2Final = {...player2};
+    if (p2Race) {
+      if (p2Race.name === 'Кунари') p2Final.od -= 5;
+       if (['Кордеи', 'Драконы'].includes(p2Race.name)) {
+        p2Final.oz += 50;
+        p2Final.maxOz += 50;
+      }
+    }
+
+    onDuelStart(p1Final, p2Final);
   };
 
   return (

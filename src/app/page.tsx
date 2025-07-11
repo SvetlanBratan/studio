@@ -113,7 +113,10 @@ export default function Home() {
         let opponent = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player2 } : { ...prevDuel.player1 };
         
         // Before doing anything else, opponent loses their "dodging" status from previous turn
-        opponent.isDodging = false;
+        if (opponent.isDodging) {
+             turnLog.push(`${opponent.name} больше не находится в состоянии уворота.`);
+             opponent.isDodging = false;
+        }
 
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield };
         
@@ -164,7 +167,13 @@ export default function Home() {
         // 2. Apply penalties (like poison/burn)
         activePlayer.penalties.forEach(p => {
             if (RULES.DOT_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')))) {
-                const damage = RULES.DOT_DAMAGE;
+                let damage = RULES.DOT_DAMAGE;
+                if (activePlayer.bonuses.includes('Скидка к урону от яда (3)')) {
+                    damage = Math.max(0, damage - 3);
+                }
+                if (activePlayer.penalties.includes('Штраф к отравлению (3)')) {
+                    damage += 3;
+                }
                 activePlayer.oz -= damage;
                 turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
             }
@@ -365,9 +374,18 @@ export default function Home() {
                          }
 
                          // Apply costs
-                         if(ability.cost?.om) activePlayer.om -= ability.cost.om;
-                         if(ability.cost?.od) activePlayer.od -= ability.cost.od;
-                         if(ability.cost?.oz) activePlayer.oz -= ability.cost.oz;
+                         if(ability.cost?.om) {
+                            activePlayer.om -= ability.cost.om;
+                            turnLog.push(`Затраты ОМ: ${ability.cost.om}.`);
+                         }
+                         if(ability.cost?.od) {
+                            activePlayer.od -= ability.cost.od;
+                            turnLog.push(`Затраты ОД: ${ability.cost.od}.`);
+                         }
+                         if(ability.cost?.oz) {
+                            activePlayer.oz -= ability.cost.oz;
+                            turnLog.push(`Затраты ОЗ: ${ability.cost.oz}.`);
+                         }
 
                          // Hardcoded effects for now
                          switch(abilityName) {
