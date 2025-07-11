@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -91,7 +92,7 @@ export default function Home() {
   };
 
   const executeTurn = (actions: Action[]) => {
-     if (!duel) return;
+    if (!duel) return;
 
     setDuel(prevDuel => {
         if (!prevDuel) return null;
@@ -121,17 +122,97 @@ export default function Home() {
 
         // 3. Execute actions
         actions.forEach(action => {
-            turnLog.push(`${activePlayer.name} использует действие: ${getActionLabel(action.type)}`);
+            turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type)}".`);
+            
+            const calculateDamage = (spellType: 'household' | 'small' | 'medium' | 'strong'): number => {
+                let damage = RULES.RITUAL_DAMAGE[activePlayer.reserve]?.[spellType] ?? 0;
+                
+                // Примерный расчет бонусов. Логику уязвимостей нужно будет уточнить
+                if (opponent.penalties.includes('Уязвимость')) {
+                    damage += RULES.DAMAGE_BONUS.vulnerability[spellType];
+                }
+                if (activePlayer.bonuses.includes('Боевая магия')) {
+                    damage += RULES.DAMAGE_BONUS.battle_magic[spellType];
+                }
+                return damage;
+            };
+
+            let damageDealt = 0;
+
+            switch(action.type) {
+                case 'strong_spell':
+                    activePlayer.om -= RULES.RITUAL_COSTS.strong;
+                    damageDealt = calculateDamage('strong');
+                    opponent.oz -= damageDealt;
+                    activePlayer.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
+                    turnLog.push(`${opponent.name} получает ${damageDealt} урона.`);
+                    break;
+                case 'medium_spell':
+                    activePlayer.om -= RULES.RITUAL_COSTS.medium;
+                    damageDealt = calculateDamage('medium');
+                    opponent.oz -= damageDealt;
+                    turnLog.push(`${opponent.name} получает ${damageDealt} урона.`);
+                    break;
+                case 'small_spell':
+                    activePlayer.om -= RULES.RITUAL_COSTS.small;
+                    damageDealt = calculateDamage('small');
+                    opponent.oz -= damageDealt;
+                    turnLog.push(`${opponent.name} получает ${damageDealt} урона.`);
+                    break;
+                case 'household_spell':
+                    activePlayer.om -= RULES.RITUAL_COSTS.household;
+                    damageDealt = calculateDamage('household');
+                    opponent.oz -= damageDealt;
+                    turnLog.push(`${opponent.name} получает ${damageDealt} урона.`);
+                    break;
+                case 'shield':
+                    activePlayer.om -= RULES.RITUAL_COSTS.medium;
+                    activePlayer.shield += RULES.BASE_SHIELD_VALUE;
+                    turnLog.push(`${activePlayer.name} создает щит прочностью ${RULES.BASE_SHIELD_VALUE}.`);
+                    break;
+                case 'dodge':
+                    activePlayer.od -= RULES.NON_MAGIC_COSTS.dodge;
+                    turnLog.push(`${activePlayer.name} пытается увернуться.`);
+                    break;
+                case 'use_item':
+                    activePlayer.od -= RULES.NON_MAGIC_COSTS.use_item;
+                    activePlayer.cooldowns.item = RULES.COOLDOWNS.item;
+                    turnLog.push(`${activePlayer.name} использует предмет.`);
+                    // Логика предмета будет добавлена позже
+                    break;
+                case 'prayer':
+                    activePlayer.od -= RULES.NON_MAGIC_COSTS.prayer;
+                    activePlayer.cooldowns.prayer = RULES.COOLDOWNS.prayer;
+                    turnLog.push(`${activePlayer.name} молится.`);
+                     // Логика молитвы будет добавлена позже
+                    break;
+                case 'rest':
+                     // Отдых обрабатывается ниже
+                    break;
+                case 'remove_effect':
+                    if (activePlayer.penalties.length > 0) {
+                        const removedEffect = activePlayer.penalties.shift();
+                        turnLog.push(`${activePlayer.name} снимает с себя эффект: "${removedEffect}".`);
+                    }
+                    break;
+            }
         });
 
-        // 4. Passive regen
+        // 4. Passive regen & Rest
         activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.PASSIVE_OM_REGEN);
+        turnLog.push(`${activePlayer.name} восстанавливает ${RULES.PASSIVE_OM_REGEN} ОМ пассивно.`);
 
         const isResting = actions.some(a => a.type === 'rest');
         if (isResting) {
             activePlayer.od = Math.min(activePlayer.maxOd, activePlayer.od + RULES.OD_REGEN_ON_REST);
-             turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OD_REGEN_ON_REST} ОД.`);
+            turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OD_REGEN_ON_REST} ОД.`);
         }
+
+        // Clamp values to not be negative
+        activePlayer.oz = Math.max(0, activePlayer.oz);
+        opponent.oz = Math.max(0, opponent.oz);
+        activePlayer.om = Math.max(0, activePlayer.om);
+        activePlayer.od = Math.max(0, activePlayer.od);
 
         // Check for winner
         let winner;
@@ -277,3 +358,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
