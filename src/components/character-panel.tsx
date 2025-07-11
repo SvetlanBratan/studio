@@ -283,11 +283,11 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
                                     <CommandItem
                                         key={element.name}
                                         value={element.name}
-                                        onSelect={() => handleElementsChange(element.name)}
+                                        onSelect={(currentValue) => handleElementsChange(currentValue)}
                                     >
                                         {element.name}
                                         <span className="ml-auto">
-                                            {editableCharacter.elementalKnowledge.includes(element.name) && "✓"}
+                                            {editableCharacter.elementalKnowledge.includes(element.name) ? "✓" : ""}
                                         </span>
                                     </CommandItem>
                                     ))}

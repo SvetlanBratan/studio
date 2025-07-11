@@ -121,11 +121,11 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
                                 <CommandItem
                                     key={element.name}
                                     value={element.name}
-                                    onSelect={() => handleElementsChange(element.name)}
+                                    onSelect={(currentValue) => handleElementsChange(currentValue)}
                                 >
                                     {element.name}
                                     <span className="ml-auto">
-                                        {player.elementalKnowledge.includes(element.name) && "✓"}
+                                        {player.elementalKnowledge.includes(element.name) ? "✓" : ""}
                                     </span>
                                 </CommandItem>
                                 ))}
