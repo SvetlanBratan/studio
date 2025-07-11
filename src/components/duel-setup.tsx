@@ -44,20 +44,19 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
 
       // Reset specific stats that might be affected by race change
       updatedPlayer.od = RULES.STARTING_OD;
-      updatedPlayer.maxOz = RULES.STARTING_OZ;
-      updatedPlayer.oz = RULES.STARTING_OZ;
+      
+      let baseOz = RULES.STARTING_OZ;
+      if (selectedRace.passiveBonuses.includes('+50 ОЗ')) {
+          baseOz += 50;
+      }
+      updatedPlayer.maxOz = baseOz;
+      updatedPlayer.oz = baseOz;
 
 
       // Apply race-specific penalties/bonuses
       if (raceName === 'Кунари') {
           updatedPlayer.od -= 5;
       }
-      if (['Кордеи'].includes(raceName)) {
-          // This bonus is added to maxOz as well to reflect it's a permanent increase for the battle
-          updatedPlayer.oz += 50;
-          updatedPlayer.maxOz += 50;
-      } 
-
 
       onUpdate(updatedPlayer);
     }
