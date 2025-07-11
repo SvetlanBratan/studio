@@ -8,17 +8,38 @@ export type ReserveLevel =
   | 'Архимагистр'
   | 'Божественный сын';
 
+export type FaithLevel =
+  | 'Ненависть/Проклят'
+  | 'Равнодушие'
+  | 'Верующий'
+  | 'Прихожанин'
+  | 'Неофит'
+  | 'Храмовник'
+  | 'Послушник'
+  | 'Священник'
+  | 'Прорицатель/Духовник'
+  | 'Наместник храма'
+  | 'Первожрец'
+  | 'Верховный жрец/Мессия';
+
+export interface InventoryItem {
+    name: string;
+    type: 'heal' | 'damage';
+    amount: number;
+}
+  
 export interface CharacterStats {
   id: string;
   name: string;
   race: string;
   reserve: ReserveLevel;
-  elementalKnowledge: string; // e.g. "Магия времени (Мастер), Магия света (Адепт)"
-  faithLevel: number;
+  elementalKnowledge: string;
+  faithLevel: number; // The numeric value from -1 to 10
+  faithLevelName: FaithLevel; // The string name of the faith level
   physicalCondition: string;
-  bonuses: string[]; // e.g. "Иммунитет к контролю", "Боевая магия", "Уязвимость к огню"
-  penalties: string[]; // e.g. "Отравление", "Горение"
-  inventory: string[];
+  bonuses: string[];
+  penalties: string[];
+  inventory: InventoryItem[];
   oz: number; // Health
   maxOz: number;
   om: number; // Mana
@@ -37,16 +58,15 @@ export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'hous
 
 export interface Action {
   type: ActionType;
-  // For spells, we might add target and effect details
   payload?: any;
 }
 
 export interface Turn {
   turnNumber: number;
   playerId: string;
-  playerName: string;
+  playerName:string;
   actions: Action[];
-  log: string[]; // Detailed log of what happened
+  log: string[];
   startStats: Pick<CharacterStats, 'oz' | 'om' | 'od' | 'shield'>;
   endStats: Pick<CharacterStats, 'oz' | 'om' | 'od' | 'shield'>;
 }
@@ -58,5 +78,5 @@ export interface DuelState {
   currentTurn: number;
   activePlayerId: string;
   winner?: string;
-  log: string[]; // Live duel log for the current turn
+  log: string[];
 }

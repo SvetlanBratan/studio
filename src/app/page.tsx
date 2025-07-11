@@ -1,34 +1,34 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { DuelState, Turn, Action, CharacterStats, ReserveLevel, ActionType } from '@/types/duel';
+import type { DuelState, Turn, Action, CharacterStats, ReserveLevel, FaithLevel } from '@/types/duel';
 import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import DuelLog from '@/components/duel-log';
 import DiceRoller from '@/components/dice-roller';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Swords, Gamepad2, ShieldAlert } from 'lucide-react';
+import { Swords, Gamepad2, ShieldAlert, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RULES } from '@/lib/rules';
+import { RULES, getOmFromReserve, getFaithLevelFromString } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
-const getOmFromReserve = (reserve: ReserveLevel): number => RULES.OM_RESERVE[reserve] || 0;
+import DuelSetup from '@/components/duel-setup';
 
 const initialPlayer1: CharacterStats = {
   id: 'player1',
-  name: 'Элара, Чародейка Времени',
-  race: 'Тальен',
-  reserve: 'Мастер',
+  name: 'Игрок 1',
+  race: 'Человек',
+  reserve: 'Неофит',
   elementalKnowledge: 'Магия времени (Мастер)',
-  faithLevel: 2,
+  faithLevel: 0,
+  faithLevelName: 'Равнодушие',
   physicalCondition: 'В полном здравии',
   bonuses: ['Иммунитет к контролю'],
   penalties: [],
-  inventory: ['Зелье малого исцеления x2', 'Кристалл времени x1'],
+  inventory: [],
   oz: 200,
   maxOz: 200,
-  om: 360,
-  maxOm: 360,
+  om: 90,
+  maxOm: 90,
   od: 100,
   maxOd: 100,
   shield: 0,
@@ -37,60 +37,65 @@ const initialPlayer1: CharacterStats = {
 
 const initialPlayer2: CharacterStats = {
   id: 'player2',
-  name: 'Громмаш, Рыцарь Хаоса',
+  name: 'Игрок 2',
   race: 'Орк',
-  reserve: 'Специалист',
+  reserve: 'Неофит',
   elementalKnowledge: 'Магия хаоса (Специалист), Магия огня (Специалист)',
-  faithLevel: -1,
+  faithLevel: 0,
+  faithLevelName: 'Равнодушие',
   physicalCondition: 'В полном здравии',
   bonuses: ['Расовая ярость (+10 к урону)', 'Боевая магия'],
   penalties: [],
-  inventory: ['Зелье силы x1'],
+  inventory: [],
   oz: 200,
   maxOz: 200,
-  om: 270,
-  maxOm: 270,
+  om: 90,
+  maxOm: 90,
   od: 100,
   maxOd: 100,
   shield: 0,
   cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
 };
 
-const initialDuelState: DuelState = {
-  player1: initialPlayer1,
-  player2: initialPlayer2,
-  turnHistory: [],
-  currentTurn: 1,
-  activePlayerId: 'player1',
-  winner: undefined,
-  log: [],
-};
-
-
 export default function Home() {
-  const [duel, setDuel] = useState<DuelState>(initialDuelState);
+  const [duel, setDuel] = useState<DuelState | null>(null);
+  const [log, setLog] = useState<string[]>([]);
 
-  // Choose first player randomly
-  useEffect(() => {
-    setDuel(prev => ({
-      ...prev,
-      activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
-    }))
-  }, [])
+  const handleDuelStart = (player1: CharacterStats, player2: CharacterStats) => {
+    setDuel({
+      player1,
+      player2,
+      turnHistory: [],
+      currentTurn: 1,
+      activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2',
+      winner: undefined,
+      log: [],
+    });
+  };
 
   const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
+    if (!duel) return;
+
     const newMaxOm = getOmFromReserve(updatedCharacter.reserve);
-    const charData = { ...updatedCharacter, maxOm: newMaxOm };
-    
-    setDuel(prevDuel => ({
-      ...prevDuel,
-      player1: prevDuel.player1.id === charData.id ? charData : prevDuel.player1,
-      player2: prevDuel.player2.id === charData.id ? charData : prevDuel.player2,
-    }));
+    const newFaithLevel = getFaithLevelFromString(updatedCharacter.faithLevelName);
+    const charData = { ...updatedCharacter, maxOm: newMaxOm, faithLevel: newFaithLevel };
+
+    setDuel(prevDuel => {
+      if (!prevDuel) return null;
+      return {
+        ...prevDuel,
+        player1: prevDuel.player1.id === charData.id ? charData : prevDuel.player1,
+        player2: prevDuel.player2.id === charData.id ? charData : prevDuel.player2,
+      }
+    });
   };
 
   const executeTurn = (actions: Action[]) => {
+     if (!duel) return;
+
     setDuel(prevDuel => {
+        if (!prevDuel) return null;
+
         const turnLog: string[] = [];
         let activePlayer = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player1 } : { ...prevDuel.player2 };
         let opponent = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player2 } : { ...prevDuel.player1 };
@@ -116,23 +121,22 @@ export default function Home() {
 
         // 3. Execute actions
         actions.forEach(action => {
-            // ... action logic will be implemented here in next steps
             turnLog.push(`${activePlayer.name} использует действие: ${action.type}`);
         });
 
         // 4. Passive regen
         activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.PASSIVE_OM_REGEN);
 
-        // A resting turn regenerates OD
-        const isResting = !actions.some(a => ['dodge', 'use_item', 'prayer'].includes(a.type));
+        const isResting = actions.some(a => a.type === 'rest');
         if (isResting) {
             activePlayer.od = Math.min(activePlayer.maxOd, activePlayer.od + RULES.OD_REGEN_ON_REST);
+             turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OD_REGEN_ON_REST} ОД.`);
         }
 
         // Check for winner
         let winner;
-        if (duel.player1.oz <= 0) winner = duel.player2.name;
-        if (duel.player2.oz <= 0) winner = duel.player1.name;
+        if (activePlayer.oz <= 0) winner = opponent.name;
+        if (opponent.oz <= 0) winner = activePlayer.name;
 
         const newTurn: Turn = {
             turnNumber: prevDuel.currentTurn,
@@ -144,6 +148,8 @@ export default function Home() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield },
         };
         
+        setLog(turnLog);
+
         return {
             ...prevDuel,
             player1: prevDuel.activePlayerId === 'player1' ? activePlayer : opponent,
@@ -152,23 +158,49 @@ export default function Home() {
             currentTurn: prevDuel.currentTurn + 1,
             activePlayerId: prevDuel.activePlayerId === 'player1' ? 'player2' : 'player1',
             winner: winner,
-            log: [], // Clear log for next turn
+            log: turnLog,
         };
     });
   };
   
   const resetDuel = () => {
-    // Reset players to initial state but keep their potentially edited names etc.
-    const p1Reset = { ...duel.player1, ...initialPlayer1, name: duel.player1.name, race: duel.player1.race };
-    const p2Reset = { ...duel.player2, ...initialPlayer2, name: duel.player2.name, race: duel.player2.race };
-    
-    setDuel({
-        ...initialDuelState,
-        player1: { ...p1Reset, maxOm: getOmFromReserve(p1Reset.reserve) },
-        player2: { ...p2Reset, maxOm: getOmFromReserve(p2Reset.reserve) },
-        activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
-    });
+    setDuel(null);
+    setLog([]);
   };
+
+  if (!duel) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="p-4 border-b border-border shadow-md bg-card">
+          <div className="container mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <Swords className="text-primary w-8 h-8" />
+              <h1 className="text-2xl md:text-3xl font-headline font-bold text-primary-foreground">
+                Magic Duel Assistant
+              </h1>
+            </div>
+          </div>
+        </header>
+        <main className="container mx-auto p-4 md:p-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Users />
+                        Настройка дуэли
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <DuelSetup
+                        initialPlayer1={initialPlayer1}
+                        initialPlayer2={initialPlayer2}
+                        onDuelStart={handleDuelStart}
+                    />
+                </CardContent>
+            </Card>
+        </main>
+      </div>
+    );
+  }
 
   const activePlayer = duel.activePlayerId === 'player1' ? duel.player1 : duel.player2;
   const opponent = duel.activePlayerId === 'player1' ? duel.player2 : duel.player1;
@@ -221,13 +253,13 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              {duel.log.length > 0 && (
+              {log.length > 0 && (
                 <Alert variant="default" className="border-primary">
                     <ShieldAlert className="h-4 w-4 text-primary" />
                     <AlertTitle>События Хода</AlertTitle>
                     <AlertDescription>
                         <ul className="list-disc pl-5">
-                            {duel.log.map((entry, i) => <li key={i}>{entry}</li>)}
+                            {log.map((entry, i) => <li key={i}>{entry}</li>)}
                         </ul>
                     </AlertDescription>
                 </Alert>

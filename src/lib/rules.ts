@@ -1,11 +1,41 @@
-import { ReserveLevel } from "@/types/duel";
+import type { ReserveLevel, FaithLevel } from "@/types/duel";
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
+
+export const FAITH_LEVELS: Record<FaithLevel, number> = {
+  'Ненависть/Проклят': -1,
+  'Равнодушие': 0,
+  'Верующий': 1,
+  'Прихожанин': 2,
+  'Неофит': 3,
+  'Храмовник': 4,
+  'Послушник': 5,
+  'Священник': 6,
+  'Прорицатель/Духовник': 7,
+  'Наместник храма': 8,
+  'Первожрец': 9,
+  'Верховный жрец/Мессия': 10,
+};
+
+export const RESERVE_LEVELS: Record<ReserveLevel, number> = {
+  'Неофит': 90,
+  'Адепт': 180,
+  'Специалист': 270,
+  'Мастер': 360,
+  'Магистр': 450,
+  'Архимаг': 540,
+  'Архимагистр': 630,
+  'Божественный сын': 1890,
+};
+
+export const getOmFromReserve = (reserve: ReserveLevel): number => RESERVE_LEVELS[reserve] || 90;
+export const getFaithLevelFromString = (faith: FaithLevel): number => FAITH_LEVELS[faith] || 0;
 
 export const RULES = {
   STARTING_OZ: 200,
   STARTING_OD: 100,
   MAX_ACTIONS_PER_TURN: 2,
+  MAX_INVENTORY_ITEMS: 2,
 
   RITUAL_COSTS: {
     strong: 90,
@@ -27,17 +57,6 @@ export const RULES = {
     item: 3,
     prayer: 4,
   },
-
-  OM_RESERVE: {
-    'Неофит': 90,
-    'Адепт': 180,
-    'Специалист': 270,
-    'Мастер': 360,
-    'Магистр': 450,
-    'Архимаг': 540,
-    'Архимагистр': 630,
-    'Божественный сын': 1890,
-  } as Record<ReserveLevel, number>,
 
   RITUAL_DAMAGE: {
     'Неофит': { household: 3, small: 6, medium: 16, strong: 48 },
@@ -70,8 +89,8 @@ export const RULES = {
   ],
 
   PRAYER_CHANCE: {
-    '-1': 0, '0': 10, '1': 20, '2': 30, '3': 40, '4': 50, '5': 50,
-    '6': 60, '7': 70, '8': 80, '9': 90, '10': 100,
+    '-1': 0, '0': 1, '1': 2, '2': 3, '3': 4, '4': 5, '5': 5,
+    '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
   } as Record<string, number>,
 
   DODGE_VS_STRONG_SPELL_DMG_REDUCTION: 20,

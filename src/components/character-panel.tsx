@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { CharacterStats, ReserveLevel } from '@/types/duel';
+import type { CharacterStats, ReserveLevel, FaithLevel, InventoryItem } from '@/types/duel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import StatBar from './stat-bar';
-import { Heart, Sparkles, Wind, Shield, User, BookOpen, Cross, Briefcase, Bot, Siren, Edit, Save, X, Timer } from 'lucide-react';
+import { Heart, Sparkles, Wind, Shield, User, BookOpen, Cross, Briefcase, Siren, Edit, Save, X, Timer, Package, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -14,7 +14,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { RULES } from '@/lib/rules';
+import { RULES, RESERVE_LEVELS, FAITH_LEVELS } from '@/lib/rules';
 
 interface CharacterPanelProps {
   character: CharacterStats;
@@ -40,12 +40,34 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
     setEditableCharacter(prev => ({ ...prev, [name]: Number(value) || 0 }));
   };
 
-  const handleSelectChange = (field: keyof CharacterStats, value: string) => {
+  const handleSelectChange = (field: 'reserve' | 'faithLevelName', value: string) => {
     setEditableCharacter(prev => ({...prev, [field]: value}));
   };
 
-  const handleArrayInputChange = (field: 'bonuses' | 'penalties' | 'inventory', value: string) => {
+  const handleArrayInputChange = (field: 'bonuses' | 'penalties', value: string) => {
     setEditableCharacter(prev => ({...prev, [field]: value.split(',').map(s => s.trim()).filter(Boolean)}));
+  };
+
+  const handleInventoryChange = (index: number, field: keyof InventoryItem, value: string | number) => {
+    const newInventory = [...editableCharacter.inventory];
+    (newInventory[index] as any)[field] = value;
+    setEditableCharacter(prev => ({ ...prev, inventory: newInventory }));
+  };
+
+  const addInventoryItem = () => {
+    if (editableCharacter.inventory.length < RULES.MAX_INVENTORY_ITEMS) {
+      setEditableCharacter(prev => ({
+        ...prev,
+        inventory: [...prev.inventory, { name: 'Новый предмет', type: 'heal', amount: 10 }]
+      }));
+    }
+  };
+
+  const removeInventoryItem = (index: number) => {
+    setEditableCharacter(prev => ({
+      ...prev,
+      inventory: prev.inventory.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSave = () => {
@@ -98,7 +120,7 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
     );
   };
 
-   const renderArrayEditor = (label: string, field: 'bonuses' | 'penalties' | 'inventory', value: string[]) => (
+   const renderArrayEditor = (label: string, field: 'bonuses' | 'penalties', value: string[]) => (
      <div className="grid w-full items-center gap-1.5">
         <Label htmlFor={`${field}-${character.id}`}>{label} (через запятую)</Label>
         <Textarea
@@ -109,6 +131,44 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
         />
      </div>
   );
+
+  const renderInventoryEditor = () => (
+    <div className="space-y-2">
+      <div className="flex justify-between items-center">
+        <Label>Инвентарь</Label>
+        <Button size="sm" variant="ghost" onClick={addInventoryItem} disabled={editableCharacter.inventory.length >= RULES.MAX_INVENTORY_ITEMS}>
+            <PlusCircle className="w-4 h-4 mr-2" /> Добавить
+        </Button>
+      </div>
+      {editableCharacter.inventory.map((item, index) => (
+          <div key={index} className="flex gap-2 p-2 border rounded">
+              <Input 
+                  value={item.name} 
+                  onChange={(e) => handleInventoryChange(index, 'name', e.target.value)} 
+                  placeholder="Название"
+                  className="h-8"
+              />
+              <Select value={item.type} onValueChange={(v: 'heal' | 'damage') => handleInventoryChange(index, 'type', v)}>
+                  <SelectTrigger className="h-8 w-[100px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="heal">Лечение</SelectItem>
+                      <SelectItem value="damage">Урон</SelectItem>
+                  </SelectContent>
+              </Select>
+               <Input 
+                  type="number"
+                  value={item.amount} 
+                  onChange={(e) => handleInventoryChange(index, 'amount', Number(e.target.value))} 
+                  className="h-8 w-20"
+              />
+              <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => removeInventoryItem(index)}>
+                  <Trash2 className="w-4 h-4 text-destructive"/>
+              </Button>
+          </div>
+      ))}
+    </div>
+  );
+
 
   const renderCooldown = (label: string, value: number) => {
     if (value <= 0) return null;
@@ -158,10 +218,10 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
           {isEditing ? (
              <div className="flex gap-2">
                <Input name="race" value={editableCharacter.race} onChange={handleInputChange} placeholder="Раса" />
-               <Select value={editableCharacter.reserve} onValueChange={(v) => handleSelectChange('reserve', v)}>
+               <Select value={editableCharacter.reserve} onValueChange={(v) => handleSelectChange('reserve', v as ReserveLevel)}>
                  <SelectTrigger><SelectValue placeholder="Резерв" /></SelectTrigger>
                  <SelectContent>
-                   {Object.keys(RULES.OM_RESERVE).map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                   {Object.keys(RESERVE_LEVELS).map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                  </SelectContent>
                </Select>
              </div>
@@ -191,7 +251,12 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
             <div className="space-y-3">
               {renderTextEditor("Знания", "elementalKnowledge", editableCharacter.elementalKnowledge, 'textarea')}
               <div className="grid grid-cols-2 gap-2">
-                {renderTextEditor("Вера", "faithLevel", String(editableCharacter.faithLevel))}
+                <Select value={editableCharacter.faithLevelName} onValueChange={(v) => handleSelectChange('faithLevelName', v as FaithLevel)}>
+                   <SelectTrigger><SelectValue placeholder="Вера" /></SelectTrigger>
+                   <SelectContent>
+                       {Object.keys(FAITH_LEVELS).map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                   </SelectContent>
+                </Select>
                 {renderTextEditor("Состояние", "physicalCondition", editableCharacter.physicalCondition)}
               </div>
             </div>
@@ -201,7 +266,7 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
                 <div className="text-right">{character.elementalKnowledge}</div>
                 
                 <div className="flex items-center gap-2"><Cross className="w-4 h-4 text-primary" /> <strong>Вера:</strong></div>
-                <div className="text-right">{character.faithLevel}</div>
+                <div className="text-right">{character.faithLevelName} ({character.faithLevel})</div>
 
                 <div className="flex items-center gap-2"><Briefcase className="w-4 h-4 text-primary" /> <strong>Состояние:</strong></div>
                 <div className="text-right">{character.physicalCondition}</div>
@@ -214,7 +279,7 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
               <div className="space-y-3">
                   {renderArrayEditor("Бонусы", "bonuses", editableCharacter.bonuses)}
                   {renderArrayEditor("Штрафы", "penalties", editableCharacter.penalties)}
-                  {renderArrayEditor("Инвентарь", "inventory", editableCharacter.inventory)}
+                  {renderInventoryEditor()}
               </div>
           ) : (
             <>
@@ -245,7 +310,7 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
               <div>
                 <h4 className="font-semibold mb-2 text-sm">Инвентарь:</h4>
                 <div className="flex flex-wrap gap-1">
-                  {character.inventory.length > 0 ? character.inventory.map((item, i) => <Badge key={i} variant="outline">{item}</Badge>) : <span className="text-xs text-muted-foreground">Пусто</span>}
+                  {character.inventory.length > 0 ? character.inventory.map((item, i) => <Badge key={i} variant="outline" className="gap-1"><Package className="w-3 h-3" />{item.name} ({item.type === 'heal' ? 'Лечение' : 'Урон'}: {item.amount})</Badge>) : <span className="text-xs text-muted-foreground">Пусто</span>}
                 </div>
               </div>
             </>
