@@ -137,7 +137,6 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
                               {player.elementalKnowledge.map(el => (
                                 <SelectItem key={el} value={el}>{el}</SelectItem>
                               ))}
-                               <SelectItem value="Эфир">Эфир</SelectItem>
                             </SelectContent>
                           </Select>
                         )}
