@@ -27,10 +27,11 @@ interface TurnFormProps {
 export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) {
   const [actions, setActions] = useState<Action[]>([]);
   const [isPrayerDialogOpen, setIsPrayerDialogOpen] = useState(false);
+  const [selectValue, setSelectValue] = useState(''); // Added to control the Select component
   const playerRaceInfo = RACES.find(r => r.name === player.race);
 
   const addAction = (type: string, payload?: any) => {
-    if (actions.length >= RULES.MAX_ACTIONS_PER_TURN) return;
+    if (actions.length >= RULES.MAX_ACTIONS_PER_TURN || !type) return;
 
     if (type === 'prayer') {
       setIsPrayerDialogOpen(true);
@@ -46,6 +47,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     } else {
       setActions([...actions, { type: type as ActionType, payload }]);
     }
+    setSelectValue(''); // Reset select after adding action
   };
 
   const handlePrayerSelect = (effect: PrayerEffectType) => {
@@ -65,24 +67,25 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
   };
 
   const hasPrayerAction = actions.some(a => a.type === 'prayer');
+  const hasAddedAction = (actionType: ActionType) => actions.some(a => a.type === actionType);
 
   const actionOptions: {value: ActionType, label: string, disabled: boolean}[] = [
-    { value: 'strong_spell', label: 'Сильный ритуал', disabled: player.cooldowns.strongSpell > 0 || player.om < RULES.RITUAL_COSTS.strong },
+    { value: 'strong_spell', label: 'Сильный ритуал', disabled: player.cooldowns.strongSpell > 0 || player.om < RULES.RITUAL_COSTS.strong || hasAddedAction('strong_spell') },
     { value: 'medium_spell', label: 'Средний ритуал', disabled: player.om < RULES.RITUAL_COSTS.medium },
     { value: 'small_spell', label: 'Малый ритуал', disabled: player.om < RULES.RITUAL_COSTS.small },
     { value: 'household_spell', label: 'Бытовое заклинание', disabled: player.om < RULES.RITUAL_COSTS.household },
-    { value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: player.om < RULES.RITUAL_COSTS.medium },
-    { value: 'dodge', label: 'Уворот', disabled: player.od < RULES.NON_MAGIC_COSTS.dodge },
-    { value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < RULES.NON_MAGIC_COSTS.use_item || player.inventory.length === 0 },
+    { value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: player.om < RULES.RITUAL_COSTS.medium || hasAddedAction('shield') },
+    { value: 'dodge', label: 'Уворот', disabled: player.od < RULES.NON_MAGIC_COSTS.dodge || hasAddedAction('dodge') },
+    { value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < RULES.NON_MAGIC_COSTS.use_item || player.inventory.length === 0 || hasAddedAction('use_item') },
     { value: 'prayer', label: 'Молитва', disabled: player.cooldowns.prayer > 0 || player.od < RULES.NON_MAGIC_COSTS.prayer || hasPrayerAction },
-    { value: 'remove_effect', label: 'Снять с себя эффект', disabled: player.penalties.length === 0 },
-    { value: 'rest', label: 'Отдых', disabled: false },
+    { value: 'remove_effect', label: 'Снять с себя эффект', disabled: player.penalties.length === 0 || hasAddedAction('remove_effect')},
+    { value: 'rest', label: 'Отдых', disabled: hasAddedAction('rest') },
   ];
 
   const racialAbilities = playerRaceInfo?.activeAbilities.map(ability => ({
     value: `racial_${ability.name}`,
     label: `${ability.name}`,
-    disabled: player.cooldowns[ability.name] > 0 || (ability.cost?.om ?? 0) > player.om || (ability.cost?.od ?? 0) > player.od,
+    disabled: player.cooldowns[ability.name] > 0 || (ability.cost?.om ?? 0) > player.om || (ability.cost?.od ?? 0) > player.od || actions.some(a => a.type === 'racial_ability' && a.payload.name === ability.name),
   })) || [];
 
   return (
@@ -105,7 +108,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
         
         {actions.length < RULES.MAX_ACTIONS_PER_TURN && (
           <div className="flex flex-col sm:flex-row gap-2">
-            <Select onValueChange={(value) => addAction(value)}>
+            <Select onValueChange={(value) => addAction(value)} value={selectValue}>
               <SelectTrigger>
                   <SelectValue placeholder="Добавить действие..." />
               </SelectTrigger>
@@ -123,7 +126,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
                       <SelectLabel>Расовые способности</SelectLabel>
                       {racialAbilities.map(opt => (
                           <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
-                              {opt.label} {opt.disabled ? `(КД: ${player.cooldowns[opt.value.substring(7)]})` : ''}
+                              {opt.label} {opt.disabled && player.cooldowns[opt.value.substring(7)] > 0 ? `(КД: ${player.cooldowns[opt.value.substring(7)]})` : ''}
                           </SelectItem>
                       ))}
                    </SelectGroup>
