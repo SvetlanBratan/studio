@@ -113,7 +113,7 @@ export default function Home() {
         
         // 2. Apply penalties (like poison/burn)
         activePlayer.penalties.forEach(p => {
-            if (RULES.DOT_EFFECTS.includes(p)) {
+            if (RULES.DOT_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')))) {
                 const damage = RULES.DOT_DAMAGE;
                 activePlayer.oz -= damage;
                 turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
@@ -121,18 +121,18 @@ export default function Home() {
         });
         
         // Filter out expired penalties
-        activePlayer.penalties = activePlayer.penalties.filter(p => !p.endsWith('(0)'));
         activePlayer.penalties = activePlayer.penalties.map(p => {
-            const match = p.match(/(.*) \((\d+)\)$/);
+            const match = p.match(/(.+) \((\d+)\)$/);
             if (match) {
                 const name = match[1];
                 const duration = parseInt(match[2], 10) - 1;
                 if (duration > 0) {
                     return `${name} (${duration})`;
                 }
+                return ''; // Mark for removal
             }
             return p;
-        }).filter(p => !p.endsWith('(0)'));
+        }).filter(p => p !== '');
 
 
         // 3. Execute actions
@@ -229,17 +229,69 @@ export default function Home() {
 
                          // Hardcoded effects for now
                          switch(abilityName) {
-                            case 'Кислотное распыление': // Алахоры
+                            case 'Кислотное распыление':
                                  opponent.oz -= 10;
                                  turnLog.push(`${opponent.name} получает 10 урона от кислоты.`);
                                  break;
-                            case 'Дар сладости': // Алариены
+                            case 'Дар сладости':
                                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
                                  turnLog.push(`${activePlayer.name} восстанавливает 15 ОЗ.`);
                                  break;
-                            case 'Ядовитый дым': // Арахниды
+                            case 'Брызг из жабр':
+                                opponent.penalties.push('Ослепление (1)');
+                                turnLog.push(`${opponent.name} ослеплен на 1 ход.`);
+                                break;
+                            case 'Ядовитый дым':
                                 opponent.penalties.push('Отравление (3)');
                                 turnLog.push(`${opponent.name} отравлен на 3 хода.`);
+                                break;
+                            case 'Призыв звезды':
+                                opponent.oz -= 20;
+                                turnLog.push(`${opponent.name} получает 20 урона от метеорита.`);
+                                break;
+                            case 'Танец лепестков':
+                                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
+                                turnLog.push(`${activePlayer.name} восстанавливает 10 ОЗ.`);
+                                break;
+                            case 'Песня влюблённого':
+                                opponent.oz -= 10;
+                                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
+                                turnLog.push(`${opponent.name} получает 10 урона, а ${activePlayer.name} восстанавливает 10 ОЗ.`);
+                                break;
+                            case 'Укус': // Бракованные пересмешники
+                                opponent.oz -= 10;
+                                activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + 10);
+                                turnLog.push(`${opponent.name} получает 10 урона, а ${activePlayer.name} восстанавливает 10 ОМ.`);
+                                break;
+                             case 'Окаменение взглядом':
+                                opponent.penalties.push('Окаменение (1)');
+                                turnLog.push(`${opponent.name} окаменел и пропускает следующий ход.`);
+                                break;
+                             case 'Драконий выдох':
+                                 opponent.oz -= 20;
+                                 turnLog.push(`${opponent.name} получает 20 урона от дыхания дракона.`);
+                                 break;
+                             case 'Корнеплетение':
+                                 opponent.penalties.push('Обездвижен (1)');
+                                 turnLog.push(`${opponent.name} обездвижен на 1 ход.`);
+                                 break;
+                             case 'Теневая стрела':
+                                 opponent.oz -= 15;
+                                 turnLog.push(`${opponent.name} получает 15 урона от теневой стрелы.`);
+                                 break;
+                            case 'Коса конца':
+                                 opponent.oz = 0;
+                                 turnLog.push(`${activePlayer.name} использует Косу конца. ${opponent.name} повержен!`);
+                                 break;
+                            case 'Похищение энергии':
+                                const stolenOm = 10;
+                                opponent.om = Math.max(0, opponent.om - stolenOm);
+                                activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + stolenOm);
+                                turnLog.push(`${activePlayer.name} похищает ${stolenOm} ОМ у ${opponent.name}.`);
+                                break;
+                            case 'Гипноз':
+                                opponent.penalties.push('Под гипнозом (1)');
+                                turnLog.push(`${opponent.name} под гипнозом и пропустит следующий ход.`);
                                 break;
                             // Add more abilities here in the future
                          }
@@ -300,7 +352,6 @@ export default function Home() {
   };
 
   if (!duel) {
-    // A default race must be selected for initial players
     const p1WithRace = { ...initialPlayer1, race: RACES[0].name, bonuses: [...RACES[0].passiveBonuses] };
     const p2WithRace = { ...initialPlayer2, race: RACES[0].name, bonuses: [...RACES[0].passiveBonuses] };
 
