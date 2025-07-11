@@ -73,6 +73,8 @@ export interface CharacterStats {
   };
 }
 
+export type PrayerEffectType = 'eternal_shield' | 'full_heal_oz' | 'full_heal_om';
+
 export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'household_spell' | 'dodge' | 'use_item' | 'shield' | 'prayer' | 'remove_effect' | 'rest' | 'racial_ability';
 
 export interface Action {

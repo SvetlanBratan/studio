@@ -1,5 +1,5 @@
 
-import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility } from "@/types/duel";
+import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType } from "@/types/duel";
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
 
@@ -110,6 +110,12 @@ export const getOmFromReserve = (reserve: ReserveLevel): number => RESERVE_LEVEL
 export const getFaithLevelFromString = (faith: FaithLevel): number => FAITH_LEVELS[faith] || 0;
 
 export const getActionLabel = (type: ActionType, payload?: any): string => {
+  const prayerEffectLabels: Record<PrayerEffectType, string> = {
+    eternal_shield: 'Вечный щит (4 хода)',
+    full_heal_oz: 'Полное исцеление ОЗ',
+    full_heal_om: 'Полное восполнение ОМ',
+  };
+
   const labels: Record<ActionType, string> = {
       strong_spell: "Сильный ритуал",
       medium_spell: "Средний ритуал",
@@ -123,6 +129,10 @@ export const getActionLabel = (type: ActionType, payload?: any): string => {
       rest: "Отдых",
       racial_ability: "Расовая способность"
   };
+
+  if (type === 'prayer' && payload?.effect) {
+    return `${labels.prayer}: ${prayerEffectLabels[payload.effect]}`;
+  }
   if (type === 'racial_ability' && payload?.name) {
     return `${labels.racial_ability}: ${payload.name}`;
   }

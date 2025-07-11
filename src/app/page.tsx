@@ -135,13 +135,9 @@ export default function Home() {
         if (petrificationCount >= 2) {
             turnSkipped = true;
             turnLog.push(`${activePlayer.name} полностью окаменел и пропускает ход!`);
-        } else if (petrificationCount === 1) {
-            if (actions.length > 0) {
-                const lostAction = actions.pop(); // Remove one action
-                turnLog.push(`${activePlayer.name} частично окаменел и теряет одно действие: "${getActionLabel(lostAction!.type, lostAction!.payload)}".`);
-            } else {
-                 turnLog.push(`${activePlayer.name} частично окаменел, но не планировал действий.`);
-            }
+        } else if (petrificationCount === 1 && actions.length > 0) {
+            const lostAction = actions.pop(); // Remove one action
+            turnLog.push(`${activePlayer.name} частично окаменел и теряет одно действие: "${getActionLabel(lostAction!.type, lostAction!.payload)}".`);
         }
         
         if (turnSkipped) {
@@ -256,10 +252,36 @@ export default function Home() {
                     // Логика предмета будет добавлена позже
                     break;
                 case 'prayer':
-                    activePlayer.od -= RULES.NON_MAGIC_COSTS.prayer;
-                    activePlayer.cooldowns.prayer = RULES.COOLDOWNS.prayer;
-                    turnLog.push(`${activePlayer.name} молится.`);
-                     // Логика молитвы будет добавлена позже
+                    {
+                        activePlayer.od -= RULES.NON_MAGIC_COSTS.prayer;
+                        activePlayer.cooldowns.prayer = RULES.COOLDOWNS.prayer;
+                        
+                        const roll = Math.floor(Math.random() * 10) + 1;
+                        const requiredRoll = RULES.PRAYER_CHANCE[String(activePlayer.faithLevel)] || 0;
+                        const isSuccess = activePlayer.faithLevel === 10 || (activePlayer.faithLevel > -1 && roll <= requiredRoll);
+
+                        turnLog.push(`${activePlayer.name} молится о "${getActionLabel(action.type, action.payload)}". Бросок: ${roll}, нужно <= ${requiredRoll}.`);
+
+                        if (isSuccess) {
+                            turnLog.push(`Молитва услышана!`);
+                            switch(action.payload.effect) {
+                                case 'eternal_shield':
+                                    activePlayer.bonuses.push('Вечный щит (4)');
+                                    turnLog.push(`${activePlayer.name} получает Вечный щит на 4 хода.`);
+                                    break;
+                                case 'full_heal_oz':
+                                    activePlayer.oz = activePlayer.maxOz;
+                                    turnLog.push(`${activePlayer.name} полностью восстанавливает ОЗ.`);
+                                    break;
+                                case 'full_heal_om':
+                                    activePlayer.om = activePlayer.maxOm;
+                                    turnLog.push(`${activePlayer.name} полностью восстанавливает ОМ.`);
+                                    break;
+                            }
+                        } else {
+                            turnLog.push(`Боги не ответили на молитву.`);
+                        }
+                    }
                     break;
                 case 'rest':
                      // Отдых обрабатывается ниже
@@ -325,7 +347,7 @@ export default function Home() {
                                 break;
                              case 'Окаменение взглядом':
                                 opponent.penalties.push('Окаменение (1)');
-                                turnLog.push(`${opponent.name} окаменел и пропускает следующий ход.`);
+                                turnLog.push(`${opponent.name} частично окаменел и теряет одно действие в следующем ходу.`);
                                 break;
                              case 'Драконий выдох':
                                  opponent.oz -= 20;
@@ -523,5 +545,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
