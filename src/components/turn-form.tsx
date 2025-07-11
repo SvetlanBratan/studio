@@ -1,19 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
 import type { Action, CharacterStats, ActionType } from '@/types/duel';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Trash2, Send } from 'lucide-react';
+import { Trash2, Send } from 'lucide-react';
 import { RULES } from '@/lib/rules';
 
 interface TurnFormProps {
   player: CharacterStats;
+  opponent: CharacterStats;
   onSubmit: (actions: Action[]) => void;
 }
 
-export default function TurnForm({ player, onSubmit }: TurnFormProps) {
+export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) {
   const [actions, setActions] = useState<Action[]>([]);
 
   const addAction = (type: ActionType) => {

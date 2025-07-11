@@ -5,7 +5,6 @@ import type { DuelState, Turn, Action, CharacterStats, ReserveLevel, ActionType 
 import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import DuelLog from '@/components/duel-log';
-import ActionSuggestion from '@/components/action-suggestion';
 import DiceRoller from '@/components/dice-roller';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Swords, Gamepad2, ShieldAlert } from 'lucide-react';
@@ -132,8 +131,8 @@ export default function Home() {
 
         // Check for winner
         let winner;
-        if (player1.oz <= 0) winner = player2.name;
-        if (player2.oz <= 0) winner = player1.name;
+        if (duel.player1.oz <= 0) winner = duel.player2.name;
+        if (duel.player2.oz <= 0) winner = duel.player1.name;
 
         const newTurn: Turn = {
             turnNumber: prevDuel.currentTurn,
@@ -216,6 +215,7 @@ export default function Home() {
                 <CardContent>
                   <TurnForm
                     player={activePlayer}
+                    opponent={opponent}
                     onSubmit={executeTurn}
                   />
                 </CardContent>
@@ -233,8 +233,7 @@ export default function Home() {
                 </Alert>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <ActionSuggestion player={activePlayer} opponent={opponent} />
+              <div className="grid grid-cols-1 gap-8">
                 <DiceRoller player={activePlayer} />
               </div>
 
