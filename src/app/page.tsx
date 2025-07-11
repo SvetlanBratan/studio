@@ -10,7 +10,7 @@ import DiceRoller from '@/components/dice-roller';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Swords, Gamepad2, ShieldAlert, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel } from '@/lib/rules';
+import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import DuelSetup from '@/components/duel-setup';
 
@@ -122,7 +122,7 @@ export default function Home() {
 
         // 3. Execute actions
         actions.forEach(action => {
-            turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type)}".`);
+            turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
             
             const calculateDamage = (spellType: 'household' | 'small' | 'medium' | 'strong'): number => {
                 let damage = RULES.RITUAL_DAMAGE[activePlayer.reserve]?.[spellType] ?? 0;
@@ -195,6 +195,11 @@ export default function Home() {
                         turnLog.push(`${activePlayer.name} снимает с себя эффект: "${removedEffect}".`);
                     }
                     break;
+                case 'racial_ability':
+                    // Basic implementation placeholder.
+                    // This will need to be expanded with specific logic for each ability.
+                    turnLog.push(`${activePlayer.name} использует "${action.payload.name}": ${action.payload.description}`);
+                    break;
             }
         });
 
@@ -250,6 +255,10 @@ export default function Home() {
   };
 
   if (!duel) {
+    // A default race must be selected for initial players
+    const p1WithRace = { ...initialPlayer1, race: RACES[0].name, bonuses: [...RACES[0].passiveBonuses] };
+    const p2WithRace = { ...initialPlayer2, race: RACES[0].name, bonuses: [...RACES[0].passiveBonuses] };
+
     return (
       <div className="min-h-screen bg-background text-foreground">
         <header className="p-4 border-b border-border shadow-md bg-card">
@@ -272,8 +281,8 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                     <DuelSetup
-                        initialPlayer1={initialPlayer1}
-                        initialPlayer2={initialPlayer2}
+                        initialPlayer1={p1WithRace}
+                        initialPlayer2={p2WithRace}
                         onDuelStart={handleDuelStart}
                     />
                 </CardContent>

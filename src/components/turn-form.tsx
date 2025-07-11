@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import type { Action, CharacterStats, ActionType } from '@/types/duel';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Trash2, Send } from 'lucide-react';
-import { RULES, getActionLabel } from '@/lib/rules';
+import { RULES, getActionLabel, RACES } from '@/lib/rules';
 
 interface TurnFormProps {
   player: CharacterStats;
@@ -15,10 +15,19 @@ interface TurnFormProps {
 
 export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) {
   const [actions, setActions] = useState<Action[]>([]);
+  const playerRaceInfo = RACES.find(r => r.name === player.race);
 
-  const addAction = (type: ActionType) => {
-    if (actions.length < RULES.MAX_ACTIONS_PER_TURN) {
-      setActions([...actions, { type }]);
+  const addAction = (type: string) => {
+    if (actions.length >= RULES.MAX_ACTIONS_PER_TURN) return;
+
+    if (type.startsWith('racial_')) {
+      const abilityName = type.split('_')[1];
+      const ability = playerRaceInfo?.activeAbilities.find(a => a.name === abilityName);
+      if (ability) {
+        setActions([...actions, { type: 'racial_ability', payload: { name: ability.name, description: ability.description } }]);
+      }
+    } else {
+      setActions([...actions, { type: type as ActionType }]);
     }
   };
 
@@ -38,11 +47,17 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     { value: 'household_spell', label: 'Бытовое заклинание', disabled: player.om < RULES.RITUAL_COSTS.household },
     { value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: player.om < RULES.RITUAL_COSTS.medium },
     { value: 'dodge', label: 'Уворот', disabled: player.od < RULES.NON_MAGIC_COSTS.dodge },
-    { value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < RULES.NON_MAGIC_COSTS.use_item },
+    { value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < RULES.NON_MAGIC_COSTS.use_item || player.inventory.length === 0 },
     { value: 'prayer', label: 'Молитва', disabled: player.cooldowns.prayer > 0 || player.od < RULES.NON_MAGIC_COSTS.prayer },
     { value: 'remove_effect', label: 'Снять с себя эффект', disabled: player.penalties.length === 0 },
     { value: 'rest', label: 'Отдых', disabled: false },
   ];
+
+  const racialAbilities = playerRaceInfo?.activeAbilities.map(ability => ({
+    value: `racial_${ability.name}`,
+    label: `${ability.name}`,
+    disabled: false, // You might want to add cooldowns or cost checks here later
+  })) || [];
 
   return (
     <div className="space-y-4">
@@ -52,7 +67,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
         <div className="space-y-2">
             {actions.map((action, index) => (
                 <div key={index} className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-background/50">
-                    <span>{index + 1}. {getActionLabel(action.type)}</span>
+                    <span>{index + 1}. {getActionLabel(action.type, action.payload)}</span>
                     <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 shrink-0 h-8 w-8" onClick={() => removeAction(index)}>
                         <Trash2 className="h-4 w-4" />
                     </Button>
@@ -63,16 +78,29 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
       
       {actions.length < RULES.MAX_ACTIONS_PER_TURN && (
         <div className="flex flex-col sm:flex-row gap-2">
-          <Select onValueChange={(value) => addAction(value as ActionType)}>
+          <Select onValueChange={(value) => addAction(value)}>
             <SelectTrigger>
                 <SelectValue placeholder="Добавить действие..." />
             </SelectTrigger>
             <SelectContent>
+              <SelectGroup>
+                <SelectLabel>Основные действия</SelectLabel>
                 {actionOptions.map(opt => (
                     <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
                         {opt.label}
                     </SelectItem>
                 ))}
+              </SelectGroup>
+              {racialAbilities.length > 0 && (
+                 <SelectGroup>
+                    <SelectLabel>Расовые способности</SelectLabel>
+                    {racialAbilities.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                            {opt.label}
+                        </SelectItem>
+                    ))}
+                 </SelectGroup>
+              )}
             </SelectContent>
           </Select>
         </div>

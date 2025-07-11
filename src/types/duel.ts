@@ -27,6 +27,20 @@ export interface InventoryItem {
     type: 'heal' | 'damage';
     amount: number;
 }
+
+export interface Race {
+  name: string;
+  passiveBonuses: string[];
+  activeAbilities: {
+    name: string;
+    description: string;
+    cost?: {
+      om?: number;
+      od?: number;
+      oz?: number;
+    };
+  }[];
+}
   
 export interface CharacterStats {
   id: string;
@@ -51,10 +65,11 @@ export interface CharacterStats {
     strongSpell: number; // turns remaining
     item: number; // turns remaining
     prayer: number; // turns remaining
+    [key: string]: number; // For racial abilities
   };
 }
 
-export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'household_spell' | 'dodge' | 'use_item' | 'shield' | 'prayer' | 'remove_effect' | 'rest';
+export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'household_spell' | 'dodge' | 'use_item' | 'shield' | 'prayer' | 'remove_effect' | 'rest' | 'racial_ability';
 
 export interface Action {
   type: ActionType;

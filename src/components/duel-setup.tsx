@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { getFaithLevelFromString, getOmFromReserve, RESERVE_LEVELS, FAITH_LEVELS, RULES } from '@/lib/rules';
+import { getFaithLevelFromString, getOmFromReserve, RESERVE_LEVELS, FAITH_LEVELS, RULES, RACES } from '@/lib/rules';
 import { User, Dices, PlusCircle, Trash2, Package } from 'lucide-react';
 
 interface DuelSetupProps {
@@ -33,6 +33,13 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
     onUpdate({ ...player, faithLevelName: value, faithLevel });
   };
   
+  const handleRaceChange = (raceName: string) => {
+    const selectedRace = RACES.find(r => r.name === raceName);
+    if (selectedRace) {
+      onUpdate({ ...player, race: selectedRace.name, bonuses: [...selectedRace.passiveBonuses] });
+    }
+  };
+
   const handleInventoryChange = (index: number, field: keyof InventoryItem, value: string | number) => {
     const newInventory = [...player.inventory];
     (newInventory[index] as any)[field] = value;
@@ -70,7 +77,14 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
         </div>
         <div className="space-y-2">
           <Label htmlFor={`race-${player.id}`}>Раса</Label>
-          <Input id={`race-${player.id}`} value={player.race} onChange={(e) => handleInputChange('race', e.target.value)} />
+          <Select value={player.race} onValueChange={handleRaceChange}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {RACES.map(race => (
+                <SelectItem key={race.name} value={race.name}>{race.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label>Резерв</Label>
