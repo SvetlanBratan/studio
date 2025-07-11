@@ -101,7 +101,7 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
             <Label>Знания стихий</Label>
              <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start font-normal">
+                    <Button variant="outline" className="w-full justify-start font-normal flex-wrap h-auto min-h-10">
                         <div className="flex gap-1 flex-wrap">
                             {player.elementalKnowledge.length > 0 ? (
                                 player.elementalKnowledge.map(e => <Badge key={e}>{e}</Badge>)
