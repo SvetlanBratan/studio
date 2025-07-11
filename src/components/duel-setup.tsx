@@ -121,7 +121,7 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
                                 <CommandItem
                                     key={element.name}
                                     value={element.name}
-                                    onSelect={handleElementsChange}
+                                    onSelect={() => handleElementsChange(element.name)}
                                 >
                                     {element.name}
                                     <span className="ml-auto">
