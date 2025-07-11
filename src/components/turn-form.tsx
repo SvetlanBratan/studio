@@ -122,7 +122,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
                   <div key={index} className="flex flex-col sm:flex-row items-center justify-between gap-2 p-2 border rounded-lg bg-background/50">
                       <span className="flex-grow">{index + 1}. {getActionLabel(action.type, action.payload)}</span>
                       <div className="flex items-center gap-2">
-                        {spellActions.includes(action.type) && player.elementalKnowledge.length > 0 && (
+                        {(spellActions.includes(action.type) || action.type === 'shield') && player.elementalKnowledge.length > 0 && (
                           <Select
                             value={action.payload?.element || ''}
                             onValueChange={(element) => updateActionPayload(index, { element })}
@@ -213,3 +213,5 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     </>
   );
 }
+
+    

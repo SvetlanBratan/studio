@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Turn } from '@/types/duel';
@@ -42,7 +43,7 @@ export default function DuelLog({ turns, player1Name, player2Name }: DuelLogProp
                       </li>
                     ))}
                   </ul>
-                  <p className="font-semibold pt-2">Итог хода: {turn.endStats.oz} ОЗ, {turn.endStats.om} ОМ, {turn.endStats.od} ОД, {turn.endStats.shield} Щит</p>
+                  <p className="font-semibold pt-2">Итог хода: {turn.endStats.oz} ОЗ, {turn.endStats.om} ОМ, {turn.endStats.od} ОД, {turn.endStats.shield.hp} Щит</p>
                 </AccordionContent>
               </AccordionItem>
             ))}
@@ -52,3 +53,5 @@ export default function DuelLog({ turns, player1Name, player2Name }: DuelLogProp
     </Card>
   );
 }
+
+    

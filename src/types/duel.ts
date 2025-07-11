@@ -52,6 +52,11 @@ export interface Element {
     strongAgainst: string[];
     weakTo: string[];
 }
+
+export interface Shield {
+    hp: number;
+    element: string | null;
+}
   
 export interface CharacterStats {
   id: string;
@@ -71,7 +76,7 @@ export interface CharacterStats {
   maxOm: number;
   od: number; // Action Points
   maxOd: number;
-  shield: number;
+  shield: Shield;
   isDodging: boolean;
   cooldowns: {
     strongSpell: number; // turns remaining
@@ -109,3 +114,5 @@ export interface DuelState {
   winner?: string;
   log: string[];
 }
+
+    

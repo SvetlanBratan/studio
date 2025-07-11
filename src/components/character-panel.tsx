@@ -251,7 +251,7 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
               <StatBar label="ОЗ" value={character.oz} maxValue={character.maxOz} colorClass="bg-red-500" icon={<Heart className="w-4 h-4 text-red-500" />} />
               <StatBar label="ОМ" value={character.om} maxValue={character.maxOm} colorClass="bg-blue-500" icon={<Sparkles className="w-4 h-4 text-blue-500" />} />
               <StatBar label="ОД" value={character.od} maxValue={character.maxOd} colorClass="bg-green-500" icon={<Wind className="w-4 h-4 text-green-500" />} />
-              {character.shield > 0 && <StatBar label="Щит" value={character.shield} maxValue={character.shield} colorClass="bg-gray-400" icon={<Shield className="w-4 h-4 text-gray-400" />} />}
+              {character.shield.hp > 0 && <StatBar label={`Щит (${character.shield.element || 'Нейтральный'})`} value={character.shield.hp} maxValue={character.shield.hp} colorClass="bg-gray-400" icon={<Shield className="w-4 h-4 text-gray-400" />} />}
             </div>
           )}
           
@@ -374,3 +374,5 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
     </TooltipProvider>
   );
 }
+
+    
