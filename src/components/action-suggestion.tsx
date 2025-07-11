@@ -24,32 +24,32 @@ export default function ActionSuggestion({ player, opponent }: ActionSuggestionP
     setError(null);
     setSuggestion(null);
 
-    const playerStatsForAI = {
-      OZ: player.oz,
-      OM: player.om,
-      OD: player.od,
-      penalties: player.penalties.join(', ') || 'нет',
-      bonuses: player.bonuses.join(', ') || 'нет',
-      race: player.race,
-      reserve: player.reserve,
-      elementalKnowledge: player.elementalKnowledge,
-      faithLevel: player.faithLevel,
-      inventory: player.inventory.join(', ') || 'пусто',
-    };
+    const playerStatsString = `
+- ОЗ: ${player.oz}
+- ОМ: ${player.om}
+- ОД: ${player.od}
+- Штрафы: ${player.penalties.join(', ') || 'нет'}
+- Бонусы: ${player.bonuses.join(', ') || 'нет'}
+- Раса: ${player.race}
+- Резерв: ${player.reserve}
+- Знания стихий: ${player.elementalKnowledge}
+- Уровень веры: ${player.faithLevel}
+- Инвентарь: ${player.inventory.join(', ') || 'пусто'}
+    `;
 
-    const opponentStatsForAI = {
-      OZ: opponent.oz,
-      OM: opponent.om,
-      OD: opponent.od,
-      race: opponent.race,
-      penalties: opponent.penalties.join(', ') || 'нет',
-      bonuses: opponent.bonuses.join(', ') || 'нет',
-    };
+    const opponentStatsString = `
+- ОЗ: ${opponent.oz}
+- ОМ: ${opponent.om}
+- ОД: ${opponent.od}
+- Раса: ${opponent.race}
+- Штрафы: ${opponent.penalties.join(', ') || 'нет'}
+- Бонусы: ${opponent.bonuses.join(', ') || 'нет'}
+    `;
 
     try {
       const result = await suggestNextAction({
-        playerStats: playerStatsForAI,
-        opponentStats: opponentStatsForAI,
+        playerStats: playerStatsString,
+        opponentStats: opponentStatsString,
         duelRules,
       });
       setSuggestion(result);

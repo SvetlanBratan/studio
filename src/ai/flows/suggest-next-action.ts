@@ -1,4 +1,3 @@
-// This is an experimental implementation of this flow. It has not been verified and is likely incorrect.
 'use server';
 /**
  * @fileOverview An AI agent to suggest the next action in a magic duel.
@@ -12,26 +11,8 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SuggestNextActionInputSchema = z.object({
-  playerStats: z.object({
-    OZ: z.number().describe('Player health points.'),
-    OM: z.number().describe('Player mana points.'),
-    OD: z.number().describe('Player action points.'),
-    penalties: z.string().describe('Current penalties affecting the player.'),
-    bonuses: z.string().describe('Current bonuses affecting the player.'),
-    race: z.string().describe('Player race'),
-    reserve: z.string().describe('Player reserve level'),
-    elementalKnowledge: z.string().describe('Player elemental knowledge'),
-    faithLevel: z.number().describe('Player faith level'),
-    inventory: z.string().describe('Player inventory'),
-  }).describe('Player current stats and status.'),
-  opponentStats: z.object({
-    OZ: z.number().describe('Opponent health points.'),
-    OM: z.number().describe('Opponent mana points.'),
-    OD: z.number().describe('Opponent action points.'),
-    race: z.string().describe('Opponent race'),
-    penalties: z.string().describe('Opponent current penalties'),
-    bonuses: z.string().describe('Opponent current bonuses'),
-  }).describe('Opponent current stats and status.'),
+  playerStats: z.string().describe("A summary of the player's current stats."),
+  opponentStats: z.string().describe("A summary of the opponent's current stats."),
   duelRules: z.string().describe('The rules of the magic duel.'),
 });
 export type SuggestNextActionInput = z.infer<typeof SuggestNextActionInputSchema>;
@@ -55,10 +36,10 @@ const prompt = ai.definePrompt({
   Consider the player's current stats, opponent stats, and the duel rules to provide a strategic suggestion.
 
   Player Stats:
-  {{{json playerStats}}}
+  {{playerStats}}
 
   Opponent Stats:
-  {{{json opponentStats}}}
+  {{opponentStats}}
 
   Duel Rules:
   {{duelRules}}
