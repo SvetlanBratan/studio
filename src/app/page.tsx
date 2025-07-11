@@ -32,6 +32,7 @@ const initialPlayer1: CharacterStats = {
   od: 100,
   maxOd: 100,
   shield: 0,
+  isDodging: false,
   cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
 };
 
@@ -54,6 +55,7 @@ const initialPlayer2: CharacterStats = {
   od: 100,
   maxOd: 100,
   shield: 0,
+  isDodging: false,
   cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
 };
 
@@ -110,6 +112,9 @@ export default function Home() {
         let activePlayer = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player1 } : { ...prevDuel.player2 };
         let opponent = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player2 } : { ...prevDuel.player1 };
         
+        // Before doing anything else, opponent loses their "dodging" status from previous turn
+        opponent.isDodging = false;
+
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield };
         
         // Filter out expired penalties and check for turn-skipping effects
@@ -232,10 +237,25 @@ export default function Home() {
             };
 
             const applyDamage = (target: CharacterStats, amount: number) => {
+                let finalDamage = amount;
+
+                if (target.isDodging) {
+                    const dodgeRoll = Math.floor(Math.random() * 10) + 1;
+                    turnLog.push(`${target.name} пытается увернуться... Бросок: ${dodgeRoll}.`);
+                    if (dodgeRoll >= 6) { // Success on 6 or higher
+                        finalDamage *= 0.5; // 50% damage reduction
+                        turnLog.push(`Уворот успешен! ${target.name} получает на 50% меньше урона.`);
+                    } else {
+                        turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
+                    }
+                }
+
+                finalDamage = Math.round(finalDamage);
+
                 if (target.shield > 0) {
-                    const damageToShield = Math.min(target.shield, amount);
+                    const damageToShield = Math.min(target.shield, finalDamage);
                     target.shield -= damageToShield;
-                    const remainingDamage = amount - damageToShield;
+                    const remainingDamage = finalDamage - damageToShield;
 
                     turnLog.push(`Щит ${target.name} поглощает ${damageToShield} урона.`);
                     if (target.shield <= 0) {
@@ -247,8 +267,8 @@ export default function Home() {
                         turnLog.push(`${target.name} получает ${remainingDamage} урона, пробившего щит.`);
                     }
                 } else {
-                    target.oz -= amount;
-                    turnLog.push(`${target.name} получает ${amount} урона.`);
+                    target.oz -= finalDamage;
+                    turnLog.push(`${target.name} получает ${finalDamage} урона.`);
                 }
             };
             
@@ -283,7 +303,8 @@ export default function Home() {
                     break;
                 case 'dodge':
                     activePlayer.od -= RULES.NON_MAGIC_COSTS.dodge;
-                    turnLog.push(`${activePlayer.name} пытается увернуться.`);
+                    activePlayer.isDodging = true;
+                    turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки.`);
                     break;
                 case 'use_item':
                     activePlayer.od -= RULES.NON_MAGIC_COSTS.use_item;
@@ -581,5 +602,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

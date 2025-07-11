@@ -72,6 +72,7 @@ export interface CharacterStats {
   od: number; // Action Points
   maxOd: number;
   shield: number;
+  isDodging: boolean;
   cooldowns: {
     strongSpell: number; // turns remaining
     item: number; // turns remaining
@@ -108,5 +109,3 @@ export interface DuelState {
   winner?: string;
   log: string[];
 }
-
-    
