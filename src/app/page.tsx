@@ -170,9 +170,11 @@ export default function Home() {
                 let damage = RULES.DOT_DAMAGE;
                 if (activePlayer.bonuses.includes('Скидка к урону от яда (3)')) {
                     damage = Math.max(0, damage - 3);
+                    turnLog.push(`Пассивная способность (Дроу): Скидка к урону от яда уменьшает урон до ${damage}.`);
                 }
                 if (activePlayer.penalties.includes('Штраф к отравлению (3)')) {
                     damage += 3;
+                     turnLog.push(`Пассивная способность (Слизень): Штраф к отравлению увеличивает урон до ${damage}.`);
                 }
                 activePlayer.oz -= damage;
                 turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
@@ -217,10 +219,18 @@ export default function Home() {
                 let damage = RULES.RITUAL_DAMAGE[activePlayer.reserve]?.[spellType] ?? 0;
                 
                 if (opponent.penalties.includes('Уязвимость')) {
-                    damage += RULES.DAMAGE_BONUS.vulnerability[spellType];
+                    const bonus = RULES.DAMAGE_BONUS.vulnerability[spellType];
+                    damage += bonus;
+                    turnLog.push(`Эффект "Уязвимость" увеличивает урон на ${bonus}.`);
                 }
                 if (activePlayer.bonuses.includes('Боевая магия')) {
-                    damage += RULES.DAMAGE_BONUS.battle_magic[spellType];
+                    const bonus = RULES.DAMAGE_BONUS.battle_magic[spellType];
+                    damage += bonus;
+                    turnLog.push(`Пассивный бонус "Боевая магия" увеличивает урон на ${bonus}.`);
+                }
+                 if (activePlayer.race === 'Орк' && activePlayer.bonuses.includes('Расовая ярость (+10 к урону)')) {
+                    damage += 10;
+                    turnLog.push(`Пассивная способность (Орк): "Расовая ярость" увеличивает урон на 10.`);
                 }
                 
                 // Elemental interactions
@@ -233,10 +243,10 @@ export default function Home() {
 
                     if (mainAttackerElement && mainDefenderElement) {
                         if (mainAttackerElement.strongAgainst.includes(mainDefenderElement.name)) {
-                            turnLog.push(`Стихийное преимущество! ${mainAttackerElement.name} силен против ${mainDefenderElement.name}. Урон увеличен.`);
+                            turnLog.push(`Стихийное преимущество! ${mainAttackerElement.name} силен против ${mainDefenderElement.name}. Урон увеличен на 50%.`);
                             damage *= 1.5;
                         } else if (mainAttackerElement.weakTo.includes(mainDefenderElement.name)) {
-                            turnLog.push(`Стихийная уязвимость! ${mainAttackerElement.name} слаб против ${mainDefenderElement.name}. Урон уменьшен.`);
+                            turnLog.push(`Стихийная уязвимость! ${mainAttackerElement.name} слаб против ${mainDefenderElement.name}. Урон уменьшен на 50%.`);
                             damage *= 0.5;
                         }
                     }
@@ -245,8 +255,15 @@ export default function Home() {
                 return Math.round(damage);
             };
 
-            const applyDamage = (target: CharacterStats, amount: number) => {
+            const applyDamage = (target: CharacterStats, amount: number, isSpell: boolean) => {
                 let finalDamage = amount;
+
+                if (target.race === 'Ларимы' && isSpell) {
+                    const restoredOm = Math.round(amount);
+                    target.om = Math.min(target.maxOm, target.om + restoredOm);
+                    turnLog.push(`Пассивная способность (Ларимы): ${target.name} поглощает ${restoredOm} магического урона и восстанавливает ОМ.`);
+                    return; // No damage taken, OM restored instead
+                }
 
                 if (target.isDodging) {
                     const dodgeRoll = Math.floor(Math.random() * 10) + 1;
@@ -287,23 +304,23 @@ export default function Home() {
                 case 'strong_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.strong;
                     damageDealt = calculateDamage('strong');
-                    applyDamage(opponent, damageDealt);
+                    applyDamage(opponent, damageDealt, true);
                     activePlayer.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
                     break;
                 case 'medium_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
                     damageDealt = calculateDamage('medium');
-                    applyDamage(opponent, damageDealt);
+                    applyDamage(opponent, damageDealt, true);
                     break;
                 case 'small_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.small;
                     damageDealt = calculateDamage('small');
-                    applyDamage(opponent, damageDealt);
+                    applyDamage(opponent, damageDealt, true);
                     break;
                 case 'household_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.household;
                     damageDealt = calculateDamage('household');
-                    applyDamage(opponent, damageDealt);
+                    applyDamage(opponent, damageDealt, true);
                     break;
                 case 'shield':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
@@ -390,7 +407,7 @@ export default function Home() {
                          // Hardcoded effects for now
                          switch(abilityName) {
                             case 'Кислотное распыление':
-                                 applyDamage(opponent, 10);
+                                 applyDamage(opponent, 10, false);
                                  break;
                             case 'Дар сладости':
                                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
@@ -405,23 +422,23 @@ export default function Home() {
                                 turnLog.push(`${opponent.name} отравлен на 3 хода.`);
                                 break;
                             case 'Призыв звезды':
-                                applyDamage(opponent, 20);
+                                applyDamage(opponent, 20, true);
                                 break;
                             case 'Танец лепестков':
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
                                 turnLog.push(`${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Песня влюблённого':
-                                applyDamage(opponent, 10);
+                                applyDamage(opponent, 10, true);
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
                                 turnLog.push(`${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Укус': 
-                                applyDamage(opponent, 10);
+                                applyDamage(opponent, 10, false);
                                 if (activePlayer.bonuses.includes('+3 к восстановлению ОМ при укусе')) {
                                     const omRestored = 3;
                                     activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omRestored);
-                                    turnLog.push(`${activePlayer.name} восстанавливает ${omRestored} ОМ благодаря пассивному бонусу от укуса.`);
+                                    turnLog.push(`Пассивный бонус (Вампир/Пересмешник): ${activePlayer.name} восстанавливает ${omRestored} ОМ от укуса.`);
                                 }
                                 break;
                              case 'Окаменение взглядом':
@@ -429,14 +446,14 @@ export default function Home() {
                                 turnLog.push(`${opponent.name} частично окаменел и теряет одно действие в следующем ходу.`);
                                 break;
                              case 'Драконий выдох':
-                                 applyDamage(opponent, 20);
+                                 applyDamage(opponent, 20, true);
                                  break;
                              case 'Корнеплетение':
                                  opponent.penalties.push('Обездвижен (1)');
                                  turnLog.push(`${opponent.name} обездвижен на 1 ход.`);
                                  break;
                              case 'Теневая стрела':
-                                 applyDamage(opponent, 15);
+                                 applyDamage(opponent, 15, true);
                                  break;
                             case 'Коса конца':
                                  opponent.oz = 0;
@@ -622,3 +639,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

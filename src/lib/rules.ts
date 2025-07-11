@@ -53,7 +53,7 @@ export const RACES: Race[] = [
     { name: 'Джакали', passiveBonuses: ['+10 ОМ/ОЗ при религиозных ритуалах'], activeAbilities: [{ name: 'Благословение крови', description: '+20 ОЗ союзнику, при молитве', cost: {om: 30} }] },
     { name: 'Джинны', passiveBonuses: ['+10 ОЗ при ОЗ <50'], activeAbilities: [{ name: 'Элементальная вспышка', description: 'случайный урон 15-25', cost: {om: 30} }] },
     { name: 'Домовые', passiveBonuses: ['+5 урона магией, +10 ОМ/ход'], activeAbilities: [{ name: 'Забота дома', description: '+15 ОЗ и снятие одного эффекта', cost: {om: 30} }] },
-    { name: 'Драконы', passiveBonuses: ['+5 урона магией, +10 ОМ/ход'], activeAbilities: [{ name: 'Драконий выдох', description: '-20 ОЗ врагу огнём/льдом/кислотой', cost: {om: 30} }] },
+    { name: 'Драконы', passiveBonuses: ['+5 урона магией', '+10 ОМ/ход', '+50 ОЗ (раз за бой)'], activeAbilities: [{ name: 'Драконий выдох', description: '-20 ОЗ врагу огнём/льдом/кислотой', cost: {om: 30} }] },
     { name: 'Дриады', passiveBonuses: ['+3 исцеления при природе'], activeAbilities: [{ name: 'Корнеплетение', description: 'обездвиживание врага', cooldown: 4, cost: {om: 30} }] },
     { name: 'Дриды', passiveBonuses: ['+2 ОЗ при контакте с цветами'], activeAbilities: [{ name: 'Цветочный нектар', description: '+10 ОЗ и +5 ОМ', cost: {om: 10} }] },
     { name: 'Дроу', passiveBonuses: ['+4 урона/ход ночью', 'Скидка к урону от яда (3)'], activeAbilities: [{ name: 'Теневая стрела', description: '-15 ОЗ, +5 к уклонению', cost: {om: 10} }] },
@@ -64,8 +64,8 @@ export const RACES: Race[] = [
     { name: 'Кентавры', passiveBonuses: ['+15 ОД в поле', 'Скидка на ОД (5)'], activeAbilities: [{ name: 'Копытный разгон', description: 'нанести урон и отступить', cost: {od: 20} }] },
     { name: 'Кицунэ', passiveBonuses: ['+2 ОМ за каждые 3 хвоста'], activeAbilities: [{ name: 'Иллюзия хвостов', description: 'дезориентация врага', cost: {om: 30} }] },
     { name: 'Коралиты', passiveBonuses: ['+10 к сопротивлению'], activeAbilities: [{ name: 'Всплеск солёной воды', description: 'обезоруживает на 1 ход', cost: {om: 10} }] },
-    { name: 'Кордеи', passiveBonuses: ['+10 ОЗ в лесной местности'], activeAbilities: [{ name: 'Пылающая кровь', description: '-10 ОЗ врагу при атаке в ближнем бою', cost: {oz: 5} }] },
-    { name: 'Кунари', passiveBonuses: ['Штраф к заклинаниям опустошения резерва (20 ОМ)'], activeAbilities: [{ name: 'Зов леса', description: '+10 ОЗ всей группе', cost: {om: 30} }] },
+    { name: 'Кордеи', passiveBonuses: ['+10 ОЗ в лесной местности', '+50 ОЗ (раз за бой)'], activeAbilities: [{ name: 'Пылающая кровь', description: '-10 ОЗ врагу при атаке в ближнем бою', cost: {oz: 5} }] },
+    { name: 'Кунари', passiveBonuses: ['Штраф к заклинаниям опустошения резерва (20 ОМ)', 'Начальный штраф к ОД (-5)'], activeAbilities: [{ name: 'Зов леса', description: '+10 ОЗ всей группе', cost: {om: 30} }] },
     { name: 'Ларимы', passiveBonuses: ['Поглощение входящего магического урона'], activeAbilities: [{ name: 'Укус', description: '-15 ОЗ, игнорирует щит', cost: {od: 20} }] },
     { name: 'Лартисты', passiveBonuses: ['+10 ОМ при удаче'], activeAbilities: [{ name: 'Мир красок', description: 'вводит врага в иллюзию (-действие)', cost: {om: 30} }] },
     { name: 'Лепреконы', passiveBonuses: ['+10 ОЗ/ход'], activeAbilities: [{ name: 'Клеверная искра', description: '+15 ОЗ и +10 ОМ (1 раз в бой)', cost: {om: 10} }] },
@@ -207,7 +207,7 @@ export const RULES = {
   DOT_EFFECTS: ['Отравление', 'Горение', 'Ожог', 'Отравление (3)', 'Отравление (2)', 'Отравление (1)'],
   DOT_DAMAGE: 8,
 
-  PASSIVE_OM_REGEN: 25,
+  PASSIVE_OM_REGEN: 15,
   OD_REGEN_ON_REST: 50,
   
   BASE_SHIELD_VALUE: 25, // For one medium ritual
@@ -225,5 +225,7 @@ export const RULES = {
 
   DODGE_VS_STRONG_SPELL_DMG_REDUCTION: 20,
 };
+
+    
 
     
