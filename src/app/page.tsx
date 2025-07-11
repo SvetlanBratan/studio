@@ -112,7 +112,6 @@ export default function Home() {
         let activePlayer = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player1 } : { ...prevDuel.player2 };
         let opponent = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player2 } : { ...prevDuel.player1 };
         
-        // Before doing anything else, opponent loses their "dodging" status from previous turn
         if (opponent.isDodging) {
              turnLog.push(`${opponent.name} больше не находится в состоянии уворота.`);
              opponent.isDodging = false;
@@ -120,7 +119,6 @@ export default function Home() {
 
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield };
         
-        // Filter out expired penalties and check for turn-skipping effects
         let turnSkipped = false;
         const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен'];
         let petrificationCount = 0;
@@ -129,7 +127,7 @@ export default function Home() {
             const match = p.match(/(.+) \((\d+)\)$/);
             if (match) {
                 const name = match[1].trim();
-                const duration = parseInt(match[2], 10) - 1;
+                let duration = parseInt(match[2], 10) - 1;
 
                 if (simpleTurnSkipEffects.includes(name)) {
                     turnSkipped = true;
@@ -138,12 +136,17 @@ export default function Home() {
                 if (name === 'Окаменение') {
                     petrificationCount++;
                 }
+                
+                if (name === 'Ослепление') {
+                    actions = []; // remove all actions
+                    turnLog.push(`${activePlayer.name} ослеплен и не может совершать действия в этом ходу!`);
+                }
 
                 if (duration > 0) {
                     return `${name} (${duration})`;
                 }
                 turnLog.push(`Эффект "${name}" закончился для ${activePlayer.name}.`);
-                return ''; // Mark for removal
+                return '';
             }
             return p;
         }).filter(p => p !== '');
@@ -152,11 +155,10 @@ export default function Home() {
             turnSkipped = true;
             turnLog.push(`${activePlayer.name} полностью окаменел и пропускает ход!`);
         } else if (petrificationCount === 1 && actions.length > 0) {
-            const lostAction = actions.pop(); // Remove one action
+            const lostAction = actions.pop();
             turnLog.push(`${activePlayer.name} частично окаменел и теряет одно действие: "${getActionLabel(lostAction!.type, lostAction!.payload)}".`);
         }
         
-        // 1. Cooldowns tick down
         for (const key in activePlayer.cooldowns) {
             const typedKey = key as keyof typeof activePlayer.cooldowns;
             if (activePlayer.cooldowns[typedKey] > 0) {
@@ -164,7 +166,6 @@ export default function Home() {
             }
         }
         
-        // 2. Apply penalties (like poison/burn)
         activePlayer.penalties.forEach(p => {
             if (RULES.DOT_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')))) {
                 let damage = RULES.DOT_DAMAGE;
@@ -182,7 +183,6 @@ export default function Home() {
         });
 
         if (turnSkipped) {
-            // DoT effects are already applied above, so just log and switch turn
             const newTurn: Turn = {
                 turnNumber: prevDuel.currentTurn,
                 playerId: activePlayer.id,
@@ -211,10 +211,18 @@ export default function Home() {
             };
         }
 
-        // 3. Execute actions
         actions.forEach(action => {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
             
+            const getOdCostPenalty = (player: CharacterStats): number => {
+                for (const wound of RULES.WOUND_PENALTIES) {
+                    if (player.oz < wound.threshold) {
+                        return wound.penalty;
+                    }
+                }
+                return 0;
+            };
+
             const calculateDamage = (spellType: 'household' | 'small' | 'medium' | 'strong'): number => {
                 let damage = RULES.RITUAL_DAMAGE[activePlayer.reserve]?.[spellType] ?? 0;
                 
@@ -233,7 +241,6 @@ export default function Home() {
                     turnLog.push(`Пассивная способность (Орк): "Расовая ярость" увеличивает урон на 10.`);
                 }
                 
-                // Elemental interactions
                 const attackerElements = activePlayer.elementalKnowledge;
                 const defenderElements = opponent.elementalKnowledge;
 
@@ -262,14 +269,14 @@ export default function Home() {
                     const restoredOm = Math.round(amount);
                     target.om = Math.min(target.maxOm, target.om + restoredOm);
                     turnLog.push(`Пассивная способность (Ларимы): ${target.name} поглощает ${restoredOm} магического урона и восстанавливает ОМ.`);
-                    return; // No damage taken, OM restored instead
+                    return;
                 }
 
                 if (target.isDodging) {
                     const dodgeRoll = Math.floor(Math.random() * 10) + 1;
                     turnLog.push(`${target.name} пытается увернуться... Бросок: ${dodgeRoll}.`);
-                    if (dodgeRoll >= 6) { // Success on 6 or higher
-                        finalDamage *= 0.5; // 50% damage reduction
+                    if (dodgeRoll >= 6) { 
+                        finalDamage *= 0.5; 
                         turnLog.push(`Уворот успешен! ${target.name} получает на 50% меньше урона.`);
                     } else {
                         turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
@@ -299,6 +306,7 @@ export default function Home() {
             };
             
             let damageDealt = 0;
+            const odPenalty = getOdCostPenalty(activePlayer);
 
             switch(action.type) {
                 case 'strong_spell':
@@ -328,26 +336,32 @@ export default function Home() {
                     turnLog.push(`${activePlayer.name} создает щит прочностью ${RULES.BASE_SHIELD_VALUE}.`);
                     break;
                 case 'dodge':
-                    activePlayer.od -= RULES.NON_MAGIC_COSTS.dodge;
-                    activePlayer.isDodging = true;
-                    turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки.`);
+                    {
+                        const cost = RULES.NON_MAGIC_COSTS.dodge + odPenalty;
+                        activePlayer.od -= cost;
+                        activePlayer.isDodging = true;
+                        turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки. Затраты ОД: ${cost}${odPenalty > 0 ? ` (включая штраф ${odPenalty})` : ''}.`);
+                    }
                     break;
                 case 'use_item':
-                    activePlayer.od -= RULES.NON_MAGIC_COSTS.use_item;
-                    activePlayer.cooldowns.item = RULES.COOLDOWNS.item;
-                    turnLog.push(`${activePlayer.name} использует предмет.`);
-                    // Логика предмета будет добавлена позже
+                     {
+                        const cost = RULES.NON_MAGIC_COSTS.use_item + odPenalty;
+                        activePlayer.od -= cost;
+                        activePlayer.cooldowns.item = RULES.COOLDOWNS.item;
+                        turnLog.push(`${activePlayer.name} использует предмет. Затраты ОД: ${cost}${odPenalty > 0 ? ` (включая штраф ${odPenalty})` : ''}.`);
+                     }
                     break;
                 case 'prayer':
                     {
-                        activePlayer.od -= RULES.NON_MAGIC_COSTS.prayer;
+                        const cost = RULES.NON_MAGIC_COSTS.prayer + odPenalty;
+                        activePlayer.od -= cost;
                         activePlayer.cooldowns.prayer = RULES.COOLDOWNS.prayer;
                         
                         const roll = Math.floor(Math.random() * 10) + 1;
                         const requiredRoll = RULES.PRAYER_CHANCE[String(activePlayer.faithLevel)] || 0;
                         const isSuccess = activePlayer.faithLevel === 10 || (activePlayer.faithLevel > -1 && roll <= requiredRoll);
 
-                        turnLog.push(`${activePlayer.name} молится о "${getActionLabel(action.type, action.payload)}". Бросок: ${roll}, нужно <= ${requiredRoll}.`);
+                        turnLog.push(`${activePlayer.name} молится о "${getActionLabel(action.type, action.payload)}". Бросок: ${roll}, нужно <= ${requiredRoll}. Затраты ОД: ${cost}${odPenalty > 0 ? ` (включая штраф ${odPenalty})` : ''}.`);
 
                         if (isSuccess) {
                             turnLog.push(`Молитва услышана!`);
@@ -371,7 +385,6 @@ export default function Home() {
                     }
                     break;
                 case 'rest':
-                     // Отдых обрабатывается ниже
                     break;
                 case 'remove_effect':
                     if (activePlayer.penalties.length > 0) {
@@ -390,21 +403,20 @@ export default function Home() {
                              activePlayer.cooldowns[abilityName] = ability.cooldown;
                          }
 
-                         // Apply costs
                          if(ability.cost?.om) {
                             activePlayer.om -= ability.cost.om;
                             turnLog.push(`Затраты ОМ: ${ability.cost.om}.`);
                          }
                          if(ability.cost?.od) {
-                            activePlayer.od -= ability.cost.od;
-                            turnLog.push(`Затраты ОД: ${ability.cost.od}.`);
+                            const cost = ability.cost.od + odPenalty;
+                            activePlayer.od -= cost;
+                            turnLog.push(`Затраты ОД: ${cost}${odPenalty > 0 ? ` (включая штраф ${odPenalty})` : ''}.`);
                          }
                          if(ability.cost?.oz) {
                             activePlayer.oz -= ability.cost.oz;
                             turnLog.push(`Затраты ОЗ: ${ability.cost.oz}.`);
                          }
 
-                         // Hardcoded effects for now
                          switch(abilityName) {
                             case 'Кислотное распыление':
                                  applyDamage(opponent, 10, false);
@@ -447,6 +459,8 @@ export default function Home() {
                                 break;
                              case 'Драконий выдох':
                                  applyDamage(opponent, 20, true);
+                                 opponent.penalties.push('Горение (2)');
+                                 turnLog.push(`${opponent.name} загорелся на 2 хода.`);
                                  break;
                              case 'Корнеплетение':
                                  opponent.penalties.push('Обездвижен (1)');
@@ -469,14 +483,12 @@ export default function Home() {
                                 opponent.penalties.push('Под гипнозом (1)');
                                 turnLog.push(`${opponent.name} под гипнозом и пропустит следующий ход.`);
                                 break;
-                            // Add more abilities here in the future
                          }
                     }
                     break;
             }
         });
 
-        // 4. Passive regen & Rest
         activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.PASSIVE_OM_REGEN);
         turnLog.push(`${activePlayer.name} восстанавливает ${RULES.PASSIVE_OM_REGEN} ОМ пассивно.`);
 
@@ -486,17 +498,14 @@ export default function Home() {
             turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OD_REGEN_ON_REST} ОД.`);
         }
 
-        // Clamp values to not be negative
         activePlayer.oz = Math.max(0, activePlayer.oz);
         opponent.oz = Math.max(0, opponent.oz);
         activePlayer.om = Math.max(0, activePlayer.om);
         activePlayer.od = Math.max(0, activePlayer.od);
         
-        // Update physical conditions
         activePlayer.physicalCondition = getPhysicalCondition(activePlayer.oz, activePlayer.maxOz);
         opponent.physicalCondition = getPhysicalCondition(opponent.oz, opponent.maxOz);
 
-        // Check for winner
         let winner;
         if (activePlayer.oz <= 0) winner = opponent.name;
         if (opponent.oz <= 0) winner = activePlayer.name;
@@ -639,5 +648,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

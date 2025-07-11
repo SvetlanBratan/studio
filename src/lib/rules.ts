@@ -79,6 +79,7 @@ export const RACES: Race[] = [
     { name: 'Оборотни', passiveBonuses: ['Иммунитет к иллюзиям', 'Скидка на ОД (5)'], activeAbilities: [{ name: 'Смена формы', description: 'звериный облик, бонусы к урону', cost: {om: 90} }] },
     { name: 'Огненные крыланы', passiveBonuses: ['-5 ОД у врага рядом'], activeAbilities: [{ name: 'Крылья Пламени', description: 'атака по всем врагам в зоне', cost: {om: 30} }] },
     { name: 'Оприты', passiveBonuses: ['-8 ОЗ/ход врагу и себе'], activeAbilities: [{ name: 'Разряд', description: '-10 ОЗ и -5 ОМ врагу', cost: {om: 10} }] },
+    { name: 'Орк', passiveBonuses: ['Расовая ярость (+10 к урону)'], activeAbilities: [] },
     { name: 'Пересмешники', passiveBonuses: ['-5 ОД у врага'], activeAbilities: [{ name: 'Имитация', description: 'доступны все бонусные действия других рас', cost: {om: 90} }] },
     { name: 'Полукоты', passiveBonuses: ['Окаменяющий взгляд при атаке', 'Скидка на ОД (5)'], activeAbilities: [{ name: 'Мурлыканье', description: 'усыпляет врага на 1 ход', cost: {om: 30} }] },
     { name: 'Полузаи', passiveBonuses: ['+5 урона огнём, иммунитет к огню'], activeAbilities: [{ name: 'Прыжок Зайца', description: 'уворот + перемещение', cost: {od: 15} }] },
@@ -95,6 +96,7 @@ export const RACES: Race[] = [
     { name: 'Тальены', passiveBonuses: ['+10 ОМ, -5 ОЗ/ход'], activeAbilities: [{ name: 'Психостенка', description: 'отражение дебаффов', cost: {om: 30} }] },
     { name: 'Тени', passiveBonuses: ['-5 ОД у врагов рядом'], activeAbilities: [{ name: 'Теневой шаг', description: 'перемещение без траты ОД', cost: {om: 10} }] },
     { name: 'Тритоны', passiveBonuses: ['-8 ОЗ при укусе'], activeAbilities: [{ name: 'Призыв боли', description: 'враг теряет 10 ОЗ/ход 3 хода', cost: {om: 30} }] },
+    { name: 'Человек', passiveBonuses: ['Иммунитет к контролю'], activeAbilities: [] },
     { name: 'Хамелеоны', passiveBonuses: ['Иммунитет к боли и страху'], activeAbilities: [{ name: 'Маскировка', description: '+50% уворота на 1 ход', cost: {om: 30} }] },
     { name: 'Химеры', passiveBonuses: ['Игнорируют физ. урон'], activeAbilities: [{ name: 'Мутация', description: 'временно копирует черты другой расы', cost: {om: 90} }] },
     { name: 'Цынаре', passiveBonuses: ['Сопротивление к колющему и режущему'], activeAbilities: [{ name: 'Гипноз', description: 'враг теряет ход', cost: {om: 90} }] },
@@ -183,7 +185,7 @@ export const RULES = {
   },
 
   COOLDOWNS: {
-    strongSpell: 2, // 1 turn of use, 1 turn of cd -> use on turn 1, available on turn 3
+    strongSpell: 2,
     item: 3,
     prayer: 4,
   },
@@ -204,13 +206,13 @@ export const RULES = {
     battle_magic: { household: 1, small: 5, medium: 10, strong: 15 },
   } as Record<'vulnerability' | 'battle_magic', Record<RitualType, number>>,
 
-  DOT_EFFECTS: ['Отравление', 'Горение', 'Ожог', 'Отравление (3)', 'Отравление (2)', 'Отравление (1)'],
+  DOT_EFFECTS: ['Отравление', 'Горение', 'Ожог', 'Отравление (3)', 'Отравление (2)', 'Отравление (1)', 'Горение (2)', 'Горение (1)'],
   DOT_DAMAGE: 8,
 
   PASSIVE_OM_REGEN: 15,
   OD_REGEN_ON_REST: 50,
   
-  BASE_SHIELD_VALUE: 25, // For one medium ritual
+  BASE_SHIELD_VALUE: 25,
   
   WOUND_PENALTIES: [
       { threshold: 150, penalty: 3 },
@@ -225,7 +227,3 @@ export const RULES = {
 
   DODGE_VS_STRONG_SPELL_DMG_REDUCTION: 20,
 };
-
-    
-
-    

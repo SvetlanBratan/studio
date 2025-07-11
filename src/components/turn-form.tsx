@@ -27,7 +27,7 @@ interface TurnFormProps {
 export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) {
   const [actions, setActions] = useState<Action[]>([]);
   const [isPrayerDialogOpen, setIsPrayerDialogOpen] = useState(false);
-  const [selectValue, setSelectValue] = useState(''); // Added to control the Select component
+  const [selectValue, setSelectValue] = useState('');
   const playerRaceInfo = RACES.find(r => r.name === player.race);
 
   const addAction = (type: string, payload?: any) => {
@@ -39,7 +39,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     }
 
     if (type.startsWith('racial_')) {
-      const abilityName = type.substring(7); // remove "racial_"
+      const abilityName = type.substring(7);
       const ability = playerRaceInfo?.activeAbilities.find(a => a.name === abilityName);
       if (ability) {
         setActions([...actions, { type: 'racial_ability', payload: { name: ability.name, description: ability.description } }]);
@@ -47,7 +47,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     } else {
       setActions([...actions, { type: type as ActionType, payload }]);
     }
-    setSelectValue(''); // Reset select after adding action
+    setSelectValue('');
   };
 
   const handlePrayerSelect = (effect: PrayerEffectType) => {
@@ -55,6 +55,7 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
       setActions([...actions, { type: 'prayer', payload: { effect } }]);
     }
     setIsPrayerDialogOpen(false);
+    setSelectValue('');
   };
 
   const removeAction = (index: number) => {
@@ -65,6 +66,17 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     onSubmit(actions);
     setActions([]);
   };
+  
+  const getOdCostPenalty = (player: CharacterStats): number => {
+    for (const wound of RULES.WOUND_PENALTIES) {
+        if (player.oz < wound.threshold) {
+            return wound.penalty;
+        }
+    }
+    return 0;
+  };
+
+  const odPenalty = getOdCostPenalty(player);
 
   const hasPrayerAction = actions.some(a => a.type === 'prayer');
   const hasAddedAction = (actionType: ActionType) => actions.some(a => a.type === actionType);
@@ -75,18 +87,21 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     { value: 'small_spell', label: 'Малый ритуал', disabled: player.om < RULES.RITUAL_COSTS.small },
     { value: 'household_spell', label: 'Бытовое заклинание', disabled: player.om < RULES.RITUAL_COSTS.household },
     { value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: player.om < RULES.RITUAL_COSTS.medium || hasAddedAction('shield') },
-    { value: 'dodge', label: 'Уворот', disabled: player.od < RULES.NON_MAGIC_COSTS.dodge || hasAddedAction('dodge') },
-    { value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < RULES.NON_MAGIC_COSTS.use_item || player.inventory.length === 0 || hasAddedAction('use_item') },
-    { value: 'prayer', label: 'Молитва', disabled: player.cooldowns.prayer > 0 || player.od < RULES.NON_MAGIC_COSTS.prayer || hasPrayerAction },
+    { value: 'dodge', label: `Уворот (${RULES.NON_MAGIC_COSTS.dodge + odPenalty} ОД)`, disabled: player.od < RULES.NON_MAGIC_COSTS.dodge + odPenalty || hasAddedAction('dodge') },
+    { value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < RULES.NON_MAGIC_COSTS.use_item + odPenalty || player.inventory.length === 0 || hasAddedAction('use_item') },
+    { value: 'prayer', label: 'Молитва', disabled: player.cooldowns.prayer > 0 || player.od < RULES.NON_MAGIC_COSTS.prayer + odPenalty || hasPrayerAction },
     { value: 'remove_effect', label: 'Снять с себя эффект', disabled: player.penalties.length === 0 || hasAddedAction('remove_effect')},
     { value: 'rest', label: 'Отдых', disabled: hasAddedAction('rest') },
   ];
 
-  const racialAbilities = playerRaceInfo?.activeAbilities.map(ability => ({
-    value: `racial_${ability.name}`,
-    label: `${ability.name}`,
-    disabled: player.cooldowns[ability.name] > 0 || (ability.cost?.om ?? 0) > player.om || (ability.cost?.od ?? 0) > player.od || actions.some(a => a.type === 'racial_ability' && a.payload.name === ability.name),
-  })) || [];
+  const racialAbilities = playerRaceInfo?.activeAbilities.map(ability => {
+    const odCost = (ability.cost?.od ?? 0) + odPenalty;
+    return {
+      value: `racial_${ability.name}`,
+      label: `${ability.name}`,
+      disabled: player.cooldowns[ability.name] > 0 || (ability.cost?.om ?? 0) > player.om || odCost > player.od || actions.some(a => a.type === 'racial_ability' && a.payload.name === ability.name),
+    }
+  }) || [];
 
   return (
     <>
