@@ -6,7 +6,6 @@ import type { DuelState, Turn, Action, CharacterStats, ReserveLevel, FaithLevel 
 import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import DuelLog from '@/components/duel-log';
-import DiceRoller from '@/components/dice-roller';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Swords, Gamepad2, ShieldAlert, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -561,10 +560,6 @@ export default function Home() {
                     </AlertDescription>
                 </Alert>
               )}
-
-              <div className="grid grid-cols-1 gap-8">
-                <DiceRoller />
-              </div>
 
               <DuelLog turns={duel.turnHistory} player1Name={duel.player1.name} player2Name={duel.player2.name} />
             </div>
