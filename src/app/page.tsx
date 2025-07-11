@@ -156,7 +156,9 @@ export default function Home() {
             turnLog.push(`${activePlayer.name} полностью окаменел и пропускает ход!`);
         } else if (petrificationCount === 1 && actions.length > 0) {
             const lostAction = actions.pop();
-            turnLog.push(`${activePlayer.name} частично окаменел и теряет одно действие: "${getActionLabel(lostAction!.type, lostAction!.payload)}".`);
+            if(lostAction) {
+              turnLog.push(`${activePlayer.name} частично окаменел и теряет одно действие: "${getActionLabel(lostAction.type, lostAction.payload)}".`);
+            }
         }
         
         for (const key in activePlayer.cooldowns) {
@@ -305,6 +307,12 @@ export default function Home() {
                 }
             };
             
+            const applyEffect = (target: CharacterStats, effect: string) => {
+                if (!target.penalties.includes(effect)) {
+                    target.penalties.push(effect);
+                }
+            };
+
             let damageDealt = 0;
             const odPenalty = getOdCostPenalty(activePlayer);
 
@@ -426,11 +434,11 @@ export default function Home() {
                                  turnLog.push(`${activePlayer.name} восстанавливает 15 ОЗ.`);
                                  break;
                             case 'Брызг из жабр':
-                                opponent.penalties.push('Ослепление (1)');
+                                applyEffect(opponent, 'Ослепление (1)');
                                 turnLog.push(`${opponent.name} ослеплен на 1 ход.`);
                                 break;
                             case 'Ядовитый дым':
-                                opponent.penalties.push('Отравление (3)');
+                                applyEffect(opponent, 'Отравление (3)');
                                 turnLog.push(`${opponent.name} отравлен на 3 хода.`);
                                 break;
                             case 'Призыв звезды':
@@ -450,20 +458,20 @@ export default function Home() {
                                 if (activePlayer.bonuses.includes('+3 к восстановлению ОМ при укусе')) {
                                     const omRestored = 3;
                                     activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omRestored);
-                                    turnLog.push(`Пассивный бонус (Вампир/Пересмешник): ${activePlayer.name} восстанавливает ${omRestored} ОМ от укуса.`);
+                                    turnLog.push(`Пассивный бонус (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omRestored} ОМ от укуса.`);
                                 }
                                 break;
                              case 'Окаменение взглядом':
-                                opponent.penalties.push('Окаменение (1)');
+                                applyEffect(opponent, 'Окаменение (1)');
                                 turnLog.push(`${opponent.name} частично окаменел и теряет одно действие в следующем ходу.`);
                                 break;
                              case 'Драконий выдох':
                                  applyDamage(opponent, 20, true);
-                                 opponent.penalties.push('Горение (2)');
+                                 applyEffect(opponent, 'Горение (2)');
                                  turnLog.push(`${opponent.name} загорелся на 2 хода.`);
                                  break;
                              case 'Корнеплетение':
-                                 opponent.penalties.push('Обездвижен (1)');
+                                 applyEffect(opponent, 'Обездвижен (1)');
                                  turnLog.push(`${opponent.name} обездвижен на 1 ход.`);
                                  break;
                              case 'Теневая стрела':
@@ -480,7 +488,7 @@ export default function Home() {
                                 turnLog.push(`${activePlayer.name} похищает ${stolenOm} ОМ у ${opponent.name}.`);
                                 break;
                             case 'Гипноз':
-                                opponent.penalties.push('Под гипнозом (1)');
+                                applyEffect(opponent, 'Под гипнозом (1)');
                                 turnLog.push(`${opponent.name} под гипнозом и пропустит следующий ход.`);
                                 break;
                          }
@@ -648,3 +656,4 @@ export default function Home() {
     </div>
   );
 }
+
