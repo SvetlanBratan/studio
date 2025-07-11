@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { CharacterStats } from '@/types/duel';
+import type { CharacterStats, ReserveLevel } from '@/types/duel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import StatBar from './stat-bar';
-import { Heart, Sparkles, Wind, Shield, User, BookOpen, Cross, Briefcase, Bot, Siren, Edit, Save, X } from 'lucide-react';
+import { Heart, Sparkles, Wind, Shield, User, BookOpen, Cross, Briefcase, Bot, Siren, Edit, Save, X, Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -13,6 +13,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { RULES } from '@/lib/rules';
 
 interface CharacterPanelProps {
   character: CharacterStats;
@@ -25,7 +27,6 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
   const [editableCharacter, setEditableCharacter] = useState<CharacterStats>(character);
 
   useEffect(() => {
-    // Reset local state if the external character data changes (e.g., on duel reset)
     setEditableCharacter(character);
   }, [character]);
 
@@ -37,6 +38,10 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
   const handleNumericInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditableCharacter(prev => ({ ...prev, [name]: Number(value) || 0 }));
+  };
+
+  const handleSelectChange = (field: keyof CharacterStats, value: string) => {
+    setEditableCharacter(prev => ({...prev, [field]: value}));
   };
 
   const handleArrayInputChange = (field: 'bonuses' | 'penalties' | 'inventory', value: string) => {
@@ -105,6 +110,19 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
      </div>
   );
 
+  const renderCooldown = (label: string, value: number) => {
+    if (value <= 0) return null;
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Badge variant="secondary" className="gap-1">
+                    <Timer className="w-3 h-3" /> {label}: {value}
+                </Badge>
+            </TooltipTrigger>
+            <TooltipContent><p>Осталось ходов перезарядки</p></TooltipContent>
+        </Tooltip>
+    )
+  }
 
   return (
     <TooltipProvider>
@@ -140,7 +158,12 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
           {isEditing ? (
              <div className="flex gap-2">
                <Input name="race" value={editableCharacter.race} onChange={handleInputChange} placeholder="Раса" />
-               <Input name="reserve" value={editableCharacter.reserve} onChange={handleInputChange} placeholder="Резерв" />
+               <Select value={editableCharacter.reserve} onValueChange={(v) => handleSelectChange('reserve', v)}>
+                 <SelectTrigger><SelectValue placeholder="Резерв" /></SelectTrigger>
+                 <SelectContent>
+                   {Object.keys(RULES.OM_RESERVE).map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                 </SelectContent>
+               </Select>
              </div>
           ) : (
              <CardDescription>{character.race} / {character.reserve}</CardDescription>
@@ -195,6 +218,16 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
               </div>
           ) : (
             <>
+              <div>
+                <h4 className="font-semibold mb-2 text-sm">Перезарядки:</h4>
+                <div className="flex flex-wrap gap-1">
+                    {renderCooldown('Сил. ритуал', character.cooldowns.strongSpell)}
+                    {renderCooldown('Предмет', character.cooldowns.item)}
+                    {renderCooldown('Молитва', character.cooldowns.prayer)}
+                    {character.cooldowns.strongSpell <=0 && character.cooldowns.item <=0 && character.cooldowns.prayer <=0 && <span className="text-xs text-muted-foreground">Нет</span>}
+                </div>
+              </div>
+
               <div>
                 <h4 className="font-semibold mb-2 text-sm">Бонусы:</h4>
                 <div className="flex flex-wrap gap-1">

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Wand2, Loader2, Sparkles } from 'lucide-react';
 import { suggestNextAction, SuggestNextActionOutput } from '@/ai/flows/suggest-next-action';
 import type { CharacterStats } from '@/types/duel';
-import { duelRules } from '@/lib/rules';
+import { RULES } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface ActionSuggestionProps {
@@ -50,7 +50,7 @@ export default function ActionSuggestion({ player, opponent }: ActionSuggestionP
       const result = await suggestNextAction({
         playerStats: playerStatsString,
         opponentStats: opponentStatsString,
-        duelRules,
+        duelRules: JSON.stringify(RULES),
       });
       setSuggestion(result);
     } catch (e) {

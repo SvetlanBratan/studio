@@ -35,18 +35,14 @@ export default function DuelLog({ turns, player1Name, player2Name }: DuelLogProp
                   Ход {turn.turnNumber}: {turn.playerName}
                 </AccordionTrigger>
                 <AccordionContent className="space-y-2 text-sm">
-                  <p><strong>Бонусы:</strong> {turn.bonuses || 'Нет'}</p>
-                  <p><strong>Штрафы:</strong> {turn.penalties || 'Нет'}</p>
-                  <p><strong>Пассивные эффекты:</strong> {turn.passiveEffects || 'Нет'}</p>
                   <ul className="list-disc pl-5 space-y-1">
-                    {turn.actions.map((action, index) => (
+                    {turn.log.map((logEntry, index) => (
                       <li key={index}>
-                        {action.description} 
-                        {action.cost > 0 && ` (-${action.cost} ${action.costType.toUpperCase()})`}
+                        {logEntry}
                       </li>
                     ))}
                   </ul>
-                  <p className="font-semibold pt-2">Итог: {turn.endStats.oz} ОЗ, {turn.endStats.om} ОМ, {turn.endStats.od} ОД</p>
+                  <p className="font-semibold pt-2">Итог хода: {turn.endStats.oz} ОЗ, {turn.endStats.om} ОМ, {turn.endStats.od} ОД, {turn.endStats.shield} Щит</p>
                 </AccordionContent>
               </AccordionItem>
             ))}

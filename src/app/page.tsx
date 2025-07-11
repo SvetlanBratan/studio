@@ -1,22 +1,26 @@
 'use client';
 
-import { useState } from 'react';
-import type { DuelState, Turn, Action, CharacterStats } from '@/types/duel';
+import { useState, useEffect } from 'react';
+import type { DuelState, Turn, Action, CharacterStats, ReserveLevel, ActionType } from '@/types/duel';
 import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import DuelLog from '@/components/duel-log';
 import ActionSuggestion from '@/components/action-suggestion';
 import DiceRoller from '@/components/dice-roller';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Swords, Gamepad2 } from 'lucide-react';
+import { Swords, Gamepad2, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { RULES } from '@/lib/rules';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+const getOmFromReserve = (reserve: ReserveLevel): number => RULES.OM_RESERVE[reserve] || 0;
 
 const initialPlayer1: CharacterStats = {
   id: 'player1',
   name: 'Элара, Чародейка Времени',
   race: 'Тальен',
   reserve: 'Мастер',
-  elementalKnowledge: 'Магия времени (Мастер), Магия света (Адепт)',
+  elementalKnowledge: 'Магия времени (Мастер)',
   faithLevel: 2,
   physicalCondition: 'В полном здравии',
   bonuses: ['Иммунитет к контролю'],
@@ -29,6 +33,7 @@ const initialPlayer1: CharacterStats = {
   od: 100,
   maxOd: 100,
   shield: 0,
+  cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
 };
 
 const initialPlayer2: CharacterStats = {
@@ -39,7 +44,7 @@ const initialPlayer2: CharacterStats = {
   elementalKnowledge: 'Магия хаоса (Специалист), Магия огня (Специалист)',
   faithLevel: -1,
   physicalCondition: 'В полном здравии',
-  bonuses: ['Расовая ярость (+10 к урону)'],
+  bonuses: ['Расовая ярость (+10 к урону)', 'Боевая магия'],
   penalties: [],
   inventory: ['Зелье силы x1'],
   oz: 200,
@@ -49,6 +54,7 @@ const initialPlayer2: CharacterStats = {
   od: 100,
   maxOd: 100,
   shield: 0,
+  cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
 };
 
 const initialDuelState: DuelState = {
@@ -58,65 +64,111 @@ const initialDuelState: DuelState = {
   currentTurn: 1,
   activePlayerId: 'player1',
   winner: undefined,
+  log: [],
 };
+
 
 export default function Home() {
   const [duel, setDuel] = useState<DuelState>(initialDuelState);
 
+  // Choose first player randomly
+  useEffect(() => {
+    setDuel(prev => ({
+      ...prev,
+      activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
+    }))
+  }, [])
+
   const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
+    const newMaxOm = getOmFromReserve(updatedCharacter.reserve);
+    const charData = { ...updatedCharacter, maxOm: newMaxOm };
+    
     setDuel(prevDuel => ({
       ...prevDuel,
-      player1: prevDuel.player1.id === updatedCharacter.id ? updatedCharacter : prevDuel.player1,
-      player2: prevDuel.player2.id === updatedCharacter.id ? updatedCharacter : prevDuel.player2,
+      player1: prevDuel.player1.id === charData.id ? charData : prevDuel.player1,
+      player2: prevDuel.player2.id === charData.id ? charData : prevDuel.player2,
     }));
   };
 
-  const handleTurnSubmit = (turnData: Omit<Turn, 'turnNumber' | 'startStats' | 'endStats'>) => {
+  const executeTurn = (actions: Action[]) => {
     setDuel(prevDuel => {
-      const activePlayer = prevDuel.activePlayerId === 'player1' ? prevDuel.player1 : prevDuel.player2;
-      const opponent = prevDuel.activePlayerId === 'player1' ? prevDuel.player2 : prevDuel.player1;
+        const turnLog: string[] = [];
+        let activePlayer = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player1 } : { ...prevDuel.player2 };
+        let opponent = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player2 } : { ...prevDuel.player1 };
+        
+        const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield };
 
-      const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od };
-      
-      let newOz = activePlayer.oz;
-      let newOm = activePlayer.om;
-      let newOd = activePlayer.od;
-      
-      // Basic cost calculation
-      turnData.actions.forEach(action => {
-        if(action.costType === 'om') newOm -= action.cost;
-        if(action.costType === 'od') newOd -= action.cost;
-      });
+        // 1. Cooldowns tick down
+        for (const key in activePlayer.cooldowns) {
+            const typedKey = key as keyof typeof activePlayer.cooldowns;
+            if (activePlayer.cooldowns[typedKey] > 0) {
+                activePlayer.cooldowns[typedKey]--;
+            }
+        }
+        
+        // 2. Apply penalties (like poison/burn)
+        activePlayer.penalties.forEach(p => {
+            if (RULES.DOT_EFFECTS.includes(p)) {
+                const damage = RULES.DOT_DAMAGE;
+                activePlayer.oz -= damage;
+                turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
+            }
+        });
 
-      // Passive mana regen
-      newOm += 25;
-      if (newOm > activePlayer.maxOm) newOm = activePlayer.maxOm;
+        // 3. Execute actions
+        actions.forEach(action => {
+            // ... action logic will be implemented here in next steps
+            turnLog.push(`${activePlayer.name} использует действие: ${action.type}`);
+        });
 
-      const updatedActivePlayer = { ...activePlayer, oz: newOz, om: newOm, od: newOd };
+        // 4. Passive regen
+        activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.PASSIVE_OM_REGEN);
 
-      const newTurn: Turn = {
-        ...turnData,
-        turnNumber: prevDuel.currentTurn,
-        startStats,
-        endStats: { oz: newOz, om: newOm, od: newOd },
-      };
+        // A resting turn regenerates OD
+        const isResting = !actions.some(a => ['dodge', 'use_item', 'prayer'].includes(a.type));
+        if (isResting) {
+            activePlayer.od = Math.min(activePlayer.maxOd, activePlayer.od + RULES.OD_REGEN_ON_REST);
+        }
 
-      // Naive implementation - assumes actions don't affect opponent for now
-      // A full implementation would parse action descriptions to calculate damage etc.
-      
-      return {
-        ...prevDuel,
-        player1: prevDuel.activePlayerId === 'player1' ? updatedActivePlayer : prevDuel.player1,
-        player2: prevDuel.activePlayerId === 'player2' ? updatedActivePlayer : prevDuel.player2,
-        turnHistory: [...prevDuel.turnHistory, newTurn],
-        currentTurn: prevDuel.currentTurn + 1,
-        activePlayerId: prevDuel.activePlayerId === 'player1' ? 'player2' : 'player1',
-      };
+        // Check for winner
+        let winner;
+        if (player1.oz <= 0) winner = player2.name;
+        if (player2.oz <= 0) winner = player1.name;
+
+        const newTurn: Turn = {
+            turnNumber: prevDuel.currentTurn,
+            playerId: activePlayer.id,
+            playerName: activePlayer.name,
+            actions: actions,
+            log: turnLog,
+            startStats: startStats,
+            endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield },
+        };
+        
+        return {
+            ...prevDuel,
+            player1: prevDuel.activePlayerId === 'player1' ? activePlayer : opponent,
+            player2: prevDuel.activePlayerId === 'player2' ? activePlayer : opponent,
+            turnHistory: [...prevDuel.turnHistory, newTurn],
+            currentTurn: prevDuel.currentTurn + 1,
+            activePlayerId: prevDuel.activePlayerId === 'player1' ? 'player2' : 'player1',
+            winner: winner,
+            log: [], // Clear log for next turn
+        };
     });
   };
   
   const resetDuel = () => {
-    setDuel(initialDuelState);
+    // Reset players to initial state but keep their potentially edited names etc.
+    const p1Reset = { ...duel.player1, ...initialPlayer1, name: duel.player1.name, race: duel.player1.race };
+    const p2Reset = { ...duel.player2, ...initialPlayer2, name: duel.player2.name, race: duel.player2.race };
+    
+    setDuel({
+        ...initialDuelState,
+        player1: { ...p1Reset, maxOm: getOmFromReserve(p1Reset.reserve) },
+        player2: { ...p2Reset, maxOm: getOmFromReserve(p2Reset.reserve) },
+        activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
+    });
   };
 
   const activePlayer = duel.activePlayerId === 'player1' ? duel.player1 : duel.player2;
@@ -164,10 +216,22 @@ export default function Home() {
                 <CardContent>
                   <TurnForm
                     player={activePlayer}
-                    onSubmit={handleTurnSubmit}
+                    onSubmit={executeTurn}
                   />
                 </CardContent>
               </Card>
+
+              {duel.log.length > 0 && (
+                <Alert variant="default" className="border-primary">
+                    <ShieldAlert className="h-4 w-4 text-primary" />
+                    <AlertTitle>События Хода</AlertTitle>
+                    <AlertDescription>
+                        <ul className="list-disc pl-5">
+                            {duel.log.map((entry, i) => <li key={i}>{entry}</li>)}
+                        </ul>
+                    </AlertDescription>
+                </Alert>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <ActionSuggestion player={activePlayer} opponent={opponent} />

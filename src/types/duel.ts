@@ -1,13 +1,23 @@
+export type ReserveLevel =
+  | 'Неофит'
+  | 'Адепт'
+  | 'Специалист'
+  | 'Мастер'
+  | 'Магистр'
+  | 'Архимаг'
+  | 'Архимагистр'
+  | 'Божественный сын';
+
 export interface CharacterStats {
   id: string;
   name: string;
   race: string;
-  reserve: string;
-  elementalKnowledge: string;
+  reserve: ReserveLevel;
+  elementalKnowledge: string; // e.g. "Магия времени (Мастер), Магия света (Адепт)"
   faithLevel: number;
   physicalCondition: string;
-  bonuses: string[];
-  penalties: string[];
+  bonuses: string[]; // e.g. "Иммунитет к контролю", "Боевая магия", "Уязвимость к огню"
+  penalties: string[]; // e.g. "Отравление", "Горение"
   inventory: string[];
   oz: number; // Health
   maxOz: number;
@@ -16,12 +26,19 @@ export interface CharacterStats {
   od: number; // Action Points
   maxOd: number;
   shield: number;
+  cooldowns: {
+    strongSpell: number; // turns remaining
+    item: number; // turns remaining
+    prayer: number; // turns remaining
+  };
 }
 
+export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'household_spell' | 'dodge' | 'use_item' | 'shield' | 'prayer' | 'remove_effect' | 'rest';
+
 export interface Action {
-  description: string;
-  costType: 'om' | 'od' | 'none';
-  cost: number;
+  type: ActionType;
+  // For spells, we might add target and effect details
+  payload?: any;
 }
 
 export interface Turn {
@@ -29,11 +46,9 @@ export interface Turn {
   playerId: string;
   playerName: string;
   actions: Action[];
-  passiveEffects: string;
-  bonuses: string;
-  penalties: string;
-  startStats: Pick<CharacterStats, 'oz' | 'om' | 'od'>;
-  endStats: Pick<CharacterStats, 'oz' | 'om' | 'od'>;
+  log: string[]; // Detailed log of what happened
+  startStats: Pick<CharacterStats, 'oz' | 'om' | 'od' | 'shield'>;
+  endStats: Pick<CharacterStats, 'oz' | 'om' | 'od' | 'shield'>;
 }
 
 export interface DuelState {
@@ -43,4 +58,5 @@ export interface DuelState {
   currentTurn: number;
   activePlayerId: string;
   winner?: string;
+  log: string[]; // Live duel log for the current turn
 }
