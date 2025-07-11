@@ -45,7 +45,7 @@ const initialPlayer2: CharacterStats = {
   faithLevel: 0,
   faithLevelName: 'Равнодушие',
   physicalCondition: 'В полном здравии',
-  bonuses: ['Расовая ярость (+10 к урону)', 'Боевая магия'],
+  bonuses: ['Расовая ярость (+10 к урону)'],
   penalties: [],
   inventory: [],
   oz: 250,
@@ -125,6 +125,12 @@ export default function Home() {
                 const healAmount = parseInt(healMatch[1], 10);
                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + healAmount);
                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${healAmount} ОЗ.`);
+            }
+             const ozMatch = bonus.match(/\+(\d+) ОЗ\/ход/);
+            if (ozMatch) {
+                const ozAmount = parseInt(ozMatch[1], 10);
+                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + ozAmount);
+                turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${ozAmount} ОЗ.`);
             }
             const omMatch = bonus.match(/\+(\d+) ОМ\/ход/);
             if (omMatch) {
@@ -256,7 +262,7 @@ export default function Home() {
                     damage += bonus;
                     turnLog.push(`Пассивный бонус "Боевая магия" увеличивает урон на ${bonus}.`);
                 }
-                 if (activePlayer.race === 'Орк' && activePlayer.bonuses.includes('Расовая ярость (+10 к урону)')) {
+                 if (activePlayer.bonuses.includes('Расовая ярость (+10 к урону)')) {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Орк): "Расовая ярость" увеличивает урон на 10.`);
                 }
@@ -285,7 +291,7 @@ export default function Home() {
             const applyDamage = (target: CharacterStats, amount: number, isSpell: boolean) => {
                 let finalDamage = amount;
 
-                if (target.race === 'Ларимы' && isSpell) {
+                if (target.bonuses.includes('Поглощение входящего магического урона') && isSpell) {
                     const restoredOm = Math.round(amount);
                     target.om = Math.min(target.maxOm, target.om + restoredOm);
                     turnLog.push(`Пассивная способность (Ларимы): ${target.name} поглощает ${restoredOm} магического урона и восстанавливает ОМ.`);
@@ -301,7 +307,7 @@ export default function Home() {
                     } else {
                         turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
                     }
-                    target.isDodging = false;
+                    target.isDodging = false; // Reset dodge state after one attack
                     turnLog.push(`${target.name} больше не находится в состоянии уворота.`);
                 }
 
