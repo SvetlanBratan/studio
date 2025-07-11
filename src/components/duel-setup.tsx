@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { getFaithLevelFromString, getOmFromReserve, RESERVE_LEVELS, FAITH_LEVELS, RULES, RACES } from '@/lib/rules';
-import { User, Dices, PlusCircle, Trash2 } from 'lucide-react';
-import { Textarea } from './ui/textarea';
+import { getFaithLevelFromString, getOmFromReserve, RESERVE_LEVELS, FAITH_LEVELS, RULES, RACES, ELEMENTS } from '@/lib/rules';
+import { User, Dices, PlusCircle, Trash2, XIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { Badge } from './ui/badge';
 
 interface DuelSetupProps {
   initialPlayer1: CharacterStats;
@@ -40,6 +42,13 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
     if (selectedRace) {
       onUpdate({ ...player, race: selectedRace.name, bonuses: [...selectedRace.passiveBonuses] });
     }
+  };
+
+  const handleElementsChange = (element: string) => {
+    const newElements = player.elementalKnowledge.includes(element)
+      ? player.elementalKnowledge.filter(e => e !== element)
+      : [...player.elementalKnowledge, element];
+    onUpdate({ ...player, elementalKnowledge: newElements });
   };
 
   const handleInventoryChange = (index: number, field: keyof InventoryItem, value: string | number) => {
@@ -89,13 +98,41 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
           </Select>
         </div>
         <div className="space-y-2">
-            <Label htmlFor={`elementalKnowledge-${player.id}`}>Знания стихий</Label>
-            <Textarea
-              id={`elementalKnowledge-${player.id}`}
-              value={player.elementalKnowledge}
-              onChange={(e) => handleInputChange('elementalKnowledge', e.target.value)}
-              placeholder="Пример: Магия огня (Мастер), Магия воды (Адепт)"
-            />
+            <Label>Знания стихий</Label>
+             <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start font-normal">
+                        <div className="flex gap-1 flex-wrap">
+                            {player.elementalKnowledge.length > 0 ? (
+                                player.elementalKnowledge.map(e => <Badge key={e}>{e}</Badge>)
+                            ) : (
+                                "Выберите стихии..."
+                            )}
+                        </div>
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                        <CommandInput placeholder="Поиск стихий..." />
+                        <CommandList>
+                            <CommandEmpty>Стихия не найдена.</CommandEmpty>
+                            <CommandGroup>
+                                {Object.values(ELEMENTS).map((element) => (
+                                <CommandItem
+                                    key={element.name}
+                                    onSelect={() => handleElementsChange(element.name)}
+                                >
+                                    {element.name}
+                                    <span className="ml-auto">
+                                        {player.elementalKnowledge.includes(element.name) && "✓"}
+                                    </span>
+                                </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -186,5 +223,3 @@ export default function DuelSetup({ initialPlayer1, initialPlayer2, onDuelStart 
     </div>
   );
 }
-
-    

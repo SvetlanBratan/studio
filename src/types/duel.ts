@@ -58,7 +58,7 @@ export interface CharacterStats {
   name: string;
   race: string;
   reserve: ReserveLevel;
-  elementalKnowledge: string;
+  elementalKnowledge: string[]; // Changed from string to string[]
   faithLevel: number; // The numeric value from -1 to 10
   faithLevelName: FaithLevel; // The string name of the faith level
   physicalCondition: string;

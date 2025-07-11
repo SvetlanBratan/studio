@@ -15,7 +15,9 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { RULES, RESERVE_LEVELS, FAITH_LEVELS } from '@/lib/rules';
+import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS } from '@/lib/rules';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 
 interface CharacterPanelProps {
   character: CharacterStats;
@@ -43,6 +45,13 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
 
   const handleSelectChange = (field: 'reserve' | 'faithLevelName', value: string) => {
     setEditableCharacter(prev => ({...prev, [field]: value}));
+  };
+  
+  const handleElementsChange = (element: string) => {
+    const newElements = editableCharacter.elementalKnowledge.includes(element)
+      ? editableCharacter.elementalKnowledge.filter(e => e !== element)
+      : [...editableCharacter.elementalKnowledge, element];
+    setEditableCharacter(prev => ({ ...prev, elementalKnowledge: newElements }));
   };
 
   const handleArrayInputChange = (field: 'bonuses' | 'penalties', value: string) => {
@@ -250,7 +259,43 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
           
           {isEditing ? (
             <div className="space-y-3">
-              {renderTextEditor("Знания", "elementalKnowledge", editableCharacter.elementalKnowledge, 'textarea')}
+               <div className="grid w-full items-center gap-1.5">
+                 <Label>Знания стихий</Label>
+                 <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start font-normal flex-wrap h-auto min-h-10">
+                            <div className="flex gap-1 flex-wrap">
+                                {editableCharacter.elementalKnowledge.length > 0 ? (
+                                    editableCharacter.elementalKnowledge.map(e => <Badge key={e}>{e}</Badge>)
+                                ) : (
+                                    "Выберите стихии..."
+                                )}
+                            </div>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <Command>
+                            <CommandInput placeholder="Поиск стихий..." />
+                            <CommandList>
+                                <CommandEmpty>Стихия не найдена.</CommandEmpty>
+                                <CommandGroup>
+                                    {Object.values(ELEMENTS).map((element) => (
+                                    <CommandItem
+                                        key={element.name}
+                                        onSelect={() => handleElementsChange(element.name)}
+                                    >
+                                        {element.name}
+                                        <span className="ml-auto">
+                                            {editableCharacter.elementalKnowledge.includes(element.name) && "✓"}
+                                        </span>
+                                    </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Select value={editableCharacter.faithLevelName} onValueChange={(v) => handleSelectChange('faithLevelName', v as FaithLevel)}>
                    <SelectTrigger><SelectValue placeholder="Вера" /></SelectTrigger>
@@ -264,7 +309,7 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
           ) : (
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 <div className="flex items-center gap-2"><BookOpen className="w-4 h-4 text-primary" /> <strong>Знания:</strong></div>
-                <div className="text-right">{character.elementalKnowledge}</div>
+                <div className="text-right">{character.elementalKnowledge.join(', ') || 'Нет'}</div>
                 
                 <div className="flex items-center gap-2"><Cross className="w-4 h-4 text-primary" /> <strong>Вера:</strong></div>
                 <div className="text-right">{character.faithLevelName} ({character.faithLevel})</div>

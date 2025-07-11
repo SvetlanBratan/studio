@@ -9,7 +9,7 @@ import DuelLog from '@/components/duel-log';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Swords, Gamepad2, ShieldAlert, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES } from '@/lib/rules';
+import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES, ELEMENTS } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import DuelSetup from '@/components/duel-setup';
 
@@ -18,7 +18,7 @@ const initialPlayer1: CharacterStats = {
   name: 'Игрок 1',
   race: 'Человек',
   reserve: 'Неофит',
-  elementalKnowledge: 'Магия времени (Мастер)',
+  elementalKnowledge: [],
   faithLevel: 0,
   faithLevelName: 'Равнодушие',
   physicalCondition: 'В полном здравии',
@@ -40,7 +40,7 @@ const initialPlayer2: CharacterStats = {
   name: 'Игрок 2',
   race: 'Орк',
   reserve: 'Неофит',
-  elementalKnowledge: 'Магия хаоса (Специалист), Магия огня (Специалист)',
+  elementalKnowledge: [],
   faithLevel: 0,
   faithLevelName: 'Равнодушие',
   physicalCondition: 'В полном здравии',
@@ -208,7 +208,27 @@ export default function Home() {
                 if (activePlayer.bonuses.includes('Боевая магия')) {
                     damage += RULES.DAMAGE_BONUS.battle_magic[spellType];
                 }
-                return damage;
+                
+                // Elemental interactions
+                const attackerElements = activePlayer.elementalKnowledge;
+                const defenderElements = opponent.elementalKnowledge;
+
+                if (attackerElements.length > 0 && defenderElements.length > 0) {
+                    const mainAttackerElement = ELEMENTS[attackerElements[0]];
+                    const mainDefenderElement = ELEMENTS[defenderElements[0]];
+
+                    if (mainAttackerElement && mainDefenderElement) {
+                        if (mainAttackerElement.strongAgainst.includes(mainDefenderElement.name)) {
+                            turnLog.push(`Стихийное преимущество! ${mainAttackerElement.name} силен против ${mainDefenderElement.name}. Урон увеличен.`);
+                            damage *= 1.5;
+                        } else if (mainAttackerElement.weakTo.includes(mainDefenderElement.name)) {
+                            turnLog.push(`Стихийная уязвимость! ${mainAttackerElement.name} слаб против ${mainDefenderElement.name}. Урон уменьшен.`);
+                            damage *= 0.5;
+                        }
+                    }
+                }
+                
+                return Math.round(damage);
             };
 
             const applyDamage = (target: CharacterStats, amount: number) => {
