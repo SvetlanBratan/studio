@@ -171,7 +171,7 @@ export default function Home() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <ActionSuggestion player={activePlayer} opponent={opponent} />
-                <DiceRoller />
+                <DiceRoller player={activePlayer} />
               </div>
 
               <DuelLog turns={duel.turnHistory} player1Name={duel.player1.name} player2Name={duel.player2.name} />
