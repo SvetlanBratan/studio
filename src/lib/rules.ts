@@ -81,7 +81,7 @@ export const RACES: Race[] = [
     { name: 'Оприты', passiveBonuses: ['+10 ОМ/ход'], activeAbilities: [{ name: 'Разряд', description: '-10 ОЗ и -5 ОМ врагу', cost: {om: 10} }] },
     { name: 'Орк', passiveBonuses: ['Расовая ярость (+10 к урону)'], activeAbilities: [] },
     { name: 'Пересмешники', passiveBonuses: ['Иммунитет к иллюзиям'], activeAbilities: [{ name: 'Имитация', description: 'доступны все бонусные действия других рас', cost: {om: 90} }] },
-    { name: 'Полукоты', passiveBonuses: ['Скидка на ОД (5)'], activeAbilities: [{ name: 'Мурлыканье', description: 'усыпляет врага на 1 ход', cost: {om: 30} }] },
+    { name: 'Полукоты', passiveBonuses: ['Скидка на ОД (5)'], activeAbilities: [{ name: 'Мурлыканье', description: 'усыпление врага на 1 ход', cost: {om: 30} }] },
     { name: 'Полузаи', passiveBonuses: [], activeAbilities: [{ name: 'Прыжок Зайца', description: 'уворот + перемещение', cost: {od: 15} }] },
     { name: 'Проклятые', passiveBonuses: ['-8 ОЗ/ход врагу и себе'], activeAbilities: [{ name: 'Извержение Скверны', description: 'массовый урон по всем', cost: {om: 90, oz: 50} }] },
     { name: 'Псилаты', passiveBonuses: ['-5 ОД у врага/ход'], activeAbilities: [{ name: 'Психошок', description: 'спутанность действий врага', cost: {om: 30} }] },
@@ -133,13 +133,19 @@ export const getActionLabel = (type: ActionType, payload?: any): string => {
       racial_ability: "Расовая способность"
   };
 
+  let label = labels[type] || type;
+
+  if (payload?.element) {
+    label += ` (${payload.element})`;
+  }
+
   if (type === 'prayer' && payload?.effect) {
     return `${labels.prayer}: ${prayerEffectLabels[payload.effect]}`;
   }
   if (type === 'racial_ability' && payload?.name) {
     return `${labels.racial_ability}: ${payload.name}`;
   }
-  return labels[type] || type;
+  return label;
 }
 
 export const ELEMENTS: Record<string, Element> = {

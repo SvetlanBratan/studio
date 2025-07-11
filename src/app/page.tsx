@@ -115,7 +115,7 @@ export default function Home() {
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield };
         
         let turnSkipped = false;
-        const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен'];
+        const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен', 'Транс', 'Усыпление'];
         let petrificationCount = 0;
         
         // Passive regen and effects at start of turn
@@ -249,7 +249,7 @@ export default function Home() {
                 return 0;
             };
 
-            const calculateDamage = (spellType: 'household' | 'small' | 'medium' | 'strong'): number => {
+            const calculateDamage = (spellType: 'household' | 'small' | 'medium' | 'strong', element?: string): number => {
                 let damage = RULES.RITUAL_DAMAGE[activePlayer.reserve]?.[spellType] ?? 0;
                 
                 if (opponent.penalties.includes('Уязвимость')) {
@@ -267,11 +267,10 @@ export default function Home() {
                     turnLog.push(`Пассивная способность (Орк): "Расовая ярость" увеличивает урон на 10.`);
                 }
                 
-                const attackerElements = activePlayer.elementalKnowledge;
                 const defenderElements = opponent.elementalKnowledge;
 
-                if (attackerElements.length > 0 && defenderElements.length > 0) {
-                    const mainAttackerElement = ELEMENTS[attackerElements[0]];
+                if (element && defenderElements.length > 0) {
+                    const mainAttackerElement = ELEMENTS[element];
                     const mainDefenderElement = ELEMENTS[defenderElements[0]];
 
                     if (mainAttackerElement && mainDefenderElement) {
@@ -334,7 +333,7 @@ export default function Home() {
             };
             
             const applyEffect = (target: CharacterStats, effect: string) => {
-                if (!target.penalties.some(p => p.startsWith(effect.split(' (')[0]))) {
+                 if (!target.penalties.some(p => p.startsWith(effect.split(' (')[0]))) {
                     target.penalties.push(effect);
                 }
             };
@@ -345,23 +344,23 @@ export default function Home() {
             switch(action.type) {
                 case 'strong_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.strong;
-                    damageDealt = calculateDamage('strong');
+                    damageDealt = calculateDamage('strong', action.payload?.element);
                     applyDamage(opponent, damageDealt, true);
                     activePlayer.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
                     break;
                 case 'medium_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
-                    damageDealt = calculateDamage('medium');
+                    damageDealt = calculateDamage('medium', action.payload?.element);
                     applyDamage(opponent, damageDealt, true);
                     break;
                 case 'small_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.small;
-                    damageDealt = calculateDamage('small');
+                    damageDealt = calculateDamage('small', action.payload?.element);
                     applyDamage(opponent, damageDealt, true);
                     break;
                 case 'household_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.household;
-                    damageDealt = calculateDamage('household');
+                    damageDealt = calculateDamage('household', action.payload?.element);
                     applyDamage(opponent, damageDealt, true);
                     break;
                 case 'shield':
@@ -463,36 +462,31 @@ export default function Home() {
                             activePlayer.oz -= ability.cost.oz;
                             turnLog.push(`Затраты ОЗ: ${ability.cost.oz}.`);
                          }
+                         
+                         turnLog.push(`Способность "${ability.name}": ${ability.description}.`);
 
                          switch(abilityName) {
                             case 'Кислотное распыление':
                                  applyDamage(opponent, 10, false);
-                                 turnLog.push(`Способность наносит ${opponent.name} 10 урона кислотой.`);
                                  break;
                             case 'Дар сладости':
                                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
-                                 turnLog.push(`${activePlayer.name} восстанавливает 15 ОЗ.`);
                                  break;
                             case 'Брызг из жабр':
                                 applyEffect(opponent, 'Ослепление (1)');
-                                turnLog.push(`${opponent.name} ослеплен на 1 ход.`);
                                 break;
                             case 'Ядовитый дым':
                                 applyEffect(opponent, 'Отравление (3)');
-                                turnLog.push(`${opponent.name} отравлен на 3 хода.`);
                                 break;
                             case 'Призыв звезды':
                                 applyDamage(opponent, 20, true);
-                                turnLog.push(`С небес на ${opponent.name} падает звезда, нанося 20 урона.`);
                                 break;
                             case 'Танец лепестков':
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
-                                turnLog.push(`${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Песня влюблённого':
                                 applyDamage(opponent, 10, true);
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
-                                turnLog.push(`${activePlayer.name} наносит 10 урона ${opponent.name} и восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Укус': 
                                 applyDamage(opponent, 10, false);
@@ -504,38 +498,36 @@ export default function Home() {
                                 break;
                              case 'Окаменение взглядом':
                                 applyEffect(opponent, 'Окаменение (1)');
-                                turnLog.push(`${opponent.name} частично окаменел и теряет одно действие в следующем ходу.`);
                                 break;
                              case 'Драконий выдох':
                                  applyDamage(opponent, 20, true);
                                  applyEffect(opponent, 'Горение (2)');
-                                 turnLog.push(`${opponent.name} получает 20 урона и загорается на 2 хода.`);
                                  break;
                              case 'Корнеплетение':
                                  applyEffect(opponent, 'Обездвижен (1)');
-                                 turnLog.push(`${opponent.name} обездвижен на 1 ход.`);
                                  break;
                              case 'Теневая стрела':
                                  applyDamage(opponent, 15, true);
-                                 turnLog.push(`Способность наносит ${opponent.name} 15 урона.`);
                                  break;
                             case 'Коса конца':
                                  opponent.oz = 0;
-                                 turnLog.push(`${activePlayer.name} использует Косу конца. ${opponent.name} повержен!`);
                                  break;
                             case 'Похищение энергии':
                                 const stolenOm = 10;
                                 opponent.om = Math.max(0, opponent.om - stolenOm);
                                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + stolenOm);
-                                turnLog.push(`${activePlayer.name} похищает ${stolenOm} ОМ у ${opponent.name}.`);
                                 break;
                             case 'Гипноз':
                                 applyEffect(opponent, 'Под гипнозом (1)');
-                                turnLog.push(`${opponent.name} под гипнозом и пропустит следующий ход.`);
                                 break;
-                             case 'Фосфоресцирующий всплеск':
+                            case 'Фосфоресцирующий всплеск':
                                 applyEffect(opponent, 'Ослепление (1)');
-                                turnLog.push(`${opponent.name} ослеплен на 1 ход.`);
+                                break;
+                            case 'Песнь чар':
+                                applyEffect(opponent, 'Транс (1)');
+                                break;
+                            case 'Мурлыканье':
+                                applyEffect(opponent, 'Усыпление (1)');
                                 break;
                          }
                     }
@@ -702,5 +694,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

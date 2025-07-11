@@ -87,7 +87,7 @@ export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'hous
 
 export interface Action {
   type: ActionType;
-  payload?: any;
+  payload?: any & { element?: string };
 }
 
 export interface Turn {

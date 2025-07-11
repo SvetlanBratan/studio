@@ -6,7 +6,7 @@ import type { Action, CharacterStats, ActionType, PrayerEffectType } from '@/typ
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Trash2, Send, ShieldCheck, HeartPulse, SparklesIcon } from 'lucide-react';
-import { RULES, getActionLabel, RACES } from '@/lib/rules';
+import { RULES, getActionLabel, RACES, ELEMENTS } from '@/lib/rules';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +48,12 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
       setActions([...actions, { type: type as ActionType, payload }]);
     }
     setSelectValue('');
+  };
+  
+  const updateActionPayload = (index: number, newPayload: any) => {
+    const newActions = [...actions];
+    newActions[index].payload = { ...newActions[index].payload, ...newPayload };
+    setActions(newActions);
   };
 
   const handlePrayerSelect = (effect: PrayerEffectType) => {
@@ -99,9 +105,11 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     return {
       value: `racial_${ability.name}`,
       label: `${ability.name}`,
-      disabled: player.cooldowns[ability.name] > 0 || (ability.cost?.om ?? 0) > player.om || odCost > player.od || actions.some(a => a.type === 'racial_ability' && a.payload.name === ability.name),
+      disabled: (player.cooldowns[ability.name] ?? 0) > 0 || (ability.cost?.om ?? 0) > player.om || odCost > player.od || actions.some(a => a.type === 'racial_ability' && a.payload.name === ability.name),
     }
   }) || [];
+
+  const spellActions: ActionType[] = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell'];
 
   return (
     <>
@@ -111,11 +119,29 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
           {actions.length === 0 && <p className="text-sm text-muted-foreground">Выберите до {RULES.MAX_ACTIONS_PER_TURN} действий.</p>}
           <div className="space-y-2">
               {actions.map((action, index) => (
-                  <div key={index} className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-background/50">
-                      <span>{index + 1}. {getActionLabel(action.type, action.payload)}</span>
-                      <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 shrink-0 h-8 w-8" onClick={() => removeAction(index)}>
-                          <Trash2 className="h-4 w-4" />
-                      </Button>
+                  <div key={index} className="flex flex-col sm:flex-row items-center justify-between gap-2 p-2 border rounded-lg bg-background/50">
+                      <span className="flex-grow">{index + 1}. {getActionLabel(action.type, action.payload)}</span>
+                      <div className="flex items-center gap-2">
+                        {spellActions.includes(action.type) && player.elementalKnowledge.length > 0 && (
+                          <Select
+                            value={action.payload?.element || ''}
+                            onValueChange={(element) => updateActionPayload(index, { element })}
+                          >
+                            <SelectTrigger className="w-full sm:w-[150px] h-8">
+                              <SelectValue placeholder="Стихия..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">Нейтрально</SelectItem>
+                              {player.elementalKnowledge.map(el => (
+                                <SelectItem key={el} value={el}>{el}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 shrink-0 h-8 w-8" onClick={() => removeAction(index)}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                   </div>
               ))}
           </div>
