@@ -53,7 +53,7 @@ export const RACES: Race[] = [
     { name: 'Джакали', passiveBonuses: [], activeAbilities: [{ name: 'Благословение крови', description: '+20 ОЗ союзнику, при молитве', cost: {om: 30} }] },
     { name: 'Джинны', passiveBonuses: [], activeAbilities: [{ name: 'Элементальная вспышка', description: 'случайный урон 15-25', cost: {om: 30} }] },
     { name: 'Домовые', passiveBonuses: ['+10 ОМ/ход'], activeAbilities: [{ name: 'Забота дома', description: '+15 ОЗ и снятие одного эффекта', cost: {om: 30} }] },
-    { name: 'Драконы', passiveBonuses: ['+10 ОМ/ход', '+50 ОЗ (раз за бой)'], activeAbilities: [{ name: 'Драконий выдох', description: '-20 ОЗ врагу огнём, накладывает Горение (2)', cost: {om: 30} }] },
+    { name: 'Драконы', passiveBonuses: ['+10 ОМ/ход'], activeAbilities: [{ name: 'Драконий выдох', description: '-20 ОЗ врагу огнём, накладывает Горение (2)', cost: {om: 30} }] },
     { name: 'Дриады', passiveBonuses: ['+3 исцеления/ход'], activeAbilities: [{ name: 'Корнеплетение', description: 'обездвиживание врага на 1 ход', cooldown: 4, cost: {om: 30} }] },
     { name: 'Дриды', passiveBonuses: ['+2 ОЗ/ход'], activeAbilities: [{ name: 'Цветочный нектар', description: '+10 ОЗ и +5 ОМ', cost: {om: 10} }] },
     { name: 'Дроу', passiveBonuses: ['Скидка к урону от яда (3)'], activeAbilities: [{ name: 'Теневая стрела', description: '-15 ОЗ', cost: {om: 10} }] },

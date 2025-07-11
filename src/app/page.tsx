@@ -112,11 +112,6 @@ export default function Home() {
         let activePlayer = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player1 } : { ...prevDuel.player2 };
         let opponent = prevDuel.activePlayerId === 'player1' ? { ...prevDuel.player2 } : { ...prevDuel.player1 };
         
-        if (opponent.isDodging) {
-             turnLog.push(`${opponent.name} больше не находится в состоянии уворота.`);
-             opponent.isDodging = false;
-        }
-
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield };
         
         let turnSkipped = false;
@@ -300,6 +295,8 @@ export default function Home() {
                     } else {
                         turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
                     }
+                    target.isDodging = false;
+                    turnLog.push(`${target.name} больше не находится в состоянии уворота.`);
                 }
 
                 finalDamage = Math.round(finalDamage);
