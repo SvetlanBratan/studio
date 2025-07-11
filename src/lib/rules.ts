@@ -1,4 +1,4 @@
-import type { ReserveLevel, FaithLevel } from "@/types/duel";
+import type { ReserveLevel, FaithLevel, ActionType } from "@/types/duel";
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
 
@@ -30,6 +30,23 @@ export const RESERVE_LEVELS: Record<ReserveLevel, number> = {
 
 export const getOmFromReserve = (reserve: ReserveLevel): number => RESERVE_LEVELS[reserve] || 90;
 export const getFaithLevelFromString = (faith: FaithLevel): number => FAITH_LEVELS[faith] || 0;
+
+export const getActionLabel = (type: ActionType): string => {
+  const labels: Record<ActionType, string> = {
+      strong_spell: "Сильный ритуал",
+      medium_spell: "Средний ритуал",
+      small_spell: "Малый ритуал",
+      household_spell: "Бытовое заклинание",
+      dodge: "Уворот",
+      use_item: "Использовать предмет",
+      shield: "Создать щит",
+      prayer: "Молитва",
+      remove_effect: "Снять эффект",
+      rest: "Отдых",
+  };
+  return labels[type] || type;
+}
+
 
 export const RULES = {
   STARTING_OZ: 200,

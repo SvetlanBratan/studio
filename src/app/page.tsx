@@ -9,7 +9,7 @@ import DiceRoller from '@/components/dice-roller';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Swords, Gamepad2, ShieldAlert, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RULES, getOmFromReserve, getFaithLevelFromString } from '@/lib/rules';
+import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import DuelSetup from '@/components/duel-setup';
 
@@ -121,7 +121,7 @@ export default function Home() {
 
         // 3. Execute actions
         actions.forEach(action => {
-            turnLog.push(`${activePlayer.name} использует действие: ${action.type}`);
+            turnLog.push(`${activePlayer.name} использует действие: ${getActionLabel(action.type)}`);
         });
 
         // 4. Passive regen

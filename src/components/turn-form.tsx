@@ -5,7 +5,7 @@ import type { Action, CharacterStats, ActionType } from '@/types/duel';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Send } from 'lucide-react';
-import { RULES } from '@/lib/rules';
+import { RULES, getActionLabel } from '@/lib/rules';
 
 interface TurnFormProps {
   player: CharacterStats;
@@ -30,22 +30,6 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     onSubmit(actions);
     setActions([]);
   };
-
-  const getActionLabel = (type: ActionType) => {
-    const labels: Record<ActionType, string> = {
-        strong_spell: "Сильный ритуал",
-        medium_spell: "Средний ритуал",
-        small_spell: "Малый ритуал",
-        household_spell: "Бытовое заклинание",
-        dodge: "Уворот",
-        use_item: "Использовать предмет",
-        shield: "Создать щит",
-        prayer: "Молитва",
-        remove_effect: "Снять эффект",
-        rest: "Отдых",
-    };
-    return labels[type];
-  }
 
   const actionOptions: {value: ActionType, label: string, disabled: boolean}[] = [
     { value: 'strong_spell', label: 'Сильный ритуал', disabled: player.cooldowns.strongSpell > 0 || player.om < RULES.RITUAL_COSTS.strong },
