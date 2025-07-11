@@ -58,6 +58,15 @@ const initialPlayer2: CharacterStats = {
   cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
 };
 
+const getPhysicalCondition = (oz: number, maxOz: number): string => {
+    const healthPercentage = (oz / maxOz) * 100;
+    if (healthPercentage > 75) return 'В полном здравии';
+    if (healthPercentage > 50) return 'Ранен';
+    if (healthPercentage > 25) return 'Тяжело ранен';
+    return 'Изнеможден';
+};
+
+
 export default function Home() {
   const [duel, setDuel] = useState<DuelState | null>(null);
   const [log, setLog] = useState<string[]>([]);
@@ -161,6 +170,10 @@ export default function Home() {
             };
             
             setLog(turnLog);
+            
+            activePlayer.physicalCondition = getPhysicalCondition(activePlayer.oz, activePlayer.maxOz);
+            opponent.physicalCondition = getPhysicalCondition(opponent.oz, opponent.maxOz);
+
 
             return {
                 ...prevDuel,
@@ -397,6 +410,10 @@ export default function Home() {
         opponent.oz = Math.max(0, opponent.oz);
         activePlayer.om = Math.max(0, activePlayer.om);
         activePlayer.od = Math.max(0, activePlayer.od);
+        
+        // Update physical conditions
+        activePlayer.physicalCondition = getPhysicalCondition(activePlayer.oz, activePlayer.maxOz);
+        opponent.physicalCondition = getPhysicalCondition(opponent.oz, opponent.maxOz);
 
         // Check for winner
         let winner;
