@@ -52,7 +52,7 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
       if (raceName === 'Кунари') {
           updatedPlayer.od -= 5;
       }
-      if (['Кордеи', 'Драконы'].includes(raceName)) {
+      if (['Кордеи'].includes(raceName)) {
           // This bonus is added to maxOz as well to reflect it's a permanent increase for the battle
           updatedPlayer.oz += 50;
           updatedPlayer.maxOz += 50;
@@ -141,7 +141,7 @@ const PlayerSetupForm = ({ player, onUpdate }: { player: CharacterStats, onUpdat
                                 <CommandItem
                                     key={element.name}
                                     value={element.name}
-                                    onSelect={() => handleElementsChange(element.name)}
+                                    onSelect={(currentValue) => handleElementsChange(currentValue)}
                                 >
                                     {element.name}
                                     <span className="ml-auto">

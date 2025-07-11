@@ -34,7 +34,7 @@ export const RACES: Race[] = [
     { name: 'Алариены', passiveBonuses: ['+3 исцеления/ход'], activeAbilities: [{ name: 'Дар сладости', description: 'восстановить +15 ОЗ', cooldown: 4, cost: {om: 10} }] },
     { name: 'Амфибии', passiveBonuses: ['+2 урона и +2 исцеления/ход'], activeAbilities: [{ name: 'Брызг из жабр', description: 'ослепление на 1 ход', cooldown: 5, cost: {om: 10} }] },
     { name: 'Антаресы', passiveBonuses: [], activeAbilities: [{ name: 'Всплеск приторной силы', description: 'бафф на +10 ОЗ/ОМ', cost: {om: 30} }] },
-    { name: 'Антропоморфы', passiveBonuses: ['+2 исцеления/ход'], activeAbilities: [{ name: 'Инстинкт зверя', description: '+10 к урону', cost: {od: 10} }] },
+    { name: 'Антропоморфы', passiveBonuses: ['+2 исцеления/ход', 'Скидка на ОД (5)'], activeAbilities: [{ name: 'Инстинкт зверя', description: '+10 к урону', cost: {od: 10} }] },
     { name: 'Арахнии', passiveBonuses: ['+1 исцеления/ход', '+1 ОМ/ход'], activeAbilities: [{ name: 'Паутина', description: 'замедление врага', cost: {od: 10, om: 10} }] },
     { name: 'Арахниды', passiveBonuses: ['Иммунитет к ядам'], activeAbilities: [{ name: 'Ядовитый дым', description: 'отравление -8 ОЗ/ход (3 хода)', cooldown: 4, cost: {om: 10} }] },
     { name: 'Аспиды', passiveBonuses: ['+1 урона космической магией'], activeAbilities: [{ name: 'Кислотное дыхание', description: '-15 ОЗ в радиусе 5м', cost: {om: 30} }] },
@@ -163,7 +163,7 @@ export const ELEMENTS: Record<string, Element> = {
 
 
 export const RULES = {
-  STARTING_OZ: 500,
+  STARTING_OZ: 250,
   STARTING_OD: 100,
   MAX_ACTIONS_PER_TURN: 2,
   MAX_INVENTORY_ITEMS: 2,
@@ -226,4 +226,3 @@ export const RULES = {
 
   DODGE_VS_STRONG_SPELL_DMG_REDUCTION: 20,
 };
-

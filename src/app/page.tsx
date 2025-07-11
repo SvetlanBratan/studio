@@ -25,8 +25,8 @@ const initialPlayer1: CharacterStats = {
   bonuses: ['Иммунитет к контролю'],
   penalties: [],
   inventory: [],
-  oz: 500,
-  maxOz: 500,
+  oz: 250,
+  maxOz: 250,
   om: 90,
   maxOm: 90,
   od: 100,
@@ -48,8 +48,8 @@ const initialPlayer2: CharacterStats = {
   bonuses: ['Расовая ярость (+10 к урону)', 'Боевая магия'],
   penalties: [],
   inventory: [],
-  oz: 500,
-  maxOz: 500,
+  oz: 250,
+  maxOz: 250,
   om: 90,
   maxOm: 90,
   od: 100,
@@ -141,7 +141,7 @@ export default function Home() {
                 const name = match[1].trim();
                 let duration = parseInt(match[2], 10) - 1;
 
-                if (simpleTurnSkipEffects.includes(name)) {
+                if (simpleTurnSkipEffects.includes(name) && !activePlayer.bonuses.includes('Иммунитет к контролю')) {
                     turnSkipped = true;
                     turnLog.push(`${activePlayer.name} пропускает ход из-за эффекта "${name}"!`);
                 }
@@ -670,4 +670,3 @@ export default function Home() {
     </div>
   );
 }
-
