@@ -87,10 +87,12 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
   const hasPrayerAction = actions.some(a => a.type === 'prayer');
   const hasAddedAction = (actionType: ActionType) => actions.some(a => a.type === actionType);
 
+  const isFaceless = player.race === 'Безликие';
+
   const actionOptions: {value: ActionType, label: string, disabled: boolean}[] = [
-    { value: 'strong_spell', label: 'Сильный ритуал', disabled: player.cooldowns.strongSpell > 0 || player.om < RULES.RITUAL_COSTS.strong || hasAddedAction('strong_spell') },
-    { value: 'medium_spell', label: 'Средний ритуал', disabled: player.om < RULES.RITUAL_COSTS.medium },
-    { value: 'small_spell', label: 'Малый ритуал', disabled: player.om < RULES.RITUAL_COSTS.small },
+    { value: 'strong_spell', label: 'Сильный ритуал', disabled: isFaceless || player.cooldowns.strongSpell > 0 || player.om < RULES.RITUAL_COSTS.strong || hasAddedAction('strong_spell') },
+    { value: 'medium_spell', label: 'Средний ритуал', disabled: isFaceless || player.om < RULES.RITUAL_COSTS.medium },
+    { value: 'small_spell', label: 'Малый ритуал', disabled: isFaceless || player.om < RULES.RITUAL_COSTS.small },
     { value: 'household_spell', label: 'Бытовое заклинание', disabled: player.om < RULES.RITUAL_COSTS.household },
     { value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: player.om < RULES.RITUAL_COSTS.medium || hasAddedAction('shield') },
     { value: 'dodge', label: `Уворот (${RULES.NON_MAGIC_COSTS.dodge + odPenalty} ОД)`, disabled: player.od < RULES.NON_MAGIC_COSTS.dodge + odPenalty || hasAddedAction('dodge') },
