@@ -563,7 +563,7 @@ export default function Home() {
               )}
 
               <div className="grid grid-cols-1 gap-8">
-                <DiceRoller player={activePlayer} />
+                <DiceRoller />
               </div>
 
               <DuelLog turns={duel.turnHistory} player1Name={duel.player1.name} player2Name={duel.player2.name} />
