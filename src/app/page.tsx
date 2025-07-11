@@ -355,7 +355,6 @@ export default function Home() {
                     break;
                 case 'racial_ability':
                     const abilityName = action.payload.name;
-                    turnLog.push(`${activePlayer.name} использует "${abilityName}".`);
                     
                     const playerRace = RACES.find(r => r.name === activePlayer.race);
                     const ability = playerRace?.activeAbilities.find(a => a.name === abilityName);
@@ -399,10 +398,13 @@ export default function Home() {
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
                                 turnLog.push(`${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
-                            case 'Укус': // Бракованные пересмешники
+                            case 'Укус': 
                                 applyDamage(opponent, 10);
-                                activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + 10);
-                                turnLog.push(`${activePlayer.name} восстанавливает 10 ОМ.`);
+                                if (activePlayer.bonuses.includes('+3 к восстановлению ОМ при укусе')) {
+                                    const omRestored = 3;
+                                    activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omRestored);
+                                    turnLog.push(`${activePlayer.name} восстанавливает ${omRestored} ОМ благодаря пассивному бонусу от укуса.`);
+                                }
                                 break;
                              case 'Окаменение взглядом':
                                 opponent.penalties.push('Окаменение (1)');

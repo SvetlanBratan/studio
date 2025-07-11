@@ -42,8 +42,8 @@ export const RACES: Race[] = [
     { name: 'Бабочки', passiveBonuses: ['Копирование последнего действия врага, абсолютно все действия отзеркаливаются, не тратит ОЗ и ОМ'], activeAbilities: [] },
     { name: 'Безликие', passiveBonuses: ['+5 к физической атаке'], activeAbilities: [{ name: 'Пронзающий удар', description: '+20 ОЗ физурона'}] },
     { name: 'Белояры', passiveBonuses: ['+4 урона/исцеления если влюблены'], activeAbilities: [{ name: 'Песня влюблённого', description: '-10 ОЗ врагу, +10 ОЗ себе'}] },
-    { name: 'Бракованные пересмешники', passiveBonuses: ['+3 к восстановлению ОМ при укусе'], activeAbilities: [{ name: 'Укус', description: '+10 ОМ, -10 ОЗ врагу'}] },
-    { name: 'Вампиры', passiveBonuses: ['+3 к восстановлению ОМ при укусе'], activeAbilities: [{ name: 'Укус', description: '+10 ОМ, -10 ОЗ врагу'}] },
+    { name: 'Бракованные пересмешники', passiveBonuses: ['+3 к восстановлению ОМ при укусе'], activeAbilities: [{ name: 'Укус', description: '-10 ОЗ врагу'}] },
+    { name: 'Вампиры', passiveBonuses: ['+3 к восстановлению ОМ при укусе'], activeAbilities: [{ name: 'Укус', description: '-10 ОЗ врагу'}] },
     { name: 'Вансаэльцы', passiveBonuses: ['+5 ОМ при общении с духами'], activeAbilities: [{ name: 'Обратиться к духам', description: 'призыв духа-хранителя'}] },
     { name: 'Василиски', passiveBonuses: ['Ядовитый урон -10 при укусе'], activeAbilities: [{ name: 'Окаменение взглядом', description: 'враг теряет ход'}] },
     { name: 'Веспы', passiveBonuses: ['-1 ОД у врага'], activeAbilities: [{ name: 'Вспышка зрения', description: 'ослепление на 1 ход'}] },
@@ -162,7 +162,7 @@ export const ELEMENTS: Record<string, Element> = {
 
 
 export const RULES = {
-  STARTING_OZ: 200,
+  STARTING_OZ: 500,
   STARTING_OD: 100,
   MAX_ACTIONS_PER_TURN: 2,
   MAX_INVENTORY_ITEMS: 2,
