@@ -36,11 +36,11 @@ export const RACES: Race[] = [
     { name: 'Антаресы', passiveBonuses: ['+2 урона/ход', '+2 исцеления/ход'], activeAbilities: [{ name: 'Всплеск приторной силы', description: 'бафф на +10 ОЗ/ОМ', cost: {om: 30} }] },
     { name: 'Антропоморфы', passiveBonuses: ['Скидка на ОД (5)'], activeAbilities: [{ name: 'Инстинкт зверя', description: '+10 к урону', cost: {od: 10} }] },
     { name: 'Арахнии', passiveBonuses: ['+2 исцеления/ход'], activeAbilities: [{ name: 'Паутина', description: 'замедление врага', cost: {od: 10, om: 10} }] },
-    { name: 'Арахниды', passiveBonuses: ['+1 исцеления/ход', '+1 ОМ/ход'], activeAbilities: [{ name: 'Ядовитый дым', description: 'отравление -8 ОЗ/ход (3 хода)', cooldown: 4, cost: {om: 10} }] },
+    { name: 'Арахниды', passiveBonuses: ['+1 исцеления/ход', '+1 ОМ/ход'], activeAbilities: [{ name: 'Ядовитый дым', description: 'отравление -5 ОЗ/ход (3 хода)', cooldown: 4, cost: {om: 10} }] },
     { name: 'Аспиды', passiveBonuses: ['Иммунитет к ядам'], activeAbilities: [{ name: 'Кислотное дыхание', description: '-15 ОЗ в радиусе 5м', cost: {om: 30} }] },
     { name: 'Астролоиды', passiveBonuses: ['+1 урона космической магией'], activeAbilities: [{ name: 'Призыв звезды', description: 'метеорит на -20 ОЗ', cooldown: 3, cost: {om: 30}} ] },
     { name: 'Бабочки', passiveBonuses: ['+3 исцеления/ход'], activeAbilities: [{name: 'Танец лепестков', description: '+10 ОЗ', cost: {om: 10}}] },
-    { name: 'Безликие', passiveBonuses: ['Отзеркаливание действий врага (описательно)'], activeAbilities: [] },
+    { name: 'Безликие', passiveBonuses: ['Отзеркаливание урона'], activeAbilities: [] },
     { name: 'Белояры', passiveBonuses: ['+5 к физической атаке'], activeAbilities: [{ name: 'Пронзающий удар', description: '+20 ОЗ физурона', cost: {od: 30} }] },
     { name: 'Бракованные пересмешники', passiveBonuses: ['+4 к урону/исцелению (описательно)'], activeAbilities: [{ name: 'Песня влюблённого', description: '-10 ОЗ врагу, +10 ОЗ себе', cost: {om: 30} }] },
     { name: 'Вампиры', passiveBonuses: ['+3 к восстановлению ОМ при укусе'], activeAbilities: [{ name: 'Укус', description: '+10 ОМ, -10 ОЗ врагу', cost: {od: 10} }] },
@@ -135,7 +135,7 @@ export const getActionLabel = (type: ActionType, payload?: any): string => {
 
   let label = labels[type] || type;
 
-  if (payload?.element) {
+  if ((type.includes('spell') || type === 'shield') && payload?.element) {
     label += ` (${payload.element})`;
   }
 

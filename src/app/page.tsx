@@ -236,6 +236,80 @@ export default function Home() {
             };
         }
 
+        const applyDamage = (attacker: CharacterStats, target: CharacterStats, amount: number, isSpell: boolean, spellElement?: string) => {
+            let finalDamage = amount;
+
+            if (target.bonuses.includes('Поглощение входящего магического урона') && isSpell) {
+                const restoredOm = Math.round(amount);
+                target.om = Math.min(target.maxOm, target.om + restoredOm);
+                turnLog.push(`Пассивная способность (Ларимы): ${target.name} поглощает ${restoredOm} магического урона и восстанавливает ОМ.`);
+                return;
+            }
+
+            if (target.isDodging) {
+                const dodgeRoll = Math.floor(Math.random() * 10) + 1;
+                turnLog.push(`${target.name} пытается увернуться... Бросок: ${dodgeRoll}.`);
+                if (dodgeRoll >= 6) {
+                    finalDamage *= 0.5;
+                    turnLog.push(`Уворот успешен! ${target.name} получает на 50% меньше урона.`);
+                } else {
+                    turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
+                }
+            }
+            finalDamage = Math.round(finalDamage);
+
+            let damageDealtToTarget = 0;
+
+            if (target.shield.hp > 0) {
+                let damageToShield = finalDamage;
+                if(spellElement && target.shield.element && target.shield.element !== 'Эфир') {
+                    const attackElement = ELEMENTS[spellElement];
+                    const shieldElement = ELEMENTS[target.shield.element];
+                    if (attackElement && shieldElement) {
+                        if(attackElement.strongAgainst.includes(shieldElement.name)) {
+                            damageToShield *= 2;
+                            turnLog.push(`Стихийное преимущество! Атака (${spellElement}) сильна против щита (${target.shield.element}). Урон по щиту удвоен.`);
+                        }
+                        if(attackElement.weakTo.includes(shieldElement.name)) {
+                            damageToShield *= 0.5;
+                            turnLog.push(`Стихийное сопротивление! Атака (${spellElement}) слаба против щита (${target.shield.element}). Урон по щиту уменьшен вдвое.`);
+                        }
+                    }
+                }
+                damageToShield = Math.round(damageToShield);
+
+                if (target.shield.element === 'Эфир' && isSpell) {
+                    turnLog.push(`Эфирный щит ${target.name} полностью поглощает магический урон.`);
+                    return; // No damage to shield or player
+                }
+
+                const absorbedDamage = Math.min(target.shield.hp, damageToShield);
+                target.shield.hp -= absorbedDamage;
+                const remainingDamage = finalDamage - Math.round(absorbedDamage / (damageToShield / finalDamage)); // Adjust remaining damage based on shield interaction
+
+                turnLog.push(`Щит ${target.name} поглощает ${absorbedDamage} урона.`);
+                if (target.shield.hp <= 0) {
+                    turnLog.push(`Щит ${target.name} был уничтожен.`);
+                    target.shield.element = null;
+                }
+
+                if (remainingDamage > 0) {
+                    target.oz -= remainingDamage;
+                    damageDealtToTarget = remainingDamage;
+                    turnLog.push(`${target.name} получает ${remainingDamage} урона, пробившего щит.`);
+                }
+            } else {
+                target.oz -= finalDamage;
+                damageDealtToTarget = finalDamage;
+                turnLog.push(`${target.name} получает ${finalDamage} урона.`);
+            }
+
+            if (target.race === 'Безликие' && damageDealtToTarget > 0) {
+                attacker.oz -= damageDealtToTarget;
+                turnLog.push(`Пассивная способность (Безликий): отзеркаливает ${damageDealtToTarget} урона обратно в ${attacker.name}!`);
+            }
+        };
+
         actions.forEach(action => {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
             
@@ -286,72 +360,6 @@ export default function Home() {
                 return Math.round(damage);
             };
 
-            const applyDamage = (target: CharacterStats, amount: number, isSpell: boolean, spellElement?: string) => {
-                let finalDamage = amount;
-
-                if (target.bonuses.includes('Поглощение входящего магического урона') && isSpell) {
-                    const restoredOm = Math.round(amount);
-                    target.om = Math.min(target.maxOm, target.om + restoredOm);
-                    turnLog.push(`Пассивная способность (Ларимы): ${target.name} поглощает ${restoredOm} магического урона и восстанавливает ОМ.`);
-                    return;
-                }
-
-                if (target.isDodging) {
-                    const dodgeRoll = Math.floor(Math.random() * 10) + 1;
-                    turnLog.push(`${target.name} пытается увернуться... Бросок: ${dodgeRoll}.`);
-                    if (dodgeRoll >= 6) { 
-                        finalDamage *= 0.5; 
-                        turnLog.push(`Уворот успешен! ${target.name} получает на 50% меньше урона.`);
-                    } else {
-                        turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
-                    }
-                }
-                target.isDodging = false; // Reset dodge state after one attack
-
-                finalDamage = Math.round(finalDamage);
-
-                if (target.shield.hp > 0) {
-                    let damageToShield = finalDamage;
-                    if(spellElement && target.shield.element && target.shield.element !== 'Эфир') {
-                        const attackElement = ELEMENTS[spellElement];
-                        const shieldElement = ELEMENTS[target.shield.element];
-                        if (attackElement && shieldElement) {
-                            if(attackElement.strongAgainst.includes(shieldElement.name)) {
-                                damageToShield *= 2;
-                                turnLog.push(`Стихийное преимущество! Атака (${spellElement}) сильна против щита (${target.shield.element}). Урон по щиту удвоен.`);
-                            }
-                             if(attackElement.weakTo.includes(shieldElement.name)) {
-                                damageToShield *= 0.5;
-                                turnLog.push(`Стихийное сопротивление! Атака (${spellElement}) слаба против щита (${target.shield.element}). Урон по щиту уменьшен вдвое.`);
-                            }
-                        }
-                    }
-                    damageToShield = Math.round(damageToShield);
-
-                    if (target.shield.element === 'Эфир' && isSpell) {
-                        turnLog.push(`Эфирный щит ${target.name} полностью поглощает магический урон.`);
-                        return; // No damage to shield or player
-                    }
-                    
-                    const absorbedDamage = Math.min(target.shield.hp, damageToShield);
-                    target.shield.hp -= absorbedDamage;
-                    const remainingDamage = finalDamage - absorbedDamage;
-
-                    turnLog.push(`Щит ${target.name} поглощает ${absorbedDamage} урона.`);
-                    if (target.shield.hp <= 0) {
-                        turnLog.push(`Щит ${target.name} был уничтожен.`);
-                        target.shield.element = null;
-                    }
-
-                    if (remainingDamage > 0) {
-                        target.oz -= remainingDamage;
-                        turnLog.push(`${target.name} получает ${remainingDamage} урона, пробившего щит.`);
-                    }
-                } else {
-                    target.oz -= finalDamage;
-                    turnLog.push(`${target.name} получает ${finalDamage} урона.`);
-                }
-            };
             
             const applyEffect = (target: CharacterStats, effect: string) => {
                  if (!target.penalties.some(p => p.startsWith(effect.split(' (')[0]))) {
@@ -366,23 +374,23 @@ export default function Home() {
                 case 'strong_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.strong;
                     damageDealt = calculateDamage('strong', action.payload?.element);
-                    applyDamage(opponent, damageDealt, true, action.payload?.element);
+                    applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
                     activePlayer.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
                     break;
                 case 'medium_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
                     damageDealt = calculateDamage('medium', action.payload?.element);
-                    applyDamage(opponent, damageDealt, true, action.payload?.element);
+                    applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
                     break;
                 case 'small_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.small;
                     damageDealt = calculateDamage('small', action.payload?.element);
-                    applyDamage(opponent, damageDealt, true, action.payload?.element);
+                    applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
                     break;
                 case 'household_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.household;
                     damageDealt = calculateDamage('household', action.payload?.element);
-                    applyDamage(opponent, damageDealt, true, action.payload?.element);
+                    applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
                     break;
                 case 'shield':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
@@ -413,7 +421,7 @@ export default function Home() {
                                 turnLog.push(`${activePlayer.name} использует "${item.name}" и восстанавливает ${item.amount} ОЗ.`);
                             }
                              if (item.type === 'damage') {
-                                applyDamage(opponent, item.amount, false);
+                                applyDamage(activePlayer, opponent, item.amount, false);
                                 turnLog.push(`${activePlayer.name} использует "${item.name}" и наносит ${item.amount} урона.`);
                             }
                             activePlayer.inventory.shift();
@@ -490,7 +498,7 @@ export default function Home() {
 
                          switch(abilityName) {
                             case 'Кислотное распыление':
-                                 applyDamage(opponent, 10, false);
+                                 applyDamage(activePlayer, opponent, 10, false);
                                  break;
                             case 'Дар сладости':
                                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
@@ -502,17 +510,17 @@ export default function Home() {
                                 applyEffect(opponent, 'Отравление (3)');
                                 break;
                             case 'Призыв звезды':
-                                applyDamage(opponent, 20, true);
+                                applyDamage(activePlayer, opponent, 20, true);
                                 break;
                             case 'Танец лепестков':
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
                                 break;
                             case 'Песня влюблённого':
-                                applyDamage(opponent, 10, true);
+                                applyDamage(activePlayer, opponent, 10, true);
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
                                 break;
                             case 'Укус': 
-                                applyDamage(opponent, 10, false);
+                                applyDamage(activePlayer, opponent, 10, false);
                                 if (activePlayer.bonuses.includes('+3 к восстановлению ОМ при укусе')) {
                                     const omRestored = 3;
                                     activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omRestored);
@@ -523,14 +531,14 @@ export default function Home() {
                                 applyEffect(opponent, 'Окаменение (1)');
                                 break;
                              case 'Драконий выдох':
-                                 applyDamage(opponent, 20, true);
+                                 applyDamage(activePlayer, opponent, 20, true);
                                  applyEffect(opponent, 'Горение (2)');
                                  break;
                              case 'Корнеплетение':
                                  applyEffect(opponent, 'Обездвижен (1)');
                                  break;
                              case 'Теневая стрела':
-                                 applyDamage(opponent, 15, true);
+                                 applyDamage(activePlayer, opponent, 15, true);
                                  break;
                             case 'Коса конца':
                                  opponent.oz = 0;
@@ -545,6 +553,7 @@ export default function Home() {
                                 break;
                             case 'Фосфоресцирующий всплеск':
                                 applyEffect(opponent, 'Ослепление (1)');
+                                turnLog.push(`Способность "Фосфоресцирующий всплеск": ${opponent.name} ослеплен на 1 ход.`);
                                 break;
                             case 'Песнь чар':
                                 applyEffect(opponent, 'Транс (1)');
@@ -558,6 +567,9 @@ export default function Home() {
             }
         });
 
+        // Reset dodge state for the opponent after the turn ends
+        opponent.isDodging = false;
+        
         activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.PASSIVE_OM_REGEN);
         turnLog.push(`${activePlayer.name} восстанавливает ${RULES.PASSIVE_OM_REGEN} ОМ пассивно.`);
 
@@ -717,5 +729,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
