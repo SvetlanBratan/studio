@@ -467,6 +467,7 @@ export default function Home() {
                          switch(abilityName) {
                             case 'Кислотное распыление':
                                  applyDamage(opponent, 10, false);
+                                 turnLog.push(`Способность наносит ${opponent.name} 10 урона кислотой.`);
                                  break;
                             case 'Дар сладости':
                                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
@@ -482,6 +483,7 @@ export default function Home() {
                                 break;
                             case 'Призыв звезды':
                                 applyDamage(opponent, 20, true);
+                                turnLog.push(`С небес на ${opponent.name} падает звезда, нанося 20 урона.`);
                                 break;
                             case 'Танец лепестков':
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
@@ -490,7 +492,7 @@ export default function Home() {
                             case 'Песня влюблённого':
                                 applyDamage(opponent, 10, true);
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
-                                turnLog.push(`${activePlayer.name} восстанавливает 10 ОЗ.`);
+                                turnLog.push(`${activePlayer.name} наносит 10 урона ${opponent.name} и восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Укус': 
                                 applyDamage(opponent, 10, false);
@@ -507,7 +509,7 @@ export default function Home() {
                              case 'Драконий выдох':
                                  applyDamage(opponent, 20, true);
                                  applyEffect(opponent, 'Горение (2)');
-                                 turnLog.push(`${opponent.name} загорелся на 2 хода.`);
+                                 turnLog.push(`${opponent.name} получает 20 урона и загорается на 2 хода.`);
                                  break;
                              case 'Корнеплетение':
                                  applyEffect(opponent, 'Обездвижен (1)');
@@ -515,6 +517,7 @@ export default function Home() {
                                  break;
                              case 'Теневая стрела':
                                  applyDamage(opponent, 15, true);
+                                 turnLog.push(`Способность наносит ${opponent.name} 15 урона.`);
                                  break;
                             case 'Коса конца':
                                  opponent.oz = 0;
@@ -529,6 +532,10 @@ export default function Home() {
                             case 'Гипноз':
                                 applyEffect(opponent, 'Под гипнозом (1)');
                                 turnLog.push(`${opponent.name} под гипнозом и пропустит следующий ход.`);
+                                break;
+                             case 'Фосфоресцирующий всплеск':
+                                applyEffect(opponent, 'Ослепление (1)');
+                                turnLog.push(`${opponent.name} ослеплен на 1 ход.`);
                                 break;
                          }
                     }
@@ -695,3 +702,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
