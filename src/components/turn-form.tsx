@@ -126,17 +126,18 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
                       <div className="flex items-center gap-2">
                         {(spellActions.includes(action.type) || action.type === 'shield') && player.elementalKnowledge.length > 0 && (
                           <Select
-                            value={action.payload?.element || ''}
+                            value={action.payload?.element || 'neutral'}
                             onValueChange={(element) => updateActionPayload(index, { element })}
                           >
                             <SelectTrigger className="w-full sm:w-[150px] h-8">
                               <SelectValue placeholder="Стихия..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">Нейтрально</SelectItem>
+                              <SelectItem value="neutral">Нейтрально</SelectItem>
                               {player.elementalKnowledge.map(el => (
                                 <SelectItem key={el} value={el}>{el}</SelectItem>
                               ))}
+                               <SelectItem value="Эфир">Эфир</SelectItem>
                             </SelectContent>
                           </Select>
                         )}
@@ -215,5 +216,3 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     </>
   );
 }
-
-    

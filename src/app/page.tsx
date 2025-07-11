@@ -262,7 +262,7 @@ export default function Home() {
 
             if (target.shield.hp > 0) {
                 let damageToShield = finalDamage;
-                if(spellElement && target.shield.element && target.shield.element !== 'Эфир') {
+                if(spellElement && spellElement !== 'neutral' && target.shield.element && target.shield.element !== 'Эфир') {
                     const attackElement = ELEMENTS[spellElement];
                     const shieldElement = ELEMENTS[target.shield.element];
                     if (attackElement && shieldElement) {
@@ -342,7 +342,7 @@ export default function Home() {
                 
                 const defenderElements = opponent.elementalKnowledge;
 
-                if (element && defenderElements.length > 0) {
+                if (element && element !== 'neutral' && defenderElements.length > 0) {
                     const mainAttackerElement = ELEMENTS[element];
                     const mainDefenderElement = ELEMENTS[defenderElements[0]];
 
@@ -395,8 +395,8 @@ export default function Home() {
                 case 'shield':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
                     activePlayer.shield.hp += RULES.BASE_SHIELD_VALUE;
-                    activePlayer.shield.element = action.payload?.element || null;
-                    const shieldType = action.payload?.element ? `${action.payload.element} щит` : "щит";
+                    activePlayer.shield.element = (action.payload?.element === 'neutral' ? null : action.payload?.element) || null;
+                    const shieldType = activePlayer.shield.element ? `${activePlayer.shield.element} щит` : "щит";
                     turnLog.push(`${activePlayer.name} создает ${shieldType} прочностью ${RULES.BASE_SHIELD_VALUE}.`);
                     break;
                 case 'dodge':
