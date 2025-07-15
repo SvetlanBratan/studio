@@ -71,6 +71,11 @@ const getPhysicalCondition = (oz: number, maxOz: number): string => {
 export default function Home() {
   const [duel, setDuel] = useState<DuelState | null>(null);
   const [log, setLog] = useState<string[]>([]);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleDuelStart = (player1: CharacterStats, player2: CharacterStats) => {
     setDuel({
@@ -618,6 +623,10 @@ export default function Home() {
     setDuel(null);
     setLog([]);
   };
+
+  if (!isClient) {
+    return null; // Render nothing on the server to avoid hydration mismatch
+  }
 
   if (!duel) {
     const p1WithRace = { ...initialPlayer1, race: RACES[0].name, bonuses: [...RACES[0].passiveBonuses] };
