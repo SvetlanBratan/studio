@@ -550,8 +550,8 @@ export default function DuelPage() {
         
         const updatedDuel = {
             ...duelData,
-            player1: duelData.activePlayerId === 'player1' ? activePlayer : opponent,
-            player2: duelData.activePlayerId === 'player2' ? activePlayer : opponent,
+            player1: duelData.activePlayerId === 'player1' ? { ...activePlayer } : { ...opponent },
+            player2: duelData.activePlayerId === 'player2' ? { ...activePlayer } : { ...opponent },
             turnHistory: [...duelData.turnHistory, newTurn],
             currentTurn: duelData.currentTurn + 1,
             activePlayerId: duelData.activePlayerId === 'player1' ? 'player2' : 'player1',
