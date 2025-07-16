@@ -1,5 +1,5 @@
 
-import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element } from "@/types/duel";
+import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element, CharacterStats } from "@/types/duel";
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
 
@@ -232,4 +232,33 @@ export const RULES = {
   } as Record<string, number>,
 
   DODGE_VS_STRONG_SPELL_DMG_REDUCTION: 20,
+};
+
+export const initialPlayerStats = (id: string, name: string): CharacterStats => {
+    const race = RACES[0];
+    const reserve = 'Неофит';
+    const maxOm = getOmFromReserve(reserve);
+
+    return {
+        id,
+        name,
+        race: race.name,
+        reserve,
+        elementalKnowledge: [],
+        faithLevel: 0,
+        faithLevelName: 'Равнодушие',
+        physicalCondition: 'В полном здравии',
+        bonuses: [...race.passiveBonuses],
+        penalties: [],
+        inventory: [],
+        oz: 250,
+        maxOz: 250,
+        om: maxOm,
+        maxOm,
+        od: 100,
+        maxOd: 100,
+        shield: { hp: 0, element: null },
+        isDodging: false,
+        cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
+    };
 };

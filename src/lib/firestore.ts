@@ -2,38 +2,9 @@
 import { getFirestore, doc, setDoc, updateDoc, getDoc, collection } from 'firebase/firestore';
 import { app } from './firebase';
 import type { DuelState, CharacterStats } from '@/types/duel';
-import { RACES, getOmFromReserve, getFaithLevelFromString } from './rules';
+import { initialPlayerStats } from './rules';
 
 export const firestore = app ? getFirestore(app) : null;
-
-const initialPlayerStats = (id: string, name: string): CharacterStats => {
-    const race = RACES[0];
-    const reserve = 'Неофит';
-    const maxOm = getOmFromReserve(reserve);
-
-    return {
-        id,
-        name,
-        race: race.name,
-        reserve,
-        elementalKnowledge: [],
-        faithLevel: 0,
-        faithLevelName: 'Равнодушие',
-        physicalCondition: 'В полном здравии',
-        bonuses: [...race.passiveBonuses],
-        penalties: [],
-        inventory: [],
-        oz: 250,
-        maxOz: 250,
-        om: maxOm,
-        maxOm,
-        od: 100,
-        maxOd: 100,
-        shield: { hp: 0, element: null },
-        isDodging: false,
-        cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
-    };
-};
 
 export async function createDuel(player1Id: string, player1Name: string): Promise<string> {
     if (!firestore) {
@@ -56,29 +27,6 @@ export async function createDuel(player1Id: string, player1Name: string): Promis
     await setDoc(duelRef, initialState);
     return duelId;
 }
-
-export async function createSoloDuel(player1Id: string, player1Name: string): Promise<string> {
-    if (!firestore) {
-        throw new Error("Firestore is not initialized.");
-    }
-    const duelId = doc(collection(firestore, 'duels')).id;
-    const duelRef = doc(firestore, 'duels', duelId);
-
-    const initialState: DuelState = {
-        player1: initialPlayerStats(player1Id, player1Name),
-        player2: initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2 (Соло)'),
-        turnHistory: [],
-        currentTurn: 1,
-        activePlayerId: 'player1',
-        winner: null,
-        log: [],
-        createdAt: new Date(),
-    };
-
-    await setDoc(duelRef, initialState);
-    return duelId;
-}
-
 
 export async function joinDuel(duelId: string, player2Id: string, player2Name: string) {
     if (!firestore) {

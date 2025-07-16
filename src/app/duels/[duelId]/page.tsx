@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Swords, Gamepad2, ShieldAlert, Users, Link, Check, ClipboardCopy, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES } from '@/lib/rules';
+import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES, initialPlayerStats } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { updateDuel, joinDuel } from '@/lib/firestore';
@@ -35,20 +35,49 @@ export default function DuelPage() {
   const params = useParams();
   const router = useRouter();
   const duelId = params.duelId as string;
+  const isLocalSolo = duelId === 'solo';
+
+  const [localDuelState, setLocalDuelState] = useState<DuelState | null>(null);
 
   const [copied, setCopied] = useState(false);
 
-  const duelRef = doc(firestore, 'duels', duelId);
-  const [duel, duelLoading, duelError] = useDocumentData(duelRef);
-  const duelData = duel as DuelState | undefined;
+  const duelRef = !isLocalSolo ? doc(firestore, 'duels', duelId) : null;
+  const [onlineDuel, onlineDuelLoading, onlineDuelError] = useDocumentData(duelRef);
 
-  const isSoloGame = duelData?.player2?.id === 'SOLO_PLAYER_2';
+  const duelData = isLocalSolo ? localDuelState : (onlineDuel as DuelState | undefined);
+  const duelLoading = isLocalSolo ? (localDuelState === null) : onlineDuelLoading;
+  const duelError = isLocalSolo ? null : onlineDuelError;
 
   useEffect(() => {
-    if (user && duelData && !duelData.player2 && duelData.player1.id !== user.uid) {
+    if (isLocalSolo && !localDuelState && user) {
+        const player1 = initialPlayerStats(user.uid, user.displayName || 'Игрок 1');
+        const player2 = initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2 (Соло)');
+        setLocalDuelState({
+            player1,
+            player2,
+            turnHistory: [],
+            currentTurn: 1,
+            activePlayerId: 'player1',
+            winner: null,
+            log: [],
+            createdAt: new Date(),
+        });
+    }
+  }, [isLocalSolo, localDuelState, user]);
+
+  useEffect(() => {
+    if (!isLocalSolo && user && onlineDuel && !onlineDuel.player2 && onlineDuel.player1.id !== user.uid) {
         joinDuel(duelId, user.uid, user.displayName || "Игрок 2");
     }
-  }, [user, duelData, duelId]);
+  }, [user, onlineDuel, duelId, isLocalSolo]);
+
+  const handleUpdateDuelState = (updatedDuel: Partial<DuelState>) => {
+    if (isLocalSolo) {
+        setLocalDuelState(prev => prev ? { ...prev, ...updatedDuel } as DuelState : null);
+    } else {
+        updateDuel(duelId, updatedDuel);
+    }
+  }
 
   const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
     if (!duelData) return;
@@ -58,11 +87,10 @@ export default function DuelPage() {
     const charData = { ...updatedCharacter, maxOm: newMaxOm, faithLevel: newFaithLevel };
 
     const updatedDuel = {
-        ...duelData,
         player1: duelData.player1.id === charData.id ? charData : duelData.player1,
         player2: duelData.player2 && duelData.player2.id === charData.id ? charData : duelData.player2,
     };
-    updateDuel(duelId, updatedDuel);
+    handleUpdateDuelState(updatedDuel);
   };
   
   const copyLink = () => {
@@ -201,7 +229,7 @@ export default function DuelPage() {
                 winner: null,
                 log: turnLog,
             };
-            updateDuel(duelId, updatedDuel);
+            handleUpdateDuelState(updatedDuel);
             return;
         }
 
@@ -564,7 +592,7 @@ export default function DuelPage() {
             log: turnLog,
         };
 
-        updateDuel(duelId, updatedDuel);
+        handleUpdateDuelState(updatedDuel);
   };
   
   if (loading || duelLoading) {
@@ -592,7 +620,7 @@ export default function DuelPage() {
     return null;
   }
 
-  if (!duelData.player2) {
+  if (!isLocalSolo && !duelData.player2) {
       return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
             <Card className="w-full max-w-md">
@@ -618,10 +646,10 @@ export default function DuelPage() {
   }
 
   const currentPlayerId = user.uid === duelData.player1.id ? 'player1' : 'player2';
-  const isMyTurn = duelData.activePlayerId === currentPlayerId || isSoloGame;
+  const isMyTurn = isLocalSolo || duelData.activePlayerId === currentPlayerId;
 
-  const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
-  const opponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
+  const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2!;
+  const opponent = duelData.activePlayerId === 'player1' ? duelData.player2! : duelData.player1;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -650,8 +678,8 @@ export default function DuelPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 flex flex-col gap-8">
-              <CharacterPanel character={duelData.player1} isActive={duelData.activePlayerId === 'player1'} onUpdate={handleCharacterUpdate} canEdit={isSoloGame || user.uid === duelData.player1.id}/>
-              <CharacterPanel character={duelData.player2} isActive={duelData.activePlayerId === 'player2'} onUpdate={handleCharacterUpdate} canEdit={isSoloGame || user.uid === duelData.player2.id} />
+              <CharacterPanel character={duelData.player1} isActive={duelData.activePlayerId === 'player1'} onUpdate={handleCharacterUpdate} canEdit={isLocalSolo || user.uid === duelData.player1.id}/>
+              {duelData.player2 && <CharacterPanel character={duelData.player2} isActive={duelData.activePlayerId === 'player2'} onUpdate={handleCharacterUpdate} canEdit={isLocalSolo || user.uid === duelData.player2.id} />}
             </div>
 
             <div className="lg:col-span-2 flex flex-col gap-8">
@@ -691,7 +719,7 @@ export default function DuelPage() {
                 </Alert>
               )}
 
-              <DuelLog turns={duelData.turnHistory} player1Name={duelData.player1.name} player2Name={duelData.player2.name} />
+              <DuelLog turns={duelData.turnHistory} player1Name={duelData.player1.name} player2Name={duelData.player2?.name || 'Оппонент'} />
             </div>
           </div>
         )}
@@ -699,5 +727,3 @@ export default function DuelPage() {
     </div>
   );
 }
-
-    
