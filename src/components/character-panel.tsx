@@ -56,11 +56,13 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
                 newState.bonuses = newBonuses;
                 const newMaxOz = calculateMaxOz(newBonuses);
                 newState.maxOz = newMaxOz;
+                newState.oz = newMaxOz;
             }
         }
         if (field === 'reserve') {
             const newMaxOm = getOmFromReserve(value as ReserveLevel);
             newState.maxOm = newMaxOm;
+            newState.om = newMaxOm;
         }
         return newState;
     });
@@ -405,5 +407,3 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
     </TooltipProvider>
   );
 }
-
-    
