@@ -56,13 +56,11 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
                 newState.bonuses = newBonuses;
                 const newMaxOz = calculateMaxOz(newBonuses);
                 newState.maxOz = newMaxOz;
-                newState.oz = Math.min(newState.oz, newMaxOz);
             }
         }
         if (field === 'reserve') {
             const newMaxOm = getOmFromReserve(value as ReserveLevel);
             newState.maxOm = newMaxOm;
-            newState.om = Math.min(newState.om, newMaxOm); // Adjust current om if it exceeds new max
         }
         return newState;
     });
@@ -101,7 +99,10 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
   };
 
   const handleSave = () => {
-    onUpdate(editableCharacter);
+    const finalCharacter = { ...editableCharacter };
+    finalCharacter.oz = Math.min(finalCharacter.oz, finalCharacter.maxOz);
+    finalCharacter.om = Math.min(finalCharacter.om, finalCharacter.maxOm);
+    onUpdate(finalCharacter);
     setIsEditing(false);
   };
 
@@ -404,3 +405,5 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
     </TooltipProvider>
   );
 }
+
+    
