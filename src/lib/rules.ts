@@ -112,6 +112,17 @@ export const RACES: Race[] = [
 export const getOmFromReserve = (reserve: ReserveLevel): number => RESERVE_LEVELS[reserve] || 90;
 export const getFaithLevelFromString = (faith: FaithLevel): number => FAITH_LEVELS[faith] || 0;
 
+export const calculateMaxOz = (bonuses: string[]): number => {
+    let maxOz = RULES.STARTING_OZ;
+    bonuses.forEach(bonus => {
+        const ozMatch = bonus.match(/\+(\d+) ОЗ/);
+        if (ozMatch) {
+            maxOz += parseInt(ozMatch[1], 10);
+        }
+    });
+    return maxOz;
+};
+
 export const getActionLabel = (type: ActionType, payload?: any): string => {
   const prayerEffectLabels: Record<PrayerEffectType, string> = {
     eternal_shield: 'Вечный щит (4 хода)',
@@ -234,9 +245,11 @@ export const RULES = {
 };
 
 export const initialPlayerStats = (id: string, name: string): CharacterStats => {
-    const race = RACES[0];
+    const race = RACES.find(r => r.name === 'Человек') || RACES[0];
     const reserve = 'Неофит';
     const maxOm = getOmFromReserve(reserve);
+    const bonuses = [...race.passiveBonuses];
+    const maxOz = calculateMaxOz(bonuses);
 
     return {
         id,
@@ -247,11 +260,11 @@ export const initialPlayerStats = (id: string, name: string): CharacterStats => 
         faithLevel: 0,
         faithLevelName: 'Равнодушие',
         physicalCondition: 'В полном здравии',
-        bonuses: [...race.passiveBonuses],
+        bonuses,
         penalties: [],
         inventory: [],
-        oz: 250,
-        maxOz: 250,
+        oz: maxOz,
+        maxOz: maxOz,
         om: maxOm,
         maxOm,
         od: 100,

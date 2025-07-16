@@ -15,7 +15,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve } from '@/lib/rules';
+import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz } from '@/lib/rules';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 
@@ -50,7 +50,11 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
         if (field === 'race') {
             const selectedRace = RACES.find(r => r.name === value);
             if (selectedRace) {
-                newState.bonuses = [...selectedRace.passiveBonuses];
+                const newBonuses = [...selectedRace.passiveBonuses];
+                newState.bonuses = newBonuses;
+                const newMaxOz = calculateMaxOz(newBonuses);
+                newState.maxOz = newMaxOz;
+                newState.oz = Math.min(newState.oz, newMaxOz);
             }
         }
         if (field === 'reserve') {
@@ -91,7 +95,7 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
   const removeInventoryItem = (index: number) => {
     setEditableCharacter(prev => ({
       ...prev,
-      inventory: prev.inventory.filter((_, i) => i !== index)
+      inventory: editableCharacter.inventory.filter((_, i) => i !== index)
     }));
   };
 
