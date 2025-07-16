@@ -6,7 +6,7 @@ import type { CharacterStats, ReserveLevel, FaithLevel, InventoryItem } from '@/
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import StatBar from './stat-bar';
-import { Heart, Sparkles, Wind, Shield, User, BookOpen, Cross, Briefcase, Siren, Edit, Save, X, Timer, Package, PlusCircle, Trash2 } from 'lucide-react';
+import { Heart, Sparkles, Wind, Shield, User, BookOpen, Cross, Briefcase, Siren, Edit, Save, X, Timer, Package, PlusCircle, Trash2, Check as CheckIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -67,10 +67,12 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
   };
   
   const handleElementsChange = (element: string) => {
-    const newElements = editableCharacter.elementalKnowledge.includes(element)
-      ? editableCharacter.elementalKnowledge.filter(e => e !== element)
-      : [...editableCharacter.elementalKnowledge, element];
-    setEditableCharacter(prev => ({ ...prev, elementalKnowledge: newElements }));
+    setEditableCharacter(prev => {
+      const newElements = prev.elementalKnowledge.includes(element)
+        ? prev.elementalKnowledge.filter(e => e !== element)
+        : [...prev.elementalKnowledge, element];
+      return { ...prev, elementalKnowledge: newElements };
+    });
   };
 
   const handleArrayInputChange = (field: 'penalties', value: string) => {
@@ -257,7 +259,7 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
                         <Button variant="outline" className="w-full justify-start font-normal flex-wrap h-auto min-h-10">
                             <div className="flex gap-1 flex-wrap">
                                 {editableCharacter.elementalKnowledge.length > 0 ? (
-                                    editableCharacter.elementalKnowledge.map(e => <Badge key={e}>{e}</Badge>)
+                                    editableCharacter.elementalKnowledge.map(e => <Badge key={e} variant="secondary">{e}</Badge>)
                                 ) : (
                                     "Выберите стихии..."
                                 )}
@@ -270,18 +272,23 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
                             <CommandList>
                                 <CommandEmpty>Стихия не найдена.</CommandEmpty>
                                 <CommandGroup>
-                                    {Object.values(ELEMENTS).map((element) => (
-                                    <CommandItem
-                                        key={element.name}
-                                        value={element.name}
-                                        onSelect={(currentValue) => handleElementsChange(currentValue)}
-                                    >
-                                        {element.name}
-                                        <span className="ml-auto">
-                                            {editableCharacter.elementalKnowledge.includes(element.name) ? "✓" : ""}
-                                        </span>
-                                    </CommandItem>
-                                    ))}
+                                    {Object.values(ELEMENTS).map((element) => {
+                                      const isSelected = editableCharacter.elementalKnowledge.includes(element.name);
+                                      return (
+                                        <CommandItem
+                                            key={element.name}
+                                            value={element.name}
+                                            onSelect={(currentValue) => {
+                                              handleElementsChange(currentValue);
+                                            }}
+                                        >
+                                            <div className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary", isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible")}>
+                                                <CheckIcon className="h-4 w-4" />
+                                            </div>
+                                            {element.name}
+                                        </CommandItem>
+                                      );
+                                    })}
                                 </CommandGroup>
                             </CommandList>
                         </Command>
