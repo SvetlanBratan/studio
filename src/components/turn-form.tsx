@@ -6,10 +6,9 @@ import type { Action, CharacterStats, ActionType, PrayerEffectType } from '@/typ
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Trash2, Send, ShieldCheck, HeartPulse, SparklesIcon } from 'lucide-react';
-import { RULES, getActionLabel, RACES, ELEMENTS } from '@/lib/rules';
+import { RULES, getActionLabel, RACES } from '@/lib/rules';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,

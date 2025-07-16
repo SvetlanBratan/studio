@@ -1,0 +1,75 @@
+
+import { getFirestore, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { app } from './firebase';
+import type { DuelState, CharacterStats } from '@/types/duel';
+import { RACES, getOmFromReserve } from './rules';
+
+export const firestore = getFirestore(app!);
+
+const initialPlayerStats = (id: string, name: string): CharacterStats => {
+    const race = RACES[0];
+    const reserve = 'Неофит';
+    const maxOm = getOmFromReserve(reserve);
+
+    return {
+        id,
+        name,
+        race: race.name,
+        reserve,
+        elementalKnowledge: [],
+        faithLevel: 0,
+        faithLevelName: 'Равнодушие',
+        physicalCondition: 'В полном здравии',
+        bonuses: [...race.passiveBonuses],
+        penalties: [],
+        inventory: [],
+        oz: 250,
+        maxOz: 250,
+        om: maxOm,
+        maxOm,
+        od: 100,
+        maxOd: 100,
+        shield: { hp: 0, element: null },
+        isDodging: false,
+        cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
+    };
+};
+
+export async function createDuel(player1Id: string, player1Name: string): Promise<string> {
+    const duelId = doc(collection(firestore, 'duels')).id;
+    const duelRef = doc(firestore, 'duels', duelId);
+
+    const initialState: DuelState = {
+        player1: initialPlayerStats(player1Id, player1Name),
+        player2: null,
+        turnHistory: [],
+        currentTurn: 1,
+        activePlayerId: 'player1',
+        winner: undefined,
+        log: [],
+        createdAt: new Date(),
+    };
+
+    await setDoc(duelRef, initialState);
+    return duelId;
+}
+
+export async function joinDuel(duelId: string, player2Id: string, player2Name: string) {
+    const duelRef = doc(firestore, 'duels', duelId);
+    const duelSnap = await getDoc(duelRef);
+
+    if (duelSnap.exists() && !duelSnap.data().player2) {
+        await updateDoc(duelRef, {
+            player2: initialPlayerStats(player2Id, player2Name),
+            activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
+        });
+    }
+}
+
+export async function updateDuel(duelId: string, duelData: Partial<DuelState>) {
+    const duelRef = doc(firestore, 'duels', duelId);
+    await updateDoc(duelRef, duelData);
+}
+
+// Re-export collection and other firestore functions if needed elsewhere
+export { doc, collection, getDoc, setDoc as setFirestoreDoc, updateDoc as updateFirestoreDoc } from 'firebase/firestore';

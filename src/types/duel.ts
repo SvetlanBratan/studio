@@ -107,12 +107,11 @@ export interface Turn {
 
 export interface DuelState {
   player1: CharacterStats;
-  player2: CharacterStats;
+  player2: CharacterStats | null;
   turnHistory: Turn[];
   currentTurn: number;
-  activePlayerId: string;
+  activePlayerId: 'player1' | 'player2';
   winner?: string;
   log: string[];
+  createdAt: any; // Using 'any' for Firebase Timestamp compatibility
 }
-
-    

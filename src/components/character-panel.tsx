@@ -23,9 +23,10 @@ interface CharacterPanelProps {
   character: CharacterStats;
   isActive: boolean;
   onUpdate: (character: CharacterStats) => void;
+  canEdit: boolean;
 }
 
-export default function CharacterPanel({ character, isActive, onUpdate }: CharacterPanelProps) {
+export default function CharacterPanel({ character, isActive, onUpdate, canEdit }: CharacterPanelProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editableCharacter, setEditableCharacter] = useState<CharacterStats>(character);
 
@@ -213,7 +214,7 @@ export default function CharacterPanel({ character, isActive, onUpdate }: Charac
                   <TooltipContent><p>Текущий ход</p></TooltipContent>
                 </Tooltip>
               )}
-               {!isEditing && (
+               {canEdit && !isEditing && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsEditing(true)}>
