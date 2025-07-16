@@ -80,10 +80,20 @@ export default function Home() {
   }, []);
   
   useEffect(() => {
-      if (isClient && !loading && !user) {
-        // This is handled by useAuth hook redirecting to /login
-      }
-  }, [user, loading, isClient]);
+    if (duel) {
+      const determineFirstPlayer = () => {
+        setDuel(prevDuel => {
+          if (!prevDuel || prevDuel.turnHistory.length > 0) return prevDuel;
+          return {
+            ...prevDuel,
+            activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
+          }
+        })
+      };
+      determineFirstPlayer();
+    }
+  }, [duel?.currentTurn]);
+
 
   const handleDuelStart = (player1: CharacterStats, player2: CharacterStats) => {
     const initialState: DuelState = {
@@ -91,25 +101,11 @@ export default function Home() {
       player2,
       turnHistory: [],
       currentTurn: 1,
-      activePlayerId: 'player1', // Default, will be set on client
+      activePlayerId: 'player1', // This will be randomized in useEffect
       winner: undefined,
       log: [],
     };
-
     setDuel(initialState);
-    
-    // Determine first player on client to avoid hydration mismatch
-    useEffect(() => {
-      if (duel) {
-        setDuel(prevDuel => {
-          if (!prevDuel) return null;
-          return {
-            ...prevDuel,
-            activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
-          }
-        })
-      }
-    }, []);
   };
 
   const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
@@ -665,7 +661,7 @@ export default function Home() {
     setLog([]);
   };
 
-  if (!isClient || loading) {
+  if (loading || !isClient) {
     return (
         <div className="flex items-center justify-center min-h-screen">
           <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
@@ -674,8 +670,8 @@ export default function Home() {
   }
 
   if (!user) {
-    // This case should ideally not be reached if useAuth handles redirection correctly.
-    // It's a fallback.
+    // This case should not be reached if useAuth handles redirection correctly,
+    // but it's a safeguard.
     return null;
   }
 
@@ -797,5 +793,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { auth, isFirebaseEnabled } from '@/lib/firebase';
 import { 
   onAuthStateChanged, 
@@ -27,29 +27,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isFirebaseEnabled) {
+      setUser(null);
       setLoading(false);
       // If firebase is not configured, we don't need auth.
-      // We can let the user proceed or show a message.
-      // For now, let's just stop loading.
+      // We can let the user proceed without being logged in if they are not on the login page.
+      if (pathname !== '/login') {
+         // Potentially handle this case, for now, it allows access to other pages
+         // without forcing a login, which might be desired if firebase isn't set up.
+      }
       return;
     }
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
       setLoading(false);
-      if (user) {
-        if(window.location.pathname === '/login') {
+      if (currentUser) {
+        if (pathname === '/login') {
             router.push('/');
         }
       } else {
-        router.push('/login');
+        if (pathname !== '/login') {
+          router.push('/login');
+        }
       }
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, pathname]);
 
   const signInWithGoogle = async () => {
     if (!isFirebaseEnabled || !auth) return;
