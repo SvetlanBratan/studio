@@ -187,11 +187,13 @@ export default function DuelPage() {
             
             activePlayer.physicalCondition = getPhysicalCondition(activePlayer.oz, activePlayer.maxOz);
             opponent.physicalCondition = getPhysicalCondition(opponent.oz, opponent.maxOz);
+            
+            const { isDodging: _activeIsDodging, ...finalActivePlayer } = activePlayer;
+            const { isDodging: _opponentIsDodging, ...finalOpponent } = opponent;
 
-            const updatedDuel = {
-                ...duelData,
-                player1: duelData.activePlayerId === 'player1' ? activePlayer : opponent,
-                player2: duelData.activePlayerId === 'player2' ? activePlayer : opponent,
+            const updatedDuel: Partial<DuelState> = {
+                player1: duelData.activePlayerId === 'player1' ? finalActivePlayer : finalOpponent,
+                player2: duelData.activePlayerId === 'player2' ? finalActivePlayer : finalOpponent,
                 turnHistory: [...duelData.turnHistory, newTurn],
                 currentTurn: duelData.currentTurn + 1,
                 activePlayerId: duelData.activePlayerId === 'player1' ? 'player2' : 'player1',
@@ -548,11 +550,10 @@ export default function DuelPage() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: { ...activePlayer.shield } },
         };
         
-        const { isDodging: _isDodging, ...finalActivePlayer } = activePlayer;
-        const { isDodging: __isDodging, ...finalOpponent } = opponent;
+        const { isDodging: _activeIsDodging, ...finalActivePlayer } = activePlayer;
+        const { isDodging: _opponentIsDodging, ...finalOpponent } = opponent;
 
-        const updatedDuel: DuelState = {
-            ...duelData,
+        const updatedDuel: Partial<DuelState> = {
             player1: duelData.activePlayerId === 'player1' ? finalActivePlayer : finalOpponent,
             player2: duelData.activePlayerId === 'player2' ? finalActivePlayer : finalOpponent,
             turnHistory: [...duelData.turnHistory, newTurn],
@@ -697,7 +698,3 @@ export default function DuelPage() {
     </div>
   );
 }
-
-    
-
-    
