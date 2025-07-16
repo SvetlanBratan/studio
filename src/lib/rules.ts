@@ -96,7 +96,7 @@ export const RACES: Race[] = [
     { name: 'Тальены', passiveBonuses: ['Иммунитет к контролю'], activeAbilities: [{ name: 'Психостенка', description: 'отражение дебаффов', cost: {om: 30} }] },
     { name: 'Тени', passiveBonuses: ['-5 урона по себе'], activeAbilities: [{ name: 'Теневой шаг', description: 'перемещение без траты ОД', cost: {om: 10} }] },
     { name: 'Тритоны', passiveBonuses: ['-10 ОЗ/2 хода врагу (описательно)'], activeAbilities: [{ name: 'Призыв боли', description: '-10 ОЗ/ход в течение 3 ходов', cost: {om: 30} }] },
-    { name: 'Человек', passiveBonuses: ['Иммунитет к контролю'], activeAbilities: [] },
+    { name: 'Человек', passiveBonuses: [], activeAbilities: [] },
     { name: 'Хамелеоны', passiveBonuses: ['Незаметность (описательно)'], activeAbilities: [{ name: 'Маскировка', description: '+50% уворота на 1 ход', cost: {om: 30} }] },
     { name: 'Химеры', passiveBonuses: [], activeAbilities: [{ name: 'Мутация', description: 'временно копирует черты другой расы', cost: {om: 90} }] },
     { name: 'Цынаре', passiveBonuses: ['+10 ОМ/ход', '-5 ОЗ/ход'], activeAbilities: [{ name: 'Гипноз', description: 'враг теряет ход', cooldown: 5, cost: {om: 90} }] },
