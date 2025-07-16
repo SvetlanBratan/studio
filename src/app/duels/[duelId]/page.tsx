@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Swords, Gamepad2, ShieldAlert, Users, Link, Check, ClipboardCopy, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES, initialPlayerStats } from '@/lib/rules';
+import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES, initialPlayerStats, ELEMENTS } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { updateDuel, joinDuel } from '@/lib/firestore';
@@ -286,6 +286,14 @@ export default function DuelPage() {
                     turnLog.push(`Эфирный щит ${target.name} полностью поглощает магический урон.`);
                     return;
                 }
+                
+                if (spellElement && target.shield.element) {
+                    const shieldElementInfo = ELEMENTS[target.shield.element];
+                    if (shieldElementInfo && shieldElementInfo.weakTo.includes(spellElement)) {
+                        finalDamage *= RULES.ELEMENTAL_VULNERABILITY_MULTIPLIER;
+                        turnLog.push(`Стихия "${spellElement}" уязвима для щита "${target.shield.element}"! Урон по щиту удвоен.`);
+                    }
+                }
 
                 const absorbedDamage = Math.min(target.shield.hp, finalDamage);
                 target.shield.hp -= absorbedDamage;
@@ -307,6 +315,12 @@ export default function DuelPage() {
                 damageDealtToTarget = finalDamage;
                 turnLog.push(`${target.name} получает ${finalDamage} урона.`);
             }
+            
+            if (damageDealtToTarget > 0) {
+                if (attacker.bonuses.includes('При попадании: Накладывает кровотечение (2)')) {
+                    applyEffect(target, 'Кровотечение (2)');
+                }
+            }
 
             if (target.race === 'Безликие' && damageDealtToTarget > 0) {
                 attacker.oz -= damageDealtToTarget;
@@ -318,7 +332,6 @@ export default function DuelPage() {
                     case 'Огонь':
                         applyEffect(target, 'Горение (2)');
                         break;
-                    // TODO: Add other elemental effects here
                 }
             }
         };
@@ -514,13 +527,20 @@ export default function DuelPage() {
                                 turnLog.push(`Способность "Песня влюблённого": ${opponent.name} получает 10 урона, а ${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Укус': 
-                                applyDamage(activePlayer, opponent, 10, false);
-                                if (activePlayer.bonuses.includes('+3 к восстановлению ОМ при укусе')) {
-                                    const omRestored = 3;
-                                    activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omRestored);
-                                    turnLog.push(`Пассивная способность (Вампир): ${activePlayer.name} восстанавливает ${omRestored} ОМ от укуса.`);
+                                {
+                                    let biteDamage = 10;
+                                    if(activePlayer.bonuses.includes('Укус (+10 ОЗ)')) {
+                                        biteDamage += 10;
+                                        turnLog.push(`Пассивная способность (Василиск): Укус усилен и наносит дополнительно 10 урона.`);
+                                    }
+                                    applyDamage(activePlayer, opponent, biteDamage, false);
+                                    if (activePlayer.bonuses.includes('+3 к восстановлению ОМ при укусе')) {
+                                        const omRestored = 3;
+                                        activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omRestored);
+                                        turnLog.push(`Пассивная способность (Вампир): ${activePlayer.name} восстанавливает ${omRestored} ОМ от укуса.`);
+                                    }
+                                    turnLog.push(`Способность "Укус": ${opponent.name} получает ${biteDamage} урона.`);
                                 }
-                                turnLog.push(`Способность "Укус": ${opponent.name} получает 10 урона.`);
                                 break;
                              case 'Окаменение взглядом':
                                 applyEffect(opponent, 'Окаменение (1)');

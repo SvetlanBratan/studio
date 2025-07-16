@@ -43,9 +43,9 @@ export const RACES: Race[] = [
     { name: 'Безликие', passiveBonuses: ['Отзеркаливание урона'], activeAbilities: [] },
     { name: 'Белояры', passiveBonuses: ['+5 к физической атаке'], activeAbilities: [{ name: 'Пронзающий удар', description: '+20 ОЗ физурона', cost: {od: 30} }] },
     { name: 'Бракованные пересмешники', passiveBonuses: ['+4 к урону/исцелению (описательно)'], activeAbilities: [{ name: 'Песня влюблённого', description: '-10 ОЗ врагу, +10 ОЗ себе', cost: {om: 30} }] },
-    { name: 'Вампиры', passiveBonuses: ['+3 к восстановлению ОМ при укусе'], activeAbilities: [{ name: 'Укус', description: '+10 ОМ, -10 ОЗ врагу', cost: {od: 10} }] },
+    { name: 'Вампиры', passiveBonuses: ['+3 к восстановлению ОМ при укусе'], activeAbilities: [{ name: 'Укус', description: '-10 ОЗ врагу', cost: {od: 10} }] },
     { name: 'Вансаэльцы', passiveBonuses: ['+5 ОМ (описательно)'], activeAbilities: [{ name: 'Обратиться к духам', description: 'призыв духа-хранителя', cost: {om: 90} }] },
-    { name: 'Василиски', passiveBonuses: ['-10 ОЗ от укуса (описательно)', 'Иммунитет к ядам'], activeAbilities: [{ name: 'Окаменение взглядом', description: 'враг теряет ход', cooldown: 5, cost: {om: 90} }] },
+    { name: 'Василиски', passiveBonuses: ['Укус (+10 ОЗ)'], activeAbilities: [{ name: 'Окаменение взглядом', description: 'враг теряет ход', cooldown: 5, cost: {om: 90} }, { name: 'Укус', description: 'Наносит 10 урона', cost: { od: 15 } }] },
     { name: 'Веспы', passiveBonuses: ['-1 ОД у врага/ход'], activeAbilities: [{ name: 'Вспышка зрения', description: 'ослепление на 1 ход', cost: {om: 10} }] },
     { name: 'Вулгары', passiveBonuses: ['Иммунитет к болезням', '+10 ОЗ/ход'], activeAbilities: [{ name: 'Удар подавления', description: 'снижает ОМ врага на 15', cost: {om: 10} }] },
     { name: 'Гуриты', passiveBonuses: [], activeAbilities: [{ name: 'Обволакивающая слизь', description: 'замедление врага', cost: {om: 10} }] },
@@ -95,7 +95,7 @@ export const RACES: Race[] = [
     { name: 'Сфинксы', passiveBonuses: ['+10 ОЗ/щит'], activeAbilities: [{ name: 'Загадка Сфинкса', description: '-20 ОЗ', cost: {om: 30} }] },
     { name: 'Тальены', passiveBonuses: [], activeAbilities: [{ name: 'Психостенка', description: 'отражение дебаффов', cost: {om: 30} }] },
     { name: 'Тени', passiveBonuses: ['-5 урона по себе'], activeAbilities: [{ name: 'Теневой шаг', description: 'перемещение без траты ОД', cost: {om: 10} }] },
-    { name: 'Тритоны', passiveBonuses: ['-10 ОЗ/2 хода врагу (описательно)'], activeAbilities: [{ name: 'Призыв боли', description: '-10 ОЗ/ход в течение 3 ходов', cost: {om: 30} }] },
+    { name: 'Тритоны', passiveBonuses: ['При попадании: Накладывает кровотечение (2)'], activeAbilities: [{ name: 'Призыв боли', description: '-10 ОЗ/ход в течение 3 ходов', cost: {om: 30} }] },
     { name: 'Человек', passiveBonuses: [], activeAbilities: [] },
     { name: 'Хамелеоны', passiveBonuses: ['Незаметность (описательно)'], activeAbilities: [{ name: 'Маскировка', description: '+50% уворота на 1 ход', cost: {om: 30} }] },
     { name: 'Химеры', passiveBonuses: [], activeAbilities: [{ name: 'Мутация', description: 'временно копирует черты другой расы', cost: {om: 90} }] },
@@ -223,7 +223,7 @@ export const RULES = {
   } as Record<'vulnerability' | 'battle_magic', Record<RitualType, number>>,
 
   POISON_EFFECTS: ['Отравление', 'Отравление (3)', 'Отравление (2)', 'Отравление (1)'],
-  DOT_EFFECTS: ['Отравление', 'Горение', 'Ожог', 'Отравление (3)', 'Отравление (2)', 'Отравление (1)', 'Горение (2)', 'Горение (1)'],
+  DOT_EFFECTS: ['Отравление', 'Горение', 'Ожог', 'Кровотечение', 'Отравление (3)', 'Отравление (2)', 'Отравление (1)', 'Горение (2)', 'Горение (1)', 'Кровотечение (2)'],
   DOT_DAMAGE: 8,
 
   OD_REGEN_ON_REST: 50,
@@ -243,6 +243,7 @@ export const RULES = {
   } as Record<string, number>,
 
   DODGE_VS_STRONG_SPELL_DMG_REDUCTION: 20,
+  ELEMENTAL_VULNERABILITY_MULTIPLIER: 2,
 };
 
 export const PENALTY_EFFECTS: string[] = [
@@ -254,6 +255,7 @@ export const PENALTY_EFFECTS: string[] = [
     'Ослепление (1)',
     'Отравление (3)',
     'Горение (2)',
+    'Кровотечение (2)',
     'Уязвимость',
     'Штраф к отравлению (3)',
 ];
