@@ -586,6 +586,10 @@ export default function DuelPage() {
                             case 'Мурлыканье':
                                 applyEffect(opponent, 'Усыпление (1)');
                                 break;
+                            case 'Луч истины':
+                                applyDamage(activePlayer, opponent, 15, true, 'Свет');
+                                turnLog.push(`Способность "Луч истины": ${opponent.name} получает 15 урона светом.`);
+                                break;
                          }
                     }
                     break;
@@ -596,8 +600,6 @@ export default function DuelPage() {
         if (isResting) {
             activePlayer.od = Math.min(activePlayer.maxOd, activePlayer.od + RULES.OD_REGEN_ON_REST);
             turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OD_REGEN_ON_REST} ОД.`);
-            activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.OM_REGEN_ON_REST);
-            turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OM_REGEN_ON_REST} ОМ.`);
         }
 
         activePlayer.oz = Math.max(0, activePlayer.oz);
@@ -770,3 +772,5 @@ export default function DuelPage() {
     </div>
   );
 }
+
+    
