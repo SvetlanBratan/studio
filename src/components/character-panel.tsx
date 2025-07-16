@@ -6,7 +6,7 @@ import type { CharacterStats, ReserveLevel, FaithLevel, InventoryItem } from '@/
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import StatBar from './stat-bar';
-import { Heart, Sparkles, Wind, Shield, User, BookOpen, Cross, Briefcase, Siren, Edit, Save, X, Timer, Package, PlusCircle, Trash2, Check as CheckIcon } from 'lucide-react';
+import { Heart, Sparkles, Wind, Shield, User, BookOpen, Cross, Briefcase, Siren, Edit, Save, X, Timer, Package, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -17,7 +17,9 @@ import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz } from '@/lib/rules';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { Checkbox } from './ui/checkbox';
+import { ScrollArea } from './ui/scroll-area';
+
 
 interface CharacterPanelProps {
   character: CharacterStats;
@@ -66,11 +68,11 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
     });
   };
   
-  const handleElementsChange = (element: string) => {
+  const handleElementsChange = (element: string, checked: boolean) => {
     setEditableCharacter(prev => {
-      const newElements = prev.elementalKnowledge.includes(element)
-        ? prev.elementalKnowledge.filter(e => e !== element)
-        : [...prev.elementalKnowledge, element];
+      const newElements = checked
+        ? [...prev.elementalKnowledge, element]
+        : prev.elementalKnowledge.filter(e => e !== element)
       return { ...prev, elementalKnowledge: newElements };
     });
   };
@@ -235,9 +237,14 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
         <CardContent className="space-y-4 flex-grow">
           {isEditing ? (
             <div className="space-y-3">
-              {renderStatDisplay("Макс. ОЗ", editableCharacter.maxOz)}
-              {renderStatDisplay("Макс. ОМ", editableCharacter.maxOm)}
-              {renderStatDisplay("Макс. ОД", editableCharacter.maxOd)}
+              <div className="grid grid-cols-2 gap-2">
+                {renderStatDisplay("Макс. ОЗ", editableCharacter.maxOz)}
+                {renderStatDisplay("Макс. ОМ", editableCharacter.maxOm)}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {renderStatDisplay("Макс. ОД", editableCharacter.maxOd)}
+                <div></div>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
@@ -267,31 +274,28 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                        <Command>
-                            <CommandInput placeholder="Поиск стихий..." />
-                            <CommandList>
-                                <CommandEmpty>Стихия не найдена.</CommandEmpty>
-                                <CommandGroup>
-                                    {Object.values(ELEMENTS).map((element) => {
-                                      const isSelected = editableCharacter.elementalKnowledge.includes(element.name);
-                                      return (
-                                        <CommandItem
-                                            key={element.name}
-                                            value={element.name}
-                                            onSelect={(currentValue) => {
-                                              handleElementsChange(currentValue);
-                                            }}
-                                        >
-                                            <div className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary", isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible")}>
-                                                <CheckIcon className="h-4 w-4" />
-                                            </div>
-                                            {element.name}
-                                        </CommandItem>
-                                      );
-                                    })}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
+                      <ScrollArea className="h-48">
+                        <div className="p-4 space-y-2">
+                          {Object.values(ELEMENTS).map((element) => {
+                            const isSelected = editableCharacter.elementalKnowledge.includes(element.name);
+                            return (
+                              <div key={element.name} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`element-${element.name}`}
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => handleElementsChange(element.name, !!checked)}
+                                />
+                                <label
+                                  htmlFor={`element-${element.name}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  {element.name}
+                                </label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
                     </PopoverContent>
                 </Popover>
                </div>
