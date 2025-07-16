@@ -46,12 +46,17 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
 
   const handleSelectChange = (field: 'reserve' | 'faithLevelName' | 'race', value: string) => {
     setEditableCharacter(prev => {
-        const newState = { ...prev, [field]: value };
+        let newState = { ...prev, [field]: value };
         if (field === 'race') {
             const selectedRace = RACES.find(r => r.name === value);
             if (selectedRace) {
                 newState.bonuses = [...selectedRace.passiveBonuses];
             }
+        }
+        if (field === 'reserve') {
+            const newMaxOm = getOmFromReserve(value as ReserveLevel);
+            newState.maxOm = newMaxOm;
+            newState.om = Math.min(newState.om, newMaxOm); // Adjust current om if it exceeds new max
         }
         return newState;
     });
@@ -64,7 +69,7 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
     setEditableCharacter(prev => ({ ...prev, elementalKnowledge: newElements }));
   };
 
-  const handleArrayInputChange = (field: 'bonuses' | 'penalties', value: string) => {
+  const handleArrayInputChange = (field: 'penalties', value: string) => {
     setEditableCharacter(prev => ({...prev, [field]: value.split(',').map(s => s.trim()).filter(Boolean)}));
   };
 
@@ -91,9 +96,7 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
   };
 
   const handleSave = () => {
-    const newMaxOm = getOmFromReserve(editableCharacter.reserve);
-    const updatedCharacterWithOm = { ...editableCharacter, maxOm: newMaxOm };
-    onUpdate(updatedCharacterWithOm);
+    onUpdate(editableCharacter);
     setIsEditing(false);
   };
 
@@ -102,47 +105,21 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
     setIsEditing(false);
   };
 
-  const renderStatEditor = (label: string, name: keyof CharacterStats, value: number, maxName: keyof CharacterStats, maxValue: number) => (
+  const renderStatEditor = (label: string, name: keyof CharacterStats, value: number) => (
     <div className="grid grid-cols-2 gap-2 items-center">
       <Label htmlFor={`${name}-${character.id}`}>{label}</Label>
-      <div className="flex gap-1">
-        <Input
-          id={`${name}-${character.id}`}
-          name={name}
-          type="number"
-          value={value}
-          onChange={handleNumericInputChange}
-          className="h-8"
-        />
-        <span className="self-center">/</span>
-         <Input
-          name={maxName}
-          type="number"
-          value={maxValue}
-          onChange={handleNumericInputChange}
-          className="h-8"
-        />
-      </div>
+      <Input
+        id={`${name}-${character.id}`}
+        name={name}
+        type="number"
+        value={value}
+        onChange={handleNumericInputChange}
+        className="h-8"
+      />
     </div>
   );
-
-  const renderTextEditor = (label: string, name: keyof CharacterStats, value: string, component: 'input' | 'textarea' = 'input') => {
-    const Comp = component === 'input' ? Input : Textarea;
-    return (
-        <div className="grid w-full items-center gap-1.5">
-          <Label htmlFor={`${name}-${character.id}`}>{label}</Label>
-          <Comp
-              id={`${name}-${character.id}`}
-              name={name}
-              value={value}
-              onChange={handleInputChange}
-              className={component === 'input' ? "h-8" : ""}
-          />
-        </div>
-    );
-  };
-
-   const renderArrayEditor = (label: string, field: 'bonuses' | 'penalties', value: string[]) => (
+  
+   const renderArrayEditor = (label: string, field: 'penalties', value: string[]) => (
      <div className="grid w-full items-center gap-1.5">
         <Label htmlFor={`${field}-${character.id}`}>{label} (через запятую)</Label>
         <Textarea
@@ -259,9 +236,12 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
         <CardContent className="space-y-4 flex-grow">
           {isEditing ? (
             <div className="space-y-3">
-              {renderStatEditor("ОЗ", "oz", editableCharacter.oz, "maxOz", editableCharacter.maxOz)}
-              {renderStatEditor("ОМ", "om", editableCharacter.om, "maxOm", editableCharacter.maxOm)}
-              {renderStatEditor("ОД", "od", editableCharacter.od, "maxOd", editableCharacter.maxOd)}
+              {renderStatEditor("Макс. ОЗ", "maxOz", editableCharacter.maxOz)}
+              <div className="grid grid-cols-2 gap-2 items-center">
+                <Label>Макс. ОМ</Label>
+                <Input value={editableCharacter.maxOm} disabled className="h-8 bg-muted/50" />
+              </div>
+              {renderStatEditor("Макс. ОД", "maxOd", editableCharacter.maxOd)}
             </div>
           ) : (
             <div className="space-y-3">
@@ -314,14 +294,13 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
                     </PopoverContent>
                 </Popover>
                </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <Select value={editableCharacter.faithLevelName} onValueChange={(v) => handleSelectChange('faithLevelName', v as FaithLevel)}>
                    <SelectTrigger><SelectValue placeholder="Вера" /></SelectTrigger>
                    <SelectContent>
                        {Object.keys(FAITH_LEVELS).map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                    </SelectContent>
                 </Select>
-                {renderTextEditor("Состояние", "physicalCondition", editableCharacter.physicalCondition)}
               </div>
             </div>
           ) : (
@@ -341,7 +320,12 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
           
            {isEditing ? (
               <div className="space-y-3">
-                  {renderArrayEditor("Бонусы", "bonuses", editableCharacter.bonuses)}
+                  <div className="space-y-1">
+                      <Label>Бонусы</Label>
+                      <div className="flex flex-wrap gap-1">
+                          {editableCharacter.bonuses.length > 0 ? editableCharacter.bonuses.map((bonus, i) => <Badge key={i} variant="secondary" className="bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200">{bonus}</Badge>) : <span className="text-xs text-muted-foreground">Автоматически от расы</span>}
+                      </div>
+                  </div>
                   {renderArrayEditor("Штрафы", "penalties", editableCharacter.penalties)}
                   {renderInventoryEditor()}
               </div>
