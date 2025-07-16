@@ -1,6 +1,6 @@
 
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApp, getApps } from "firebase/app";
+import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from 'firebase/firestore';
 
@@ -20,7 +20,7 @@ const isFirebaseConfigValid = !!(firebaseConfig.apiKey &&
   firebaseConfig.projectId);
 
 // Initialize Firebase only if the configuration is valid
-const app = isFirebaseConfigValid && !getApps().length ? initializeApp(firebaseConfig) : (getApps().length > 0 ? getApp() : null);
+export const app: FirebaseApp | null = isFirebaseConfigValid && !getApps().length ? initializeApp(firebaseConfig) : (getApps().length > 0 ? getApp() : null);
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 

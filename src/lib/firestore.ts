@@ -4,7 +4,7 @@ import { app } from './firebase';
 import type { DuelState, CharacterStats } from '@/types/duel';
 import { RACES, getOmFromReserve } from './rules';
 
-export const firestore = getFirestore(app!);
+export const firestore = app ? getFirestore(app) : null;
 
 const initialPlayerStats = (id: string, name: string): CharacterStats => {
     const race = RACES[0];
@@ -36,6 +36,9 @@ const initialPlayerStats = (id: string, name: string): CharacterStats => {
 };
 
 export async function createDuel(player1Id: string, player1Name: string): Promise<string> {
+    if (!firestore) {
+        throw new Error("Firestore is not initialized.");
+    }
     const duelId = doc(collection(firestore, 'duels')).id;
     const duelRef = doc(firestore, 'duels', duelId);
 
@@ -55,6 +58,9 @@ export async function createDuel(player1Id: string, player1Name: string): Promis
 }
 
 export async function joinDuel(duelId: string, player2Id: string, player2Name: string) {
+    if (!firestore) {
+        throw new Error("Firestore is not initialized.");
+    }
     const duelRef = doc(firestore, 'duels', duelId);
     const duelSnap = await getDoc(duelRef);
 
@@ -67,6 +73,9 @@ export async function joinDuel(duelId: string, player2Id: string, player2Name: s
 }
 
 export async function updateDuel(duelId: string, duelData: Partial<DuelState>) {
+    if (!firestore) {
+        throw new Error("Firestore is not initialized.");
+    }
     const duelRef = doc(firestore, 'duels', duelId);
     await updateDoc(duelRef, duelData);
 }
