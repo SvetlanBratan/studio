@@ -233,6 +233,29 @@ export default function DuelPage() {
             return;
         }
 
+        const applyEffect = (target: CharacterStats, effect: string) => {
+            const effectName = effect.split(' (')[0];
+            const existingEffectIndex = target.penalties.findIndex(p => p.startsWith(effectName));
+
+            if (existingEffectIndex > -1) {
+                const existingEffect = target.penalties[existingEffectIndex];
+                const existingMatch = existingEffect.match(/\((\d+)\)/);
+                const newMatch = effect.match(/\((\d+)\)/);
+
+                if (existingMatch && newMatch) {
+                    const existingDuration = parseInt(existingMatch[1], 10);
+                    const newDuration = parseInt(newMatch[1], 10);
+                    if (newDuration > existingDuration) {
+                        target.penalties[existingEffectIndex] = effect;
+                        turnLog.push(`Эффект "${effectName}" на ${target.name} был обновлен.`);
+                    }
+                }
+            } else {
+                target.penalties.push(effect);
+                turnLog.push(`${target.name} получает эффект "${effect}".`);
+            }
+        };
+
         const applyDamage = (attacker: CharacterStats, target: CharacterStats, amount: number, isSpell: boolean, spellElement?: string) => {
             let finalDamage = amount;
 
@@ -289,6 +312,15 @@ export default function DuelPage() {
                 attacker.oz -= damageDealtToTarget;
                 turnLog.push(`Пассивная способность (Безликий): отзеркаливает ${damageDealtToTarget} урона обратно в ${attacker.name}!`);
             }
+            
+            if (isSpell && spellElement) {
+                switch (spellElement) {
+                    case 'Огонь':
+                        applyEffect(target, 'Горение (2)');
+                        break;
+                    // TODO: Add other elemental effects here
+                }
+            }
         };
 
         actions.forEach(action => {
@@ -322,13 +354,6 @@ export default function DuelPage() {
                 }
 
                 return Math.round(damage);
-            };
-
-            
-            const applyEffect = (target: CharacterStats, effect: string) => {
-                 if (!target.penalties.some(p => p.startsWith(effect.split(' (')[0]))) {
-                    target.penalties.push(effect);
-                }
             };
 
             let damageDealt = 0;
@@ -471,11 +496,9 @@ export default function DuelPage() {
                                  break;
                             case 'Брызг из жабр':
                                 applyEffect(opponent, 'Ослепление (1)');
-                                turnLog.push(`Способность "Брызг из жабр": ${opponent.name} ослеплен на 1 ход.`);
                                 break;
                             case 'Ядовитый дым':
                                 applyEffect(opponent, 'Отравление (3)');
-                                turnLog.push(`Способность "Ядовитый дым": ${opponent.name} отравлен на 3 хода.`);
                                 break;
                             case 'Призыв звезды':
                                 applyDamage(activePlayer, opponent, 20, true);
@@ -501,16 +524,13 @@ export default function DuelPage() {
                                 break;
                              case 'Окаменение взглядом':
                                 applyEffect(opponent, 'Окаменение (1)');
-                                turnLog.push(`Способность "Окаменение взглядом": на ${opponent.name} наложен эффект Окаменение (1).`);
                                 break;
                              case 'Драконий выдох':
                                  applyDamage(activePlayer, opponent, 20, true);
                                  applyEffect(opponent, 'Горение (2)');
-                                 turnLog.push(`Способность "Драконий выдох": ${opponent.name} получает 20 урона и эффект Горение (2).`);
                                  break;
                              case 'Корнеплетение':
                                  applyEffect(opponent, 'Обездвижен (1)');
-                                 turnLog.push(`Способность "Корнеплетение": ${opponent.name} обездвижен на 1 ход.`);
                                  break;
                              case 'Теневая стрела':
                                  applyDamage(activePlayer, opponent, 15, true);
@@ -528,19 +548,15 @@ export default function DuelPage() {
                                 break;
                             case 'Гипноз':
                                 applyEffect(opponent, 'Под гипнозом (1)');
-                                turnLog.push(`Способность "Гипноз": ${opponent.name} под гипнозом на 1 ход.`);
                                 break;
                             case 'Фосфоресцирующий всплеск':
                                 applyEffect(opponent, 'Ослепление (1)');
-                                turnLog.push(`Способность "Фосфоресцирующий всплеск": ${opponent.name} ослеплен на 1 ход.`);
                                 break;
                             case 'Песнь чар':
                                 applyEffect(opponent, 'Транс (1)');
-                                turnLog.push(`Способность "Песнь чар": ${opponent.name} в трансе на 1 ход.`);
                                 break;
                             case 'Мурлыканье':
                                 applyEffect(opponent, 'Усыпление (1)');
-                                turnLog.push(`Способность "Мурлыканье": ${opponent.name} усыплен на 1 ход.`);
                                 break;
                          }
                     }
