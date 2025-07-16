@@ -215,7 +215,6 @@ export const RULES = {
   DOT_EFFECTS: ['Отравление', 'Горение', 'Ожог', 'Отравление (3)', 'Отравление (2)', 'Отравление (1)', 'Горение (2)', 'Горение (1)'],
   DOT_DAMAGE: 8,
 
-  PASSIVE_OM_REGEN: 15,
   OD_REGEN_ON_REST: 50,
   
   BASE_SHIELD_VALUE: 25,

@@ -548,9 +548,6 @@ export default function DuelPage() {
             }
         });
         
-        activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.PASSIVE_OM_REGEN);
-        turnLog.push(`${activePlayer.name} восстанавливает ${RULES.PASSIVE_OM_REGEN} ОМ пассивно.`);
-
         const isResting = actions.some(a => a.type === 'rest');
         if (isResting) {
             activePlayer.od = Math.min(activePlayer.maxOd, activePlayer.od + RULES.OD_REGEN_ON_REST);
