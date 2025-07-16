@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
+
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -15,24 +17,7 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
-  },
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'ALLOWALL',
-          },
-          {
-            key: 'Content-Security-Policy',
-            value: 'frame-ancestors *;',
-          },
-        ],
-      },
-    ];
-  },
+  }
 };
 
 module.exports = nextConfig;
