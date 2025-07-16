@@ -7,11 +7,12 @@ import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import DuelLog from '@/components/duel-log';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Swords, Gamepad2, ShieldAlert, Users } from 'lucide-react';
+import { Swords, Gamepad2, ShieldAlert, Users, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES, ELEMENTS } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import DuelSetup from '@/components/duel-setup';
+import { useAuth } from '@/hooks/useAuth';
 
 const initialPlayer1: CharacterStats = {
   id: 'player1',
@@ -69,6 +70,7 @@ const getPhysicalCondition = (oz: number, maxOz: number): string => {
 
 
 export default function Home() {
+  const { user, loading, signOut } = useAuth();
   const [duel, setDuel] = useState<DuelState | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [isClient, setIsClient] = useState(false);
@@ -76,17 +78,34 @@ export default function Home() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+  
+  useEffect(() => {
+      if (isClient && !loading && !user) {
+        // This is handled by useAuth hook redirecting to /login
+      }
+  }, [user, loading, isClient]);
 
   const handleDuelStart = (player1: CharacterStats, player2: CharacterStats) => {
-    setDuel({
+    const initialState = {
       player1,
       player2,
       turnHistory: [],
       currentTurn: 1,
-      activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2',
+      activePlayerId: 'player1', // Default, will be set on client
       winner: undefined,
       log: [],
-    });
+    };
+    
+    setDuel(initialState);
+
+    // Determine first player on client to avoid hydration mismatch
+    setDuel(prevDuel => {
+      if (!prevDuel) return initialState;
+      return {
+        ...prevDuel,
+        activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
+      }
+    })
   };
 
   const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
@@ -269,14 +288,15 @@ export default function Home() {
             if (target.shield.hp > 0) {
                 let damageToShield = finalDamage;
                 if(spellElement && spellElement !== 'physical' && target.shield.element && target.shield.element !== 'Эфир') {
-                    const attackElement = ELEMENTS[spellElement];
-                    const shieldElement = ELEMENTS[target.shield.element];
-                    if (attackElement && shieldElement) {
-                        if(attackElement.strongAgainst.includes(shieldElement.name)) {
+                    const attackElementInfo = Object.values(ELEMENTS).find(e => e.name === spellElement);
+                    const shieldElementInfo = Object.values(ELEMENTS).find(e => e.name === target.shield.element);
+                    
+                    if (attackElementInfo && shieldElementInfo) {
+                        if(attackElementInfo.strongAgainst.includes(shieldElementInfo.name)) {
                             damageToShield *= 2;
                             turnLog.push(`Стихийное преимущество! Атака (${spellElement}) сильна против щита (${target.shield.element}). Урон по щиту удвоен.`);
                         }
-                        if(attackElement.weakTo.includes(shieldElement.name)) {
+                        if(attackElementInfo.weakTo.includes(shieldElementInfo.name)) {
                             damageToShield *= 0.5;
                             turnLog.push(`Стихийное сопротивление! Атака (${spellElement}) слаба против щита (${target.shield.element}). Урон по щиту уменьшен вдвое.`);
                         }
@@ -291,7 +311,7 @@ export default function Home() {
 
                 const absorbedDamage = Math.min(target.shield.hp, damageToShield);
                 target.shield.hp -= absorbedDamage;
-                const remainingDamage = finalDamage - Math.round(absorbedDamage / (damageToShield / finalDamage)); 
+                const remainingDamage = finalDamage - Math.round(absorbedDamage / (damageToShield / finalDamage || 1)); 
 
                 turnLog.push(`Щит ${target.name} поглощает ${absorbedDamage} урона.`);
                 if (target.shield.hp <= 0) {
@@ -349,8 +369,8 @@ export default function Home() {
                 const defenderElements = opponent.elementalKnowledge;
 
                 if (element && element !== 'physical' && defenderElements.length > 0) {
-                    const mainAttackerElement = ELEMENTS[element];
-                    const mainDefenderElement = ELEMENTS[defenderElements[0]];
+                    const mainAttackerElement = Object.values(ELEMENTS).find(e => e.name === element);
+                    const mainDefenderElement = Object.values(ELEMENTS).find(e => e.name === defenderElements[0]);
 
                     if (mainAttackerElement && mainDefenderElement) {
                         if (mainAttackerElement.strongAgainst.includes(mainDefenderElement.name)) {
@@ -505,25 +525,32 @@ export default function Home() {
                          switch(abilityName) {
                             case 'Кислотное распыление':
                                  applyDamage(activePlayer, opponent, 10, false);
+                                 turnLog.push(`Способность "Кислотное распыление": ${opponent.name} получает 10 урона.`);
                                  break;
                             case 'Дар сладости':
                                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
+                                 turnLog.push(`Способность "Дар сладости": ${activePlayer.name} восстанавливает 15 ОЗ.`);
                                  break;
                             case 'Брызг из жабр':
                                 applyEffect(opponent, 'Ослепление (1)');
+                                turnLog.push(`Способность "Брызг из жабр": ${opponent.name} ослеплен на 1 ход.`);
                                 break;
                             case 'Ядовитый дым':
                                 applyEffect(opponent, 'Отравление (3)');
+                                turnLog.push(`Способность "Ядовитый дым": ${opponent.name} отравлен на 3 хода.`);
                                 break;
                             case 'Призыв звезды':
                                 applyDamage(activePlayer, opponent, 20, true);
+                                turnLog.push(`Способность "Призыв звезды": ${opponent.name} получает 20 урона.`);
                                 break;
                             case 'Танец лепестков':
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
+                                turnLog.push(`Способность "Танец лепестков": ${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Песня влюблённого':
                                 applyDamage(activePlayer, opponent, 10, true);
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
+                                turnLog.push(`Способность "Песня влюблённого": ${opponent.name} получает 10 урона, а ${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Укус': 
                                 applyDamage(activePlayer, opponent, 10, false);
@@ -532,30 +559,38 @@ export default function Home() {
                                     activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omRestored);
                                     turnLog.push(`Пассивная способность (Вампир): ${activePlayer.name} восстанавливает ${omRestored} ОМ от укуса.`);
                                 }
+                                turnLog.push(`Способность "Укус": ${opponent.name} получает 10 урона.`);
                                 break;
                              case 'Окаменение взглядом':
                                 applyEffect(opponent, 'Окаменение (1)');
+                                turnLog.push(`Способность "Окаменение взглядом": на ${opponent.name} наложен эффект Окаменение (1).`);
                                 break;
                              case 'Драконий выдох':
                                  applyDamage(activePlayer, opponent, 20, true);
                                  applyEffect(opponent, 'Горение (2)');
+                                 turnLog.push(`Способность "Драконий выдох": ${opponent.name} получает 20 урона и эффект Горение (2).`);
                                  break;
                              case 'Корнеплетение':
                                  applyEffect(opponent, 'Обездвижен (1)');
+                                 turnLog.push(`Способность "Корнеплетение": ${opponent.name} обездвижен на 1 ход.`);
                                  break;
                              case 'Теневая стрела':
                                  applyDamage(activePlayer, opponent, 15, true);
+                                 turnLog.push(`Способность "Теневая стрела": ${opponent.name} получает 15 урона.`);
                                  break;
                             case 'Коса конца':
                                  opponent.oz = 0;
+                                 turnLog.push(`Способность "Коса конца": ОЗ ${opponent.name} снижены до 0.`);
                                  break;
                             case 'Похищение энергии':
                                 const stolenOm = 10;
                                 opponent.om = Math.max(0, opponent.om - stolenOm);
                                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + stolenOm);
+                                turnLog.push(`Способность "Похищение энергии": ${activePlayer.name} похищает 10 ОМ у ${opponent.name}.`);
                                 break;
                             case 'Гипноз':
                                 applyEffect(opponent, 'Под гипнозом (1)');
+                                turnLog.push(`Способность "Гипноз": ${opponent.name} под гипнозом на 1 ход.`);
                                 break;
                             case 'Фосфоресцирующий всплеск':
                                 applyEffect(opponent, 'Ослепление (1)');
@@ -563,9 +598,11 @@ export default function Home() {
                                 break;
                             case 'Песнь чар':
                                 applyEffect(opponent, 'Транс (1)');
+                                turnLog.push(`Способность "Песнь чар": ${opponent.name} в трансе на 1 ход.`);
                                 break;
                             case 'Мурлыканье':
                                 applyEffect(opponent, 'Усыпление (1)');
+                                turnLog.push(`Способность "Мурлыканье": ${opponent.name} усыплен на 1 ход.`);
                                 break;
                          }
                     }
@@ -624,8 +661,12 @@ export default function Home() {
     setLog([]);
   };
 
-  if (!isClient) {
-    return null; // Render nothing on the server to avoid hydration mismatch
+  if (!isClient || loading) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
+        </div>
+    );
   }
 
   if (!duel) {
@@ -642,6 +683,16 @@ export default function Home() {
                 Magic Duel Assistant
               </h1>
             </div>
+            {user && (
+              <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted-foreground hidden sm:inline">
+                      {user.isAnonymous ? 'Гость' : (user.displayName || user.email)}
+                  </span>
+                  <Button onClick={signOut} variant="ghost" size="icon" aria-label="Выйти">
+                      <LogOut className="w-5 h-5" />
+                  </Button>
+              </div>
+            )}
           </div>
         </header>
         <main className="container mx-auto p-4 md:p-8">
