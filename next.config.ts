@@ -1,6 +1,5 @@
-import type { NextConfig } from 'next';
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -17,20 +16,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-
-  // 🔽 Добавляем заголовки для разрешения встраивания
   async headers() {
     return [
       {
-        source: '/(.*)', // применимо ко всем путям
+        source: '/(.*)',
         headers: [
           {
             key: 'X-Frame-Options',
-            value: 'ALLOWALL', // ⚠️ Позволяет встраивать сайт куда угодно
+            value: 'ALLOWALL',
           },
           {
             key: 'Content-Security-Policy',
-            value: 'frame-ancestors *;', // Позволяет фреймить из любого источника
+            value: 'frame-ancestors *;',
           },
         ],
       },
@@ -38,4 +35,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
