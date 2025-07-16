@@ -73,13 +73,13 @@ export default function DuelPage() {
   };
 
   const executeTurn = (turnActions: Action[]) => {
-    if (!duelData) return;
+    if (!duelData || !duelData.player1 || !duelData.player2) return;
         let actions = [...turnActions];
         const turnLog: string[] = [];
-        let activePlayer = duelData.activePlayerId === 'player1' ? { ...duelData.player1 } : { ...duelData.player2! };
-        let opponent = duelData.activePlayerId === 'player1' ? { ...duelData.player2! } : { ...duelData.player1 };
+        let activePlayer = duelData.activePlayerId === 'player1' ? { ...duelData.player1 } : { ...duelData.player2 };
+        let opponent = duelData.activePlayerId === 'player1' ? { ...duelData.player2 } : { ...duelData.player1 };
         
-        const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield };
+        const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: { ...activePlayer.shield } };
         
         let turnSkipped = false;
         const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен', 'Транс', 'Усыпление'];
@@ -545,26 +545,28 @@ export default function DuelPage() {
             actions: actions,
             log: turnLog,
             startStats: startStats,
-            endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield },
+            endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: { ...activePlayer.shield } },
         };
         
         const player1Data = duelData.activePlayerId === 'player1' ? activePlayer : opponent;
         const player2Data = duelData.activePlayerId === 'player2' ? activePlayer : opponent;
+
+        const finalPlayer1 = { ...duelData.player1, ...player1Data };
+        const finalPlayer2 = { ...duelData.player2, ...player2Data };
         
+        delete (finalPlayer1 as any).isDodging;
+        delete (finalPlayer2 as any).isDodging;
+
         const updatedDuel = {
             ...duelData,
-            player1: { ...duelData.player1, ...player1Data },
-            player2: { ...duelData.player2, ...player2Data },
+            player1: finalPlayer1,
+            player2: finalPlayer2,
             turnHistory: [...duelData.turnHistory, newTurn],
             currentTurn: duelData.currentTurn + 1,
             activePlayerId: duelData.activePlayerId === 'player1' ? 'player2' : 'player1',
             winner: winner,
             log: turnLog,
         };
-        
-        // Sanitize `isDodging` which is not part of the db schema.
-        delete (updatedDuel.player1 as any).isDodging;
-        delete (updatedDuel.player2 as any).isDodging;
 
         updateDuel(duelId, updatedDuel);
   };
