@@ -19,6 +19,7 @@ import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { updateDuel, joinDuel } from '@/lib/firestore';
+import { deepClone } from '@/lib/utils';
 
 const getPhysicalCondition = (oz: number, maxOz: number): string => {
     const healthPercentage = (oz / maxOz) * 100;
@@ -76,10 +77,10 @@ export default function DuelPage() {
     if (!duelData || !duelData.player1 || !duelData.player2) return;
         let actions = [...turnActions];
         const turnLog: string[] = [];
-        let activePlayer = duelData.activePlayerId === 'player1' ? { ...duelData.player1 } : { ...duelData.player2 };
-        let opponent = duelData.activePlayerId === 'player1' ? { ...duelData.player2 } : { ...duelData.player1 };
+        let activePlayer = deepClone(duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2);
+        let opponent = deepClone(duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1);
         
-        const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: { ...activePlayer.shield } };
+        const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) };
         
         let turnSkipped = false;
         const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен', 'Транс', 'Усыпление'];
@@ -547,7 +548,7 @@ export default function DuelPage() {
             actions: actions,
             log: turnLog,
             startStats: startStats,
-            endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: { ...activePlayer.shield } },
+            endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) },
         };
         
         const { isDodging: _activeIsDodging, ...finalActivePlayer } = activePlayer;
@@ -698,3 +699,5 @@ export default function DuelPage() {
     </div>
   );
 }
+
+    
