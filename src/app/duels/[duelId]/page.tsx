@@ -266,6 +266,14 @@ export default function DuelPage() {
                 return;
             }
 
+            if (isSpell && spellElement === 'Вода') {
+                const burningIndex = target.penalties.findIndex(p => p.startsWith('Горение'));
+                if (burningIndex > -1) {
+                    const removedEffect = target.penalties.splice(burningIndex, 1)[0];
+                    turnLog.push(`Стихия Воды тушит эффект "${removedEffect}" на ${target.name}.`);
+                }
+            }
+            
             if (target.isDodging) {
                 const dodgeRoll = Math.floor(Math.random() * 10) + 1;
                 turnLog.push(`${target.name} пытается увернуться... Бросок: ${dodgeRoll}.`);
