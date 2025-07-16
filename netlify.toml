@@ -1,11 +1,13 @@
 [build]
   command = "npm run build"
   publish = ".next/export"
-  environment = { NETLIFY_NEXT_PLUGIN_SKIP = "true" }
+  environment = { 
+    NETLIFY_NEXT_PLUGIN_SKIP = "true", # отключает плагин Next.js (иначе он конфликтует с output: 'export')
+    NODE_VERSION = "18"               # рабочая LTS-версия Node.js, поддерживаемая Netlify
+  }
 
 [functions]
   directory = "netlify/functions"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-  # Отключён плагином через переменную среды
