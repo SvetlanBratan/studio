@@ -77,7 +77,7 @@ export const RACES: Race[] = [
     { name: 'Нетленные', passiveBonuses: ['+50 ОЗ', '+10 ОЗ/ход', 'Сниженный физ. урон (описательно)'], activeAbilities: [{ name: 'Желеобразный барьер', description: 'поглощает 15 урона', cost: {om: 30} }] },
     { name: 'Нимфилус', passiveBonuses: [], activeAbilities: [{ name: 'Сладкое прикосновение', description: '+10 ОЗ и -ОД врагу', cost: {om: 10} }] },
     { name: 'Оборотни', passiveBonuses: ['+10 ОЗ/ход', 'Скидка на ОД (10)'], activeAbilities: [{ name: 'Смена формы', description: 'звериный облик, бонусы к урону', cost: {om: 90} }] },
-    { name: 'Огненные крыланы', passiveBonuses: ['+5 урона огнём'], activeAbilities: [{ name: 'Крылья Пламени', description: 'атака по всем врагам в зоне', cost: {om: 30} }] },
+    { name: 'Огненные крыланы', passiveBonuses: ['+5 урона огнём', 'Иммунитет к огню'], activeAbilities: [{ name: 'Крылья Пламени', description: 'атака по всем врагам в зоне', cost: {om: 30} }] },
     { name: 'Оприты', passiveBonuses: ['+10 ОМ/ход'], activeAbilities: [{ name: 'Разряд', description: '-10 ОЗ и -5 ОМ врагу', cost: {om: 10} }] },
     { name: 'Орк', passiveBonuses: ['Расовая ярость (+10 к урону)'], activeAbilities: [] },
     { name: 'Пересмешники', passiveBonuses: ['Иммунитет к иллюзиям'], activeAbilities: [{ name: 'Имитация', description: 'доступны все бонусные действия других рас', cost: {om: 90} }] },

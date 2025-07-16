@@ -188,6 +188,11 @@ export default function DuelPage() {
                  return;
             }
 
+            if (p.startsWith('Горение') && activePlayer.bonuses.includes('Иммунитет к огню')) {
+                turnLog.push(`Иммунитет к огню: урон от "${p}" не получен.`);
+                return;
+            }
+
             if (RULES.DOT_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')))) {
                 let damage = RULES.DOT_DAMAGE;
                 if (activePlayer.bonuses.includes('Скидка к урону от яда (3)')) {
@@ -235,6 +240,12 @@ export default function DuelPage() {
 
         const applyEffect = (target: CharacterStats, effect: string) => {
             const effectName = effect.split(' (')[0];
+            
+            if (effectName === 'Горение' && target.bonuses.includes('Иммунитет к огню')) {
+                turnLog.push(`${target.name} имеет иммунитет к огню, и эффект "${effectName}" не был наложен.`);
+                return;
+            }
+
             const existingEffectIndex = target.penalties.findIndex(p => p.startsWith(effectName));
 
             if (existingEffectIndex > -1) {
@@ -258,6 +269,13 @@ export default function DuelPage() {
 
         const applyDamage = (attacker: CharacterStats, target: CharacterStats, amount: number, isSpell: boolean, spellElement?: string) => {
             let finalDamage = amount;
+
+            if (isSpell && spellElement) {
+                if (target.bonuses.includes(`Иммунитет к ${spellElement.toLowerCase()}`)) {
+                    turnLog.push(`${target.name} имеет иммунитет к стихии "${spellElement}" и не получает урон.`);
+                    return;
+                }
+            }
 
             if (target.bonuses.includes('Поглощение входящего магического урона') && isSpell) {
                 const restoredOm = Math.round(amount);
@@ -554,7 +572,7 @@ export default function DuelPage() {
                                 applyEffect(opponent, 'Окаменение (1)');
                                 break;
                              case 'Драконий выдох':
-                                 applyDamage(activePlayer, opponent, 20, true);
+                                 applyDamage(activePlayer, opponent, 20, true, 'Огонь');
                                  applyEffect(opponent, 'Горение (2)');
                                  break;
                              case 'Корнеплетение':
@@ -599,7 +617,8 @@ export default function DuelPage() {
         const isResting = actions.some(a => a.type === 'rest');
         if (isResting) {
             activePlayer.od = Math.min(activePlayer.maxOd, activePlayer.od + RULES.OD_REGEN_ON_REST);
-            turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OD_REGEN_ON_REST} ОД.`);
+            activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.OM_REGEN_ON_REST);
+            turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OD_REGEN_ON_REST} ОД и ${RULES.OM_REGEN_ON_REST} ОМ.`);
         }
 
         activePlayer.oz = Math.max(0, activePlayer.oz);
