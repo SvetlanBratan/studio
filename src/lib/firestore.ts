@@ -1,5 +1,5 @@
 
-import { getFirestore, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, updateDoc, getDoc, collection } from 'firebase/firestore';
 import { app } from './firebase';
 import type { DuelState, CharacterStats } from '@/types/duel';
 import { RACES, getOmFromReserve } from './rules';
