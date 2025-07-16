@@ -86,7 +86,7 @@ export default function Home() {
   }, [user, loading, isClient]);
 
   const handleDuelStart = (player1: CharacterStats, player2: CharacterStats) => {
-    const initialState = {
+    const initialState: DuelState = {
       player1,
       player2,
       turnHistory: [],
@@ -95,17 +95,21 @@ export default function Home() {
       winner: undefined,
       log: [],
     };
-    
-    setDuel(initialState);
 
+    setDuel(initialState);
+    
     // Determine first player on client to avoid hydration mismatch
-    setDuel(prevDuel => {
-      if (!prevDuel) return initialState;
-      return {
-        ...prevDuel,
-        activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
+    useEffect(() => {
+      if (duel) {
+        setDuel(prevDuel => {
+          if (!prevDuel) return null;
+          return {
+            ...prevDuel,
+            activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
+          }
+        })
       }
-    })
+    }, []);
   };
 
   const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
@@ -669,6 +673,12 @@ export default function Home() {
     );
   }
 
+  if (!user) {
+    // This case should ideally not be reached if useAuth handles redirection correctly.
+    // It's a fallback.
+    return null;
+  }
+
   if (!duel) {
     const p1WithRace = { ...initialPlayer1, race: RACES[0].name, bonuses: [...RACES[0].passiveBonuses] };
     const p2WithRace = { ...initialPlayer2, race: RACES[0].name, bonuses: [...RACES[0].passiveBonuses] };
@@ -787,3 +797,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
