@@ -548,16 +548,13 @@ export default function DuelPage() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: { ...activePlayer.shield } },
         };
         
-        const player1Data = duelData.activePlayerId === 'player1' ? activePlayer : opponent;
-        const player2Data = duelData.activePlayerId === 'player2' ? activePlayer : opponent;
-
-        const { isDodging: p1isDodging, ...p1 } = { ...duelData.player1, ...player1Data };
-        const { isDodging: p2isDodging, ...p2 } = { ...duelData.player2, ...player2Data };
+        const { isDodging: activeIsDodging, ...finalActivePlayer } = activePlayer;
+        const { isDodging: opponentIsDodging, ...finalOpponent } = opponent;
 
         const updatedDuel = {
             ...duelData,
-            player1: p1,
-            player2: p2,
+            player1: duelData.activePlayerId === 'player1' ? finalActivePlayer : finalOpponent,
+            player2: duelData.activePlayerId === 'player2' ? finalActivePlayer : finalOpponent,
             turnHistory: [...duelData.turnHistory, newTurn],
             currentTurn: duelData.currentTurn + 1,
             activePlayerId: duelData.activePlayerId === 'player1' ? 'player2' : 'player1',
