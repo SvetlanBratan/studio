@@ -41,6 +41,8 @@ export default function DuelPage() {
   const [duel, duelLoading, duelError] = useDocumentData(duelRef);
   const duelData = duel as DuelState | undefined;
 
+  const isSoloGame = duelData?.player2?.id === 'SOLO_PLAYER_2';
+
   useEffect(() => {
     if (user && duelData && !duelData.player2 && duelData.player1.id !== user.uid) {
         joinDuel(duelId, user.uid, user.displayName || "Игрок 2");
@@ -610,7 +612,7 @@ export default function DuelPage() {
   }
 
   const currentPlayerId = user.uid === duelData.player1.id ? 'player1' : 'player2';
-  const isMyTurn = duelData.activePlayerId === currentPlayerId;
+  const isMyTurn = duelData.activePlayerId === currentPlayerId || isSoloGame;
 
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
   const opponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
@@ -642,8 +644,8 @@ export default function DuelPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 flex flex-col gap-8">
-              <CharacterPanel character={duelData.player1} isActive={duelData.activePlayerId === 'player1'} onUpdate={handleCharacterUpdate} canEdit={user.uid === duelData.player1.id}/>
-              <CharacterPanel character={duelData.player2} isActive={duelData.activePlayerId === 'player2'} onUpdate={handleCharacterUpdate} canEdit={user.uid === duelData.player2.id} />
+              <CharacterPanel character={duelData.player1} isActive={duelData.activePlayerId === 'player1'} onUpdate={handleCharacterUpdate} canEdit={isSoloGame || user.uid === duelData.player1.id}/>
+              <CharacterPanel character={duelData.player2} isActive={duelData.activePlayerId === 'player2'} onUpdate={handleCharacterUpdate} canEdit={isSoloGame || user.uid === duelData.player2.id} />
             </div>
 
             <div className="lg:col-span-2 flex flex-col gap-8">

@@ -4,18 +4,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { createDuel } from '@/lib/firestore';
+import { createDuel, createSoloDuel } from '@/lib/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dices, LogIn, LogOut, Swords } from 'lucide-react';
+import { Dices, LogIn, LogOut, Swords, User as UserIcon } from 'lucide-react';
 
 export default function DuelsPage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [joinDuelId, setJoinDuelId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingSolo, setIsCreatingSolo] = useState(false);
 
   if (loading || !user) {
     return (
@@ -34,6 +35,18 @@ export default function DuelsPage() {
     } catch (error) {
       console.error("Не удалось создать дуэль:", error);
       setIsCreating(false);
+    }
+  };
+
+  const handleCreateSoloDuel = async () => {
+    if (!user) return;
+    setIsCreatingSolo(true);
+    try {
+      const duelId = await createSoloDuel(user.uid, user.displayName || 'Игрок 1');
+      router.push(`/duels/${duelId}`);
+    } catch (error) {
+      console.error("Не удалось создать пробную дуэль:", error);
+      setIsCreatingSolo(false);
     }
   };
 
@@ -73,9 +86,13 @@ export default function DuelsPage() {
                     <CardDescription>Создайте новую дуэль или войдите в существующую по ID.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Button onClick={handleCreateDuel} disabled={isCreating} className="w-full" size="lg">
+                    <Button onClick={handleCreateDuel} disabled={isCreating || isCreatingSolo} className="w-full" size="lg">
                         <Dices className="mr-2" />
-                        {isCreating ? 'Создание...' : 'Создать новую дуэль'}
+                        {isCreating ? 'Создание...' : 'Создать новую дуэль (Онлайн)'}
+                    </Button>
+                    <Button onClick={handleCreateSoloDuel} disabled={isCreating || isCreatingSolo} className="w-full" size="lg" variant="outline">
+                        <UserIcon className="mr-2" />
+                        {isCreatingSolo ? 'Создание...' : 'Создать пробную дуэль (Соло)'}
                     </Button>
                     
                     <div className="relative">

@@ -57,6 +57,29 @@ export async function createDuel(player1Id: string, player1Name: string): Promis
     return duelId;
 }
 
+export async function createSoloDuel(player1Id: string, player1Name: string): Promise<string> {
+    if (!firestore) {
+        throw new Error("Firestore is not initialized.");
+    }
+    const duelId = doc(collection(firestore, 'duels')).id;
+    const duelRef = doc(firestore, 'duels', duelId);
+
+    const initialState: DuelState = {
+        player1: initialPlayerStats(player1Id, player1Name),
+        player2: initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2 (Соло)'),
+        turnHistory: [],
+        currentTurn: 1,
+        activePlayerId: 'player1',
+        winner: null,
+        log: [],
+        createdAt: new Date(),
+    };
+
+    await setDoc(duelRef, initialState);
+    return duelId;
+}
+
+
 export async function joinDuel(duelId: string, player2Id: string, player2Name: string) {
     if (!firestore) {
         throw new Error("Firestore is not initialized.");
