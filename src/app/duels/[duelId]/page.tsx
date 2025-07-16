@@ -548,16 +548,24 @@ export default function DuelPage() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield },
         };
         
+        const player1Data = duelData.activePlayerId === 'player1' ? activePlayer : opponent;
+        const player2Data = duelData.activePlayerId === 'player2' ? activePlayer : opponent;
+        
         const updatedDuel = {
             ...duelData,
-            player1: duelData.activePlayerId === 'player1' ? { ...activePlayer } : { ...opponent },
-            player2: duelData.activePlayerId === 'player2' ? { ...activePlayer } : { ...opponent },
+            player1: { ...duelData.player1, ...player1Data },
+            player2: { ...duelData.player2, ...player2Data },
             turnHistory: [...duelData.turnHistory, newTurn],
             currentTurn: duelData.currentTurn + 1,
             activePlayerId: duelData.activePlayerId === 'player1' ? 'player2' : 'player1',
             winner: winner,
             log: turnLog,
         };
+        
+        // Sanitize `isDodging` which is not part of the db schema.
+        delete (updatedDuel.player1 as any).isDodging;
+        delete (updatedDuel.player2 as any).isDodging;
+
         updateDuel(duelId, updatedDuel);
   };
   
