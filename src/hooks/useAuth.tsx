@@ -6,8 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { auth, isFirebaseEnabled } from '@/lib/firebase';
 import { 
   onAuthStateChanged, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
   signOut as firebaseSignOut, 
   User,
   signInAnonymously
@@ -16,7 +14,6 @@ import {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
   signInAsGuest: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -59,17 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [router, pathname]);
 
-  const signInWithGoogle = async () => {
-    if (!isFirebaseEnabled || !auth) return;
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      router.push('/');
-    } catch (error) {
-      console.error("Ошибка входа с Google:", error);
-    }
-  };
-  
   const signInAsGuest = async () => {
     if (!isFirebaseEnabled || !auth) return;
     try {
@@ -90,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = { user, loading, signInWithGoogle, signInAsGuest, signOut };
+  const value = { user, loading, signInAsGuest, signOut };
 
   return (
     <AuthContext.Provider value={value}>
