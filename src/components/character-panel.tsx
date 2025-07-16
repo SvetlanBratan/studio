@@ -15,7 +15,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS } from '@/lib/rules';
+import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve } from '@/lib/rules';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 
@@ -44,8 +44,17 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
     setEditableCharacter(prev => ({ ...prev, [name]: Number(value) || 0 }));
   };
 
-  const handleSelectChange = (field: 'reserve' | 'faithLevelName', value: string) => {
-    setEditableCharacter(prev => ({...prev, [field]: value}));
+  const handleSelectChange = (field: 'reserve' | 'faithLevelName' | 'race', value: string) => {
+    setEditableCharacter(prev => {
+        const newState = { ...prev, [field]: value };
+        if (field === 'race') {
+            const selectedRace = RACES.find(r => r.name === value);
+            if (selectedRace) {
+                newState.bonuses = [...selectedRace.passiveBonuses];
+            }
+        }
+        return newState;
+    });
   };
   
   const handleElementsChange = (element: string) => {
@@ -82,7 +91,9 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
   };
 
   const handleSave = () => {
-    onUpdate(editableCharacter);
+    const newMaxOm = getOmFromReserve(editableCharacter.reserve);
+    const updatedCharacterWithOm = { ...editableCharacter, maxOm: newMaxOm };
+    onUpdate(updatedCharacterWithOm);
     setIsEditing(false);
   };
 
@@ -228,7 +239,12 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
           </CardTitle>
           {isEditing ? (
              <div className="flex gap-2">
-               <Input name="race" value={editableCharacter.race} onChange={handleInputChange} placeholder="Раса" />
+               <Select value={editableCharacter.race} onValueChange={(v) => handleSelectChange('race', v)}>
+                 <SelectTrigger><SelectValue placeholder="Раса" /></SelectTrigger>
+                 <SelectContent>
+                   {RACES.map(r => <SelectItem key={r.name} value={r.name}>{r.name}</SelectItem>)}
+                 </SelectContent>
+               </Select>
                <Select value={editableCharacter.reserve} onValueChange={(v) => handleSelectChange('reserve', v as ReserveLevel)}>
                  <SelectTrigger><SelectValue placeholder="Резерв" /></SelectTrigger>
                  <SelectContent>

@@ -2,7 +2,7 @@
 import { getFirestore, doc, setDoc, updateDoc, getDoc, collection } from 'firebase/firestore';
 import { app } from './firebase';
 import type { DuelState, CharacterStats } from '@/types/duel';
-import { RACES, getOmFromReserve } from './rules';
+import { RACES, getOmFromReserve, getFaithLevelFromString } from './rules';
 
 export const firestore = app ? getFirestore(app) : null;
 
