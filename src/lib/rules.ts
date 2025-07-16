@@ -244,6 +244,19 @@ export const RULES = {
   DODGE_VS_STRONG_SPELL_DMG_REDUCTION: 20,
 };
 
+export const PENALTY_EFFECTS: string[] = [
+    'Под гипнозом (1)',
+    'Обездвижен (1)',
+    'Транс (1)',
+    'Усыпление (1)',
+    'Окаменение (1)',
+    'Ослепление (1)',
+    'Отравление (3)',
+    'Горение (2)',
+    'Уязвимость',
+    'Штраф к отравлению (3)',
+];
+
 export const initialPlayerStats = (id: string, name: string): CharacterStats => {
     const race = RACES.find(r => r.name === 'Человек') || RACES[0];
     const reserve = 'Неофит';

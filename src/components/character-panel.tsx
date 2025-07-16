@@ -15,7 +15,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz } from '@/lib/rules';
+import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz, PENALTY_EFFECTS } from '@/lib/rules';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Checkbox } from './ui/checkbox';
 import { ScrollArea } from './ui/scroll-area';
@@ -68,17 +68,14 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
     });
   };
   
-  const handleElementsChange = (element: string, checked: boolean) => {
+  const handleMultiSelectChange = (field: 'elementalKnowledge' | 'penalties', item: string, checked: boolean) => {
     setEditableCharacter(prev => {
-      const newElements = checked
-        ? [...prev.elementalKnowledge, element]
-        : prev.elementalKnowledge.filter(e => e !== element)
-      return { ...prev, elementalKnowledge: newElements };
+      const currentValues = prev[field] || [];
+      const newValues = checked
+        ? [...currentValues, item]
+        : currentValues.filter(v => v !== item);
+      return { ...prev, [field]: newValues };
     });
-  };
-
-  const handleArrayInputChange = (field: 'penalties', value: string) => {
-    setEditableCharacter(prev => ({...prev, [field]: value.split(',').map(s => s.trim()).filter(Boolean)}));
   };
 
   const handleInventoryChange = (index: number, field: keyof InventoryItem, value: string | number) => {
@@ -118,18 +115,6 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
       <Label>{label}</Label>
       <Input value={value} disabled className="h-8 bg-muted/50" />
     </div>
-  );
-  
-   const renderArrayEditor = (label: string, field: 'penalties', value: string[]) => (
-     <div className="grid w-full items-center gap-1.5">
-        <Label htmlFor={`${field}-${character.id}`}>{label} (через запятую)</Label>
-        <Textarea
-            id={`${field}-${character.id}`}
-            name={field}
-            value={value.join(', ')}
-            onChange={(e) => handleArrayInputChange(field, e.target.value)}
-        />
-     </div>
   );
 
   const renderInventoryEditor = () => (
@@ -283,7 +268,7 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
                                 <Checkbox
                                   id={`element-${element.name}`}
                                   checked={isSelected}
-                                  onCheckedChange={(checked) => handleElementsChange(element.name, !!checked)}
+                                  onCheckedChange={(checked) => handleMultiSelectChange('elementalKnowledge', element.name, !!checked)}
                                 />
                                 <label
                                   htmlFor={`element-${element.name}`}
@@ -327,11 +312,50 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
               <div className="space-y-3">
                   <div className="space-y-1">
                       <Label>Бонусы</Label>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1 p-2 rounded-md bg-muted/50 min-h-10">
                           {editableCharacter.bonuses.length > 0 ? editableCharacter.bonuses.map((bonus, i) => <Badge key={i} variant="secondary" className="bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200">{bonus}</Badge>) : <span className="text-xs text-muted-foreground">Автоматически от расы</span>}
                       </div>
                   </div>
-                  {renderArrayEditor("Штрафы", "penalties", editableCharacter.penalties)}
+                  <div className="grid w-full items-center gap-1.5">
+                    <Label>Штрафы</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start font-normal flex-wrap h-auto min-h-10">
+                                <div className="flex gap-1 flex-wrap">
+                                    {editableCharacter.penalties.length > 0 ? (
+                                        editableCharacter.penalties.map(p => <Badge key={p} variant="destructive">{p}</Badge>)
+                                    ) : (
+                                        "Выберите штрафы..."
+                                    )}
+                                </div>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <ScrollArea className="h-48">
+                            <div className="p-4 space-y-2">
+                            {PENALTY_EFFECTS.map((penalty) => {
+                                const isSelected = editableCharacter.penalties.includes(penalty);
+                                return (
+                                <div key={penalty} className="flex items-center space-x-2">
+                                    <Checkbox
+                                    id={`penalty-${penalty}`}
+                                    checked={isSelected}
+                                    onCheckedChange={(checked) => handleMultiSelectChange('penalties', penalty, !!checked)}
+                                    />
+                                    <label
+                                    htmlFor={`penalty-${penalty}`}
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                    {penalty}
+                                    </label>
+                                </div>
+                                );
+                            })}
+                            </div>
+                        </ScrollArea>
+                        </PopoverContent>
+                    </Popover>
+                  </div>
                   {renderInventoryEditor()}
               </div>
           ) : (
