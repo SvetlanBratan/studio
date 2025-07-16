@@ -105,17 +105,10 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
     setIsEditing(false);
   };
 
-  const renderStatEditor = (label: string, name: keyof CharacterStats, value: number) => (
+  const renderStatDisplay = (label: string, value: number) => (
     <div className="grid grid-cols-2 gap-2 items-center">
-      <Label htmlFor={`${name}-${character.id}`}>{label}</Label>
-      <Input
-        id={`${name}-${character.id}`}
-        name={name}
-        type="number"
-        value={value}
-        onChange={handleNumericInputChange}
-        className="h-8"
-      />
+      <Label>{label}</Label>
+      <Input value={value} disabled className="h-8 bg-muted/50" />
     </div>
   );
   
@@ -236,12 +229,9 @@ export default function CharacterPanel({ character, isActive, onUpdate, canEdit 
         <CardContent className="space-y-4 flex-grow">
           {isEditing ? (
             <div className="space-y-3">
-              {renderStatEditor("Макс. ОЗ", "maxOz", editableCharacter.maxOz)}
-              <div className="grid grid-cols-2 gap-2 items-center">
-                <Label>Макс. ОМ</Label>
-                <Input value={editableCharacter.maxOm} disabled className="h-8 bg-muted/50" />
-              </div>
-              {renderStatEditor("Макс. ОД", "maxOd", editableCharacter.maxOd)}
+              {renderStatDisplay("Макс. ОЗ", editableCharacter.maxOz)}
+              {renderStatDisplay("Макс. ОМ", editableCharacter.maxOm)}
+              {renderStatDisplay("Макс. ОД", editableCharacter.maxOd)}
             </div>
           ) : (
             <div className="space-y-3">
