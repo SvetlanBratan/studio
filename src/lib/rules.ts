@@ -93,7 +93,7 @@ export const RACES: Race[] = [
     { name: 'Снежные эльфы', passiveBonuses: ['+5 урона льдом', 'Иммунитет к холоду'], activeAbilities: [{ name: 'Ледяной вихрь', description: '-15 ОЗ, замедление', cost: {om: 30} }] },
     { name: 'Солнечные эльфы', passiveBonuses: ['+10 ОЗ/ход'], activeAbilities: [{ name: 'Луч истины', description: 'раскрытие маскировки, урон светом', cost: {om: 10} }] },
     { name: 'Сфинксы', passiveBonuses: ['+10 ОЗ/щит'], activeAbilities: [{ name: 'Загадка Сфинкса', description: '-20 ОЗ', cost: {om: 30} }] },
-    { name: 'Тальены', passiveBonuses: ['Иммунитет к контролю'], activeAbilities: [{ name: 'Психостенка', description: 'отражение дебаффов', cost: {om: 30} }] },
+    { name: 'Тальены', passiveBonuses: [], activeAbilities: [{ name: 'Психостенка', description: 'отражение дебаффов', cost: {om: 30} }] },
     { name: 'Тени', passiveBonuses: ['-5 урона по себе'], activeAbilities: [{ name: 'Теневой шаг', description: 'перемещение без траты ОД', cost: {om: 10} }] },
     { name: 'Тритоны', passiveBonuses: ['-10 ОЗ/2 хода врагу (описательно)'], activeAbilities: [{ name: 'Призыв боли', description: '-10 ОЗ/ход в течение 3 ходов', cost: {om: 30} }] },
     { name: 'Человек', passiveBonuses: [], activeAbilities: [] },
@@ -227,6 +227,7 @@ export const RULES = {
   DOT_DAMAGE: 8,
 
   OD_REGEN_ON_REST: 50,
+  OM_REGEN_ON_REST: 15,
   
   BASE_SHIELD_VALUE: 25,
   

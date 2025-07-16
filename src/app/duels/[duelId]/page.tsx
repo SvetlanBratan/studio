@@ -552,6 +552,8 @@ export default function DuelPage() {
         if (isResting) {
             activePlayer.od = Math.min(activePlayer.maxOd, activePlayer.od + RULES.OD_REGEN_ON_REST);
             turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OD_REGEN_ON_REST} ОД.`);
+            activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.OM_REGEN_ON_REST);
+            turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OM_REGEN_ON_REST} ОМ.`);
         }
 
         activePlayer.oz = Math.max(0, activePlayer.oz);
