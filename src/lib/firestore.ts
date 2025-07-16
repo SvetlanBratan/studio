@@ -48,7 +48,7 @@ export async function createDuel(player1Id: string, player1Name: string): Promis
         turnHistory: [],
         currentTurn: 1,
         activePlayerId: 'player1',
-        winner: undefined,
+        winner: null,
         log: [],
         createdAt: new Date(),
     };

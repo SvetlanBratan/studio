@@ -11,9 +11,10 @@ import type { DuelState, Turn, Action, CharacterStats } from '@/types/duel';
 import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import DuelLog from '@/components/duel-log';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Swords, Gamepad2, ShieldAlert, Users, Link, Check, ClipboardCopy, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
@@ -192,7 +193,7 @@ export default function DuelPage() {
                 turnHistory: [...duelData.turnHistory, newTurn],
                 currentTurn: duelData.currentTurn + 1,
                 activePlayerId: duelData.activePlayerId === 'player1' ? 'player2' : 'player1',
-                winner: undefined,
+                winner: null,
                 log: turnLog,
             };
             updateDuel(duelId, updatedDuel);
@@ -531,7 +532,7 @@ export default function DuelPage() {
         activePlayer.physicalCondition = getPhysicalCondition(activePlayer.oz, activePlayer.maxOz);
         opponent.physicalCondition = getPhysicalCondition(opponent.oz, opponent.maxOz);
 
-        let winner;
+        let winner = null;
         if (activePlayer.oz <= 0) winner = opponent.name;
         if (opponent.oz <= 0) winner = activePlayer.name;
 
@@ -593,7 +594,7 @@ export default function DuelPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center space-x-2">
-                        <Input value={window.location.href} readOnly className="flex-1" />
+                        <Input value={typeof window !== 'undefined' ? window.location.href : ''} readOnly className="flex-1" />
                         <Button onClick={copyLink} size="icon">
                             {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
                         </Button>
