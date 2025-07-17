@@ -91,7 +91,7 @@ export const RACES: Race[] = [
     { name: 'Сирены', passiveBonuses: ['-5 ОД у врага/ход'], activeAbilities: [{ name: 'Песнь чар', description: 'транс на 1 ход', cost: {om: 30} }] },
     { name: 'Слизни', passiveBonuses: ['+10 ОЗ/ход', 'Штраф к отравлению (3)'], activeAbilities: [{ name: 'Склизкий отпор', description: 'враг соскальзывает, теряет действие', cost: {om: 10} }] },
     { name: 'Снежные эльфы', passiveBonuses: ['+5 урона льдом', 'Иммунитет к льду'], activeAbilities: [{ name: 'Ледяной вихрь', description: '-15 ОЗ, замедление', cost: {om: 30} }] },
-    { name: 'Солнечные эльфы', passiveBonuses: ['+10 ОЗ/ход'], activeAbilities: [{ name: 'Луч истины', description: 'раскрытие маскировки, урон светом', cost: {om: 10} }] },
+    { name: 'Солнечные эльфы', passiveBonuses: ['+10 ОЗ/ход'], activeAbilities: [{ name: 'Луч истины', description: 'раскрытие маскировки, урон светом 15', cost: {om: 10} }] },
     { name: 'Сфинксы', passiveBonuses: ['+10 ОЗ/щит'], activeAbilities: [{ name: 'Загадка Сфинкса', description: '-20 ОЗ', cost: {om: 30} }] },
     { name: 'Тальены', passiveBonuses: [], activeAbilities: [{ name: 'Психостенка', description: 'отражение дебаффов', cost: {om: 30} }] },
     { name: 'Тени', passiveBonuses: ['-5 урона по себе'], activeAbilities: [{ name: 'Теневой шаг', description: 'перемещение без траты ОД', cost: {om: 10} }] },
@@ -288,5 +288,6 @@ export const initialPlayerStats = (id: string, name: string): CharacterStats => 
         shield: { hp: 0, element: null },
         isDodging: false,
         cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
+        isSetupComplete: false,
     };
 };

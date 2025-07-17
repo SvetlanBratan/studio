@@ -22,6 +22,7 @@ export async function createDuel(player1Id: string, player1Name: string): Promis
         winner: null,
         log: [],
         createdAt: new Date(),
+        duelStarted: false,
     };
 
     await setDoc(duelRef, initialState);
@@ -36,9 +37,9 @@ export async function joinDuel(duelId: string, player2Id: string, player2Name: s
     const duelSnap = await getDoc(duelRef);
 
     if (duelSnap.exists() && !duelSnap.data().player2) {
+        const player2Stats = initialPlayerStats(player2Id, player2Name);
         await updateDoc(duelRef, {
-            player2: initialPlayerStats(player2Id, player2Name),
-            activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
+            player2: player2Stats,
         });
     }
 }

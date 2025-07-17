@@ -31,7 +31,7 @@ export interface InventoryItem {
 }
 
 export interface RaceAbility {
-    name: string;
+    name:string;
     description: string;
     cost?: {
       om?: number;
@@ -84,6 +84,7 @@ export interface CharacterStats {
     prayer: number; // turns remaining
     [key: string]: number; // For racial abilities
   };
+  isSetupComplete: boolean;
 }
 
 export type PrayerEffectType = 'eternal_shield' | 'full_heal_oz' | 'full_heal_om';
@@ -114,4 +115,5 @@ export interface DuelState {
   winner: string | null;
   log: string[];
   createdAt: any; // Using 'any' for Firebase Timestamp compatibility
+  duelStarted: boolean;
 }
