@@ -26,10 +26,11 @@ interface CharacterPanelProps {
   isActive: boolean;
   onUpdate: (character: CharacterStats) => void;
   canEdit: boolean;
+  startInEditMode?: boolean;
 }
 
-export default function CharacterPanel({ character, isActive, onUpdate, canEdit }: CharacterPanelProps) {
-  const [isEditing, setIsEditing] = useState(false);
+export default function CharacterPanel({ character, isActive, onUpdate, canEdit, startInEditMode = false }: CharacterPanelProps) {
+  const [isEditing, setIsEditing] = useState(startInEditMode && canEdit);
   const [editableCharacter, setEditableCharacter] = useState<CharacterStats>(character);
 
   useEffect(() => {

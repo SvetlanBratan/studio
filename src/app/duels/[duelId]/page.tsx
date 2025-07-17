@@ -12,7 +12,7 @@ import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import DuelLog from '@/components/duel-log';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Swords, Gamepad2, ShieldAlert, Users, Link, Check, ClipboardCopy, ArrowLeft } from 'lucide-react';
+import { Swords, Gamepad2, ShieldAlert, Users, Link, Check, ClipboardCopy, ArrowLeft, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES, initialPlayerStats, ELEMENTS } from '@/lib/rules';
@@ -191,6 +191,10 @@ export default function DuelPage() {
                 turnLog.push(`Иммунитет к огню: урон от "${p}" не получен.`);
                 return;
             }
+            if (p.startsWith('Горение') && activePlayer.bonuses.includes('Иммунитет к льду')) {
+                turnLog.push(`Иммунитет ко льду: урон от "${p}" не получен.`);
+                return;
+            }
 
             if (RULES.DOT_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')))) {
                 let damage = RULES.DOT_DAMAGE;
@@ -244,6 +248,11 @@ export default function DuelPage() {
                 turnLog.push(`${target.name} имеет иммунитет к огню, и эффект "${effectName}" не был наложен.`);
                 return;
             }
+             if (effectName === 'Горение' && target.bonuses.includes('Иммунитет к льду')) {
+                turnLog.push(`${target.name} имеет иммунитет ко льду, и эффект "${effectName}" не был наложен.`);
+                return;
+            }
+
 
             const existingEffectIndex = target.penalties.findIndex(p => p.startsWith(effectName));
 
@@ -741,11 +750,33 @@ export default function DuelPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 flex flex-col gap-8">
-              <CharacterPanel character={duelData.player1} isActive={duelData.activePlayerId === 'player1'} onUpdate={handleCharacterUpdate} canEdit={isLocalSolo || user.uid === duelData.player1.id}/>
-              {duelData.player2 && <CharacterPanel character={duelData.player2} isActive={duelData.activePlayerId === 'player2'} onUpdate={handleCharacterUpdate} canEdit={isLocalSolo || user.uid === duelData.player2.id} />}
+              <CharacterPanel 
+                character={duelData.player1} 
+                isActive={duelData.activePlayerId === 'player1'} 
+                onUpdate={handleCharacterUpdate} 
+                canEdit={isLocalSolo || user.uid === duelData.player1.id}
+                startInEditMode={duelData.turnHistory.length === 0}
+              />
+              {duelData.player2 && 
+                <CharacterPanel 
+                    character={duelData.player2} 
+                    isActive={duelData.activePlayerId === 'player2'} 
+                    onUpdate={handleCharacterUpdate} 
+                    canEdit={isLocalSolo || user.uid === duelData.player2.id} 
+                    startInEditMode={duelData.turnHistory.length === 0}
+                />}
             </div>
 
             <div className="lg:col-span-2 flex flex-col gap-8">
+               {duelData.turnHistory.length < 2 && (
+                <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Настройте своего персонажа!</AlertTitle>
+                    <AlertDescription>
+                        Перед началом дуэли нажмите кнопку редактирования (карандаш) на панели вашего персонажа, чтобы выбрать расу, резерв и другие параметры.
+                    </AlertDescription>
+                </Alert>
+              )}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -790,7 +821,3 @@ export default function DuelPage() {
     </div>
   );
 }
-
-    
-
-    
