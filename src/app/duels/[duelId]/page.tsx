@@ -93,9 +93,8 @@ export default function DuelPage() {
     handleUpdateDuelState(updatedDuel);
   };
   
-  const copyLink = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url).then(() => {
+  const copyDuelId = () => {
+    navigator.clipboard.writeText(duelId).then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     });
@@ -690,12 +689,12 @@ export default function DuelPage() {
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle>Ожидание второго игрока...</CardTitle>
-                    <CardDescription>Поделитесь ссылкой на эту страницу со своим оппонентом.</CardDescription>
+                    <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center space-x-2">
-                        <Input value={typeof window !== 'undefined' ? window.location.href : ''} readOnly className="flex-1" />
-                        <Button onClick={copyLink} size="icon">
+                        <Input value={duelId} readOnly className="flex-1" />
+                        <Button onClick={copyDuelId} size="icon">
                             {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
                         </Button>
                     </div>
@@ -791,5 +790,7 @@ export default function DuelPage() {
     </div>
   );
 }
+
+    
 
     
