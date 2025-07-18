@@ -185,6 +185,9 @@ export default function DuelPage() {
             }
         }
         
+        // Clear one-turn buffs
+        activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Железный ёж');
+
         activePlayer.penalties.forEach(p => {
             const isPoisonEffect = RULES.POISON_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')));
             if (isPoisonEffect && activePlayer.bonuses.includes('Иммунитет к ядам')) {
@@ -258,6 +261,10 @@ export default function DuelPage() {
                 turnLog.push(`${target.name} имеет иммунитет к ${immunityType}, и эффект "${effectName}" не был наложен.`);
                 return;
             }
+            if (effectName.includes('замедления') && target.bonuses.includes('Иммунитет к замедлению')) {
+                turnLog.push(`Пассивная способность (Арахнии): ${target.name} имеет иммунитет к замедлению, эффект не наложен.`);
+                return;
+            }
 
             const existingEffectIndex = target.penalties.findIndex(p => p.startsWith(effectName));
 
@@ -280,7 +287,7 @@ export default function DuelPage() {
             }
         };
 
-        const applyDamage = (attacker: CharacterStats, target: CharacterStats, amount: number, isSpell: boolean, spellElement?: string) => {
+        const applyDamage = (attacker: CharacterStats, target: CharacterStats, amount: number, isSpell: boolean, spellElement?: string, isPhysical: boolean = !isSpell) => {
             let finalDamage = amount;
 
             if (isSpell && spellElement) {
@@ -289,10 +296,58 @@ export default function DuelPage() {
                     turnLog.push(`${target.name} имеет иммунитет к стихии "${spellElement}" и не получает урон.`);
                     return;
                 }
+                 if (target.bonuses.includes('Понимание звёзд (-5 урон от света/эфира)') && (spellElement === 'Свет' || spellElement === 'Эфир')) {
+                    finalDamage = Math.max(0, finalDamage - 5);
+                    turnLog.push(`Пассивная способность (Астролоиды): ${target.name} получает на 5 меньше урона от света/эфира.`);
+                }
+            }
+            
+            if (target.bonuses.includes('Железный ёж') && isSpell) {
+                turnLog.push(`Способность "Железный ёж": ${target.name} поглощает весь магический урон.`);
+                target.bonuses = target.bonuses.filter(b => b !== 'Железный ёж'); // Remove after use
+                target.shield.hp += RULES.BASE_SHIELD_VALUE;
+                target.shield.element = null; // Physical shield
+                turnLog.push(`Способность "Железный ёж": ${target.name} получает физический щит прочностью ${RULES.BASE_SHIELD_VALUE}.`);
+                return; // No damage taken
             }
 
+            // --- Damage Reduction Passives ---
+            if (target.bonuses.includes('Аморфное тело (-10 урон)')) {
+                finalDamage = Math.max(0, finalDamage - 10);
+                turnLog.push(`Пассивная способность (Амфибии): урон снижен на 10.`);
+            }
+            if (target.bonuses.includes('Проницательность (-5 урон)')) {
+                finalDamage = Math.max(0, finalDamage - 5);
+                turnLog.push(`Пассивная способность (Антаресы): урон снижен на 5.`);
+            }
+            if (target.bonuses.includes('Экзоскелет (-10 урон)')) {
+                finalDamage = Math.max(0, finalDamage - 10);
+                turnLog.push(`Пассивная способность (Арахниды): урон снижен на 10.`);
+            }
+             if (target.bonuses.includes('Изворотливость (-10 урон)')) {
+                finalDamage = Math.max(0, finalDamage - 10);
+                turnLog.push(`Пассивная способность (Аспиды): урон снижен на 10.`);
+            }
+
+            if(isPhysical) {
+                 if (target.bonuses.includes('Гибкость (-5 физ. урон)')) {
+                    finalDamage = Math.max(0, finalDamage - 5);
+                    turnLog.push(`Пассивная способность (Алахоры): физ. урон снижен на 5.`);
+                 }
+                 if (target.bonuses.includes('Шестиглазое зрение (-5 физ. урон)')) {
+                    finalDamage = Math.max(0, finalDamage - 5);
+                    turnLog.push(`Пассивная способность (Арахниды): физ. урон снижен на 5.`);
+                 }
+            }
+
+            if(isSpell && spellElement === 'Звук' && target.bonuses.includes('-10 урон от звука')) {
+                finalDamage = Math.max(0, finalDamage - 10);
+                turnLog.push(`Пассивная способность (Антропоморфы): урон от звука снижен на 10.`);
+            }
+
+
             if (target.bonuses.includes('Поглощение входящего магического урона') && isSpell) {
-                const restoredOm = Math.round(amount);
+                const restoredOm = Math.round(finalDamage); // use finalDamage after reductions
                 target.om = Math.min(target.maxOm, target.om + restoredOm);
                 turnLog.push(`Пассивная способность (Ларимы): ${target.name} поглощает ${restoredOm} магического урона и восстанавливает ОМ.`);
                 return;
@@ -380,12 +435,16 @@ export default function DuelPage() {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
             
             const getOdCostPenalty = (player: CharacterStats): number => {
+                let penalty = 0;
                 for (const wound of RULES.WOUND_PENALTIES) {
                     if (player.oz < wound.threshold) {
-                        return wound.penalty;
+                        penalty = wound.penalty;
                     }
                 }
-                return 0;
+                 if (player.bonuses.includes('Животная реакция (скидка 5 ОД)') || player.bonuses.includes('Ловкие конечности (скидка 5 ОД)')) {
+                    penalty -= 5;
+                }
+                return penalty;
             };
 
             const calculateDamage = (spellType: 'household' | 'small' | 'medium' | 'strong'): number => {
@@ -405,9 +464,19 @@ export default function DuelPage() {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Орк): "Расовая ярость" увеличивает урон на 10.`);
                 }
+                if (activePlayer.bonuses.includes('Меткость (+10 урон)')) {
+                    damage += 10;
+                    turnLog.push(`Пассивная способность (Алариены): "Меткость" увеличивает урон на 10.`);
+                }
 
                 return Math.round(damage);
             };
+            
+            const isSpellAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield'].includes(action.type);
+            if(isSpellAction && opponent.bonuses.includes('Беззвучие')) {
+                activePlayer.om = Math.max(0, activePlayer.om - 5);
+                turnLog.push(`Пассивная способность (Алахоры): ${opponent.name} искажает восприятие, ${activePlayer.name} теряет 5 ОМ.`);
+            }
 
             let damageDealt = 0;
             const odPenalty = getOdCostPenalty(activePlayer);
@@ -539,32 +608,39 @@ export default function DuelPage() {
                          turnLog.push(`Способность "${ability.name}": ${ability.description}.`);
 
                          switch(abilityName) {
-                            case 'Кислотное распыление':
-                                 applyDamage(activePlayer, opponent, 10, false);
-                                 turnLog.push(`Способность "Кислотное распыление": ${opponent.name} получает 10 урона.`);
+                             case 'Железный ёж':
+                                 activePlayer.bonuses.push('Железный ёж');
+                                 turnLog.push(`${activePlayer.name} готовится поглотить следующее заклинание.`);
                                  break;
-                            case 'Дар сладости':
-                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
-                                 turnLog.push(`Способность "Дар сладости": ${activePlayer.name} восстанавливает 15 ОЗ.`);
+                             case 'Дождь из осколков':
+                                 applyDamage(activePlayer, opponent, 40, true, undefined, true);
                                  break;
-                            case 'Брызг из жабр':
-                                applyEffect(opponent, 'Ослепление (1)');
-                                break;
-                            case 'Ядовитый дым':
-                                applyEffect(opponent, 'Отравление (3)');
-                                break;
+                             case 'Водяной захват':
+                                 applyEffect(opponent, 'Потеря действия (1)');
+                                 break;
+                             case 'Самоисцеление':
+                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 50);
+                                 turnLog.push(`${activePlayer.name} восстанавливает 50 ОЗ.`);
+                                 break;
+                             case 'Ипостась зверя':
+                                 applyDamage(activePlayer, opponent, 40, false);
+                                 break;
+                             case 'Паутина':
+                                 applyEffect(opponent, 'Потеря действия (1)');
+                                 applyDamage(activePlayer, opponent, 20, false);
+                                 break;
+                             case 'Жало-хищника':
+                                 applyDamage(activePlayer, opponent, 50, false);
+                                 break;
+                             case 'Окаменяющий взгляд':
+                                 applyEffect(opponent, 'Потеря действия (1)');
+                                 break;
+                             case 'Метеорит':
+                                 applyDamage(activePlayer, opponent, 60, true, 'Огонь');
+                                 break;
                             case 'Призыв звезды':
                                 applyDamage(activePlayer, opponent, 20, true);
                                 turnLog.push(`Способность "Призыв звезды": ${opponent.name} получает 20 урона.`);
-                                break;
-                            case 'Танец лепестков':
-                                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
-                                turnLog.push(`Способность "Танец лепестков": ${activePlayer.name} восстанавливает 10 ОЗ.`);
-                                break;
-                            case 'Песня влюблённого':
-                                applyDamage(activePlayer, opponent, 10, true);
-                                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
-                                turnLog.push(`Способность "Песня влюблённого": ${opponent.name} получает 10 урона, а ${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
                             case 'Укус': 
                                 {
@@ -581,9 +657,6 @@ export default function DuelPage() {
                                     }
                                     turnLog.push(`Способность "Укус": ${opponent.name} получает ${biteDamage} урона.`);
                                 }
-                                break;
-                             case 'Окаменение взглядом':
-                                applyEffect(opponent, 'Окаменение (1)');
                                 break;
                              case 'Драконий выдох':
                                  applyDamage(activePlayer, opponent, 20, true, 'Огонь');
@@ -628,6 +701,16 @@ export default function DuelPage() {
             }
         });
         
+        // Handle "lose action" effects
+        const loseActionCount = activePlayer.penalties.filter(p => p.startsWith('Потеря действия')).length;
+        if (loseActionCount > 0 && actions.length > 0) {
+            const lostActions = actions.splice(-loseActionCount);
+            lostActions.forEach(lostAction => {
+                turnLog.push(`${activePlayer.name} теряет действие "${getActionLabel(lostAction.type, lostAction.payload)}" из-за штрафа.`);
+            });
+            activePlayer.penalties = activePlayer.penalties.filter(p => !p.startsWith('Потеря действия'));
+        }
+
         const isResting = actions.some(a => a.type === 'rest');
         if (isResting) {
             activePlayer.od = Math.min(activePlayer.maxOd, activePlayer.od + RULES.OD_REGEN_ON_REST);
