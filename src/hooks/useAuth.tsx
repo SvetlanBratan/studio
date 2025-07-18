@@ -28,10 +28,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isFirebaseEnabled) {
       setLoading(false);
-      // Immediately redirect to login if firebase is not configured, except for the login page itself.
-      if (window.location.pathname !== '/login') {
-          router.push('/login');
-      }
       return;
     }
     
@@ -41,17 +37,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, []);
 
   const signInAsGuest = async () => {
     if (!isFirebaseEnabled || !auth) return;
     setLoading(true);
     try {
       await signInAnonymously(auth);
-      // onAuthStateChanged will handle routing to /duels via the Home page component
+      // onAuthStateChanged will set the user, then the root page will redirect.
+      router.push('/duels');
     } catch (error) {
       console.error("Ошибка анонимного входа:", error);
-      setLoading(false);
+    } finally {
+        setLoading(false);
     }
   };
 
