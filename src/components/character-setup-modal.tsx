@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { CharacterStats, ReserveLevel, FaithLevel, InventoryItem } from '@/types/duel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,11 +23,6 @@ interface CharacterSetupModalProps {
 
 export default function CharacterSetupModal({ character, onSave }: CharacterSetupModalProps) {
   const [editableCharacter, setEditableCharacter] = useState<CharacterStats>(character);
-  const [isOpen, setIsOpen] = useState(true);
-
-  useEffect(() => {
-    setEditableCharacter(character);
-  }, [character]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -102,7 +97,6 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
         isSetupComplete: true 
     };
     onSave(finalCharacter);
-    setIsOpen(false);
   };
   
   const renderInventoryEditor = () => (
@@ -143,7 +137,7 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
   );
 
   return (
-    <Dialog open={isOpen}>
+    <Dialog open={true}>
         <DialogContent className="max-w-xl">
             <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
