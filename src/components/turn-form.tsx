@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Action, CharacterStats, ActionType, PrayerEffectType, WeaponType } from '@/types/duel';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
@@ -123,7 +123,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   };
   
   const getOdCostPenalty = (player: CharacterStats): number => {
-    if (player.race === 'Куклы' && player.bonuses.includes('Абсолютная память (не тратится ОД)')) {
+    if (player.race === 'Куклы' && player.bonuses.includes('Абсолютная память — не тратится ОД.')) {
         return -Infinity; // Special value for zero cost
     }
     let penalty = 0;
@@ -149,7 +149,19 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
 
   const weaponInfo = WEAPONS[player.weapon];
   const isOpponentInRangeForWeapon = distance <= weaponInfo.range;
-  const physicalAttackCost = RULES.NON_MAGIC_COSTS.physical_attack + odPenalty;
+  const getFinalOdCost = (baseCost: number) => {
+    if (odPenalty === -Infinity) return 0;
+    return baseCost + odPenalty;
+  };
+  const physicalAttackCost = getFinalOdCost(RULES.NON_MAGIC_COSTS.physical_attack);
+
+  const isSubmitDisabled = useMemo(() => {
+    if (actions.length === 0) return true;
+    return actions.some(action => {
+      const needsElement = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield'].includes(action.type);
+      return needsElement && !action.payload?.element;
+    });
+  }, [actions]);
 
   const actionOptions: {value: string, label: string, disabled: boolean, tooltip?: string, group: 'magic' | 'physical' | 'other'}[] = [
     // Physical
@@ -163,16 +175,16 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     { group: 'magic', value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: isFaceless || !hasElementalKnowledge || player.om < RULES.RITUAL_COSTS.medium || hasAddedAction('shield') },
 
     // Other
-    { group: 'other', value: 'dodge', label: `Уворот (${RULES.NON_MAGIC_COSTS.dodge + odPenalty} ОД)`, disabled: player.od < RULES.NON_MAGIC_COSTS.dodge + odPenalty || hasAddedAction('dodge') },
+    { group: 'other', value: 'dodge', label: `Уворот (${getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge)} ОД)`, disabled: player.od < getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge) || hasAddedAction('dodge') },
     { group: 'other', value: 'move', label: 'Передвижение', disabled: false },
-    { group: 'other', value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < RULES.NON_MAGIC_COSTS.use_item + odPenalty || player.inventory.length === 0 || hasAddedAction('use_item') },
-    { group: 'other', value: 'prayer', label: 'Молитва', disabled: player.cooldowns.prayer > 0 || player.od < RULES.NON_MAGIC_COSTS.prayer + odPenalty || hasPrayerAction },
+    { group: 'other', value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < getFinalOdCost(RULES.NON_MAGIC_COSTS.use_item) || player.inventory.length === 0 || hasAddedAction('use_item') },
+    { group: 'other', value: 'prayer', label: 'Молитва', disabled: player.cooldowns.prayer > 0 || player.od < getFinalOdCost(RULES.NON_MAGIC_COSTS.prayer) || hasPrayerAction },
     { group: 'other', value: 'remove_effect', label: 'Снять с себя эффект', disabled: player.penalties.length === 0 || hasAddedAction('remove_effect')},
     { group: 'other', value: 'rest', label: 'Отдых', disabled: hasAddedAction('rest') },
   ];
 
   const racialAbilities = playerRaceInfo?.activeAbilities.map(ability => {
-    const odCost = (ability.cost?.od ?? 0) + odPenalty;
+    const odCost = getFinalOdCost(ability.cost?.od ?? 0);
     const value = ability.name === 'Песня стихий' ? `racial_${ability.name}` : `racial_${ability.name}`;
     
     return {
@@ -253,7 +265,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
           </div>
         )}
 
-        <Button onClick={handleFormSubmit} disabled={actions.length === 0} className="w-full">
+        <Button onClick={handleFormSubmit} disabled={isSubmitDisabled} className="w-full">
           <Send className="mr-2 h-4 w-4" />
           Завершить ход
         </Button>

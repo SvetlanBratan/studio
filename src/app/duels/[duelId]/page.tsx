@@ -134,7 +134,7 @@ export default function DuelPage() {
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) };
         
         let turnSkipped = false;
-        const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен', 'Транс', 'Усыпление'];
+        const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен', 'Транс', 'Усыпление', 'Заморожен'];
         let petrificationCount = 0;
         
         // Reset turn-based flags
@@ -410,6 +410,11 @@ export default function DuelPage() {
                 turnLog.push(`Пассивная способность (Арахнии): ${target.name} имеет иммунитет к замедлению, эффект не наложен.`);
                 return;
             }
+            
+            if (effectName === 'Заморожен' && target.bonuses.some(b => b === 'Иммунитет к льду' || b === 'Теплокровность (+50 иммунитет к огню)')) {
+                 turnLog.push(`${target.name} имеет иммунитет к заморозке.`);
+                 return;
+            }
 
             const existingEffectIndex = target.penalties.findIndex(p => p.startsWith(effectName));
 
@@ -669,11 +674,34 @@ export default function DuelPage() {
                 turnLog.push(`Пассивная способность (Антропоморфы): урон от звука снижен на 10.`);
             }
 
-            if (isSpell && spellElement === 'Вода') {
-                const burningIndex = target.penalties.findIndex(p => p.startsWith('Горение'));
-                if (burningIndex > -1) {
-                    const removedEffect = target.penalties.splice(burningIndex, 1)[0];
-                    turnLog.push(`Стихия Воды тушит эффект "${removedEffect}" на ${target.name}.`);
+            if (isSpell) {
+                if (spellElement === 'Вода') {
+                    const burningIndex = target.penalties.findIndex(p => p.startsWith('Горение'));
+                    if (burningIndex > -1) {
+                        const removedEffect = target.penalties.splice(burningIndex, 1)[0];
+                        turnLog.push(`Стихия Воды тушит эффект "${removedEffect}" на ${target.name}.`);
+                    }
+                    applyEffect(target, 'Мокрый', 2);
+                }
+                if (spellElement === 'Лёд') {
+                     const wetIndex = target.penalties.findIndex(p => p.startsWith('Мокрый'));
+                     if (wetIndex > -1) {
+                        target.penalties.splice(wetIndex, 1);
+                        turnLog.push(`Эффект "Мокрый" на ${target.name} был использован для заморозки.`);
+                        applyEffect(target, 'Заморожен', 1);
+                     }
+                }
+                 if (spellElement === 'Огонь') {
+                    const wetIndex = target.penalties.findIndex(p => p.startsWith('Мокрый'));
+                    if (wetIndex > -1) {
+                        target.penalties.splice(wetIndex, 1);
+                        turnLog.push(`Огонь высушивает эффект "Мокрый" на ${target.name}.`);
+                    }
+                    const frozenIndex = target.penalties.findIndex(p => p.startsWith('Заморожен'));
+                    if (frozenIndex > -1) {
+                        target.penalties.splice(frozenIndex, 1);
+                        turnLog.push(`Огонь растапливает лед, снимая эффект "Заморожен" с ${target.name}.`);
+                    }
                 }
             }
             
