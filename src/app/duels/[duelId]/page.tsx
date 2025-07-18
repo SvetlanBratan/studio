@@ -44,7 +44,6 @@ export default function DuelPage() {
   const [localDuelState, setLocalDuelState] = useState<DuelState | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // This hook must be called unconditionally at the top level.
   const duelRef = isLocalSolo ? null : doc(firestore, 'duels', duelId);
   const [onlineDuel, onlineDuelLoading, onlineDuelError] = useDocumentData(duelRef);
 
