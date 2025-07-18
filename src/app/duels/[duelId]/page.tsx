@@ -2,13 +2,13 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
 
-import type { DuelState, Turn, Action, CharacterStats, WeaponType } from '@/types/duel';
+import type { DuelState, Turn, Action, CharacterStats } from '@/types/duel';
 import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import CharacterSetupModal from '@/components/character-setup-modal';
@@ -836,7 +836,7 @@ export default function DuelPage() {
                         penalty = wound.penalty;
                     }
                 }
-                const armorPenalty = ARMORS[player.armor]?.odPenalty ?? 0;
+                const armorPenalty = ARMORS[player.armor as ArmorType]?.odPenalty ?? 0;
                 penalty += armorPenalty;
 
                  if (player.bonuses.includes('Животная реакция (-5 ОД на физические действия)') || player.bonuses.includes('Ловкие конечности (-5 ОД на действия)') || player.bonuses.includes('Галоп (-5 ОД на действия)')) {
@@ -1003,7 +1003,7 @@ export default function DuelPage() {
                 case 'physical_attack': {
                     const cost = getFinalOdCost(RULES.NON_MAGIC_COSTS.physical_attack);
                     activePlayer.od -= cost;
-                    const weapon = WEAPONS[activePlayer.weapon];
+                    const weapon = WEAPONS[activePlayer.weapon as WeaponType];
                     damageDealt = calculateDamage(weapon.damage, false);
                     applyDamage(activePlayer, opponent, damageDealt, false, undefined, true);
                     activePlayer.cooldowns.physical_attack = RULES.COOLDOWNS.physical_attack;
@@ -1572,7 +1572,7 @@ export default function DuelPage() {
     );
   }
 
-  if (!duelData || !duelData.player1 || !duelData.player2) {
+  if (!duelData || !duelData.player1) {
       return (
         <div className="flex items-center justify-center min-h-screen">
           <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
@@ -1581,16 +1581,22 @@ export default function DuelPage() {
   }
 
   // --- STAGE LOGIC ---
+  const isPlayer1 = user.uid === duelData.player1.id;
+  const isPlayer2 = !!(duelData.player2 && user.uid === duelData.player2.id);
   
+  // 1. Solo duel setup
   if (isLocalSolo && !duelData.duelStarted) {
-    return <SoloSetupForm player1={duelData.player1} player2={duelData.player2} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
+    return <SoloSetupForm player1={duelData.player1} player2={duelData.player2!} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
   }
   
+  // --- Online Duel Flow ---
   if (!isLocalSolo) {
-      if (!duelData.player1.isSetupComplete && user.uid === duelData.player1.id) {
+      // 2. Player 1 setup
+      if (isPlayer1 && !duelData.player1.isSetupComplete) {
         return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
       }
 
+      // 3. Waiting for Player 2 to join
       if (!duelData.player2) {
         return (
           <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
@@ -1616,26 +1622,28 @@ export default function DuelPage() {
         );
       }
       
-      if (!duelData.player2.isSetupComplete) {
-        if (user.uid === duelData.player2.id) {
-            return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
-        } else {
-             return (
-                <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
-                    <Card className="w-full max-w-md">
-                        <CardHeader>
-                            <CardTitle className="flex items-center justify-center gap-2">
-                                <Settings2 className="animate-spin" />
-                                Ожидание оппонента
-                            </CardTitle>
-                            <CardDescription>
-                                Ваш оппонент еще настраивает своего персонажа.
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
-                </div>
-            );
-        }
+      // 4. Player 2 setup
+      if (isPlayer2 && !duelData.player2.isSetupComplete) {
+          return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+      }
+      
+      // 5. Waiting for opponent to finish setup
+      if ((isPlayer1 && !duelData.player2.isSetupComplete) || (isPlayer2 && !duelData.player1.isSetupComplete)) {
+           return (
+              <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+                  <Card className="w-full max-w-md">
+                      <CardHeader>
+                          <CardTitle className="flex items-center justify-center gap-2">
+                              <Settings2 className="animate-spin" />
+                              Ожидание оппонента
+                          </CardTitle>
+                          <CardDescription>
+                              Ваш оппонент еще настраивает своего персонажа.
+                          </CardDescription>
+                      </CardHeader>
+                  </Card>
+              </div>
+          );
       }
   }
 
@@ -1644,6 +1652,11 @@ export default function DuelPage() {
   if (!duelData.duelStarted) {
       // This can happen briefly for online duels
       return <div className="flex items-center justify-center min-h-screen"><div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div></div>;
+  }
+  
+  if (!duelData.player2) {
+    // Should not happen if logic is correct, but a safeguard
+    return <div>Ошибка: Данные второго игрока отсутствуют.</div>
   }
 
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;

@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { ShieldCheck, User, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import CharacterSetupForm from './character-setup-form';
-import { Separator } from './ui/separator';
 
 interface SoloSetupFormProps {
   player1: CharacterStats;
