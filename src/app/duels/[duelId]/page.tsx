@@ -151,6 +151,19 @@ export default function DuelPage() {
                 }
             }
         }
+        
+        if (opponent.race === 'Цынаре' && opponent.bonuses.includes('Гипнотический взгляд (враг теряет 10 ОД/ход)')) {
+            activePlayer.od = Math.max(0, activePlayer.od - 10);
+            turnLog.push(`Пассивная способность (Цынаре): ${opponent.name} влияет на ${activePlayer.name}, который теряет 10 ОД.`);
+        }
+        if (opponent.race === 'Призраки' && opponent.bonuses.includes('Ясновидение (враг теряет 5 ОМ/ход)')) {
+            activePlayer.om = Math.max(0, activePlayer.om - 5);
+            turnLog.push(`Пассивная способность (Призраки): ${opponent.name} влияет на ${activePlayer.name}, который теряет 5 ОМ.`);
+        }
+        if (opponent.race === 'Скелеты' && opponent.bonuses.includes('Холод нежизни (враг теряет 2 ОЗ/ход)')) {
+            activePlayer.oz -= 2;
+            turnLog.push(`Пассивная способность (Скелеты): ${opponent.name} влияет на ${activePlayer.name}, который теряет 2 ОЗ.`);
+        }
 
         activePlayer.bonuses.forEach(bonus => {
             // OZ Regen
@@ -171,6 +184,10 @@ export default function DuelPage() {
                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + healAmount);
                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${healAmount} ОЗ.`);
             }
+             if (bonus === 'Энергетический резонанс (+1 ОЗ/ход)') {
+                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 1);
+                turnLog.push(`Пассивная способность (Энергетические вампиры): ${activePlayer.name} восстанавливает 1 ОЗ.`);
+            }
             if (bonus === 'Регенерация (+5 ОЗ каждый второй ход)' && duelData.currentTurn % 2 === 0) {
                  const healAmount = 5;
                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + healAmount);
@@ -189,12 +206,12 @@ export default function DuelPage() {
 
 
             // OM Regen
-            if (bonus === 'Этикет крови (+1 ОМ/ход)' || bonus === 'Холодный ум (+5 ОМ/ход)') {
+            if (bonus === 'Этикет крови (+1 ОМ/ход)' || bonus === 'Холодный ум (+5 ОМ/ход)' || bonus === 'Слияние со стихией (+5 ОМ/ход)') {
                 const omAmount = bonus.includes('5') ? 5 : 1;
                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omAmount);
                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omAmount} ОМ.`);
             }
-            if (bonus === 'Звёздный резонанс (+10 ОМ/ход)' || bonus === 'Кристальная стабильность (+10 ОМ/ход)' || bonus === 'Единение с природой (+10 ОМ/ход)' || bonus === 'Друидическая связь (+10 ОМ/ход)' || bonus === 'Озарение (+10 ОМ каждый ход)' || bonus === 'Светлая энергия (+10 ОМ каждый ход)') {
+            if (bonus === 'Звёздный резонанс (+10 ОМ/ход)' || bonus === 'Кристальная стабильность (+10 ОМ/ход)' || bonus === 'Единение с природой (+10 ОМ/ход)' || bonus === 'Друидическая связь (+10 ОМ/ход)' || bonus === 'Озарение (+10 ОМ каждый ход)' || bonus === 'Светлая энергия (+10 ОМ каждый ход)' || bonus === 'Эфирная стабильность (+10 ОМ/ход)') {
                 const omAmount = 10;
                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omAmount);
                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omAmount} ОМ.`);
@@ -270,7 +287,7 @@ export default function DuelPage() {
 
         activePlayer.penalties.forEach(p => {
             const isPoisonEffect = RULES.POISON_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')));
-            if (isPoisonEffect && activePlayer.bonuses.includes('Иммунитет к яду')) {
+            if (isPoisonEffect && (activePlayer.bonuses.includes('Иммунитет к яду') || activePlayer.race === 'Куклы' || activePlayer.race === 'Скелеты')) {
                  turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} имеет иммунитет к яду, урон от "${p}" не получен.`);
                  return;
             }
@@ -281,7 +298,7 @@ export default function DuelPage() {
             }
 
             const isBurning = p.startsWith('Горение');
-            if (isBurning && activePlayer.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду')) {
+            if (isBurning && (activePlayer.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду') || activePlayer.race === 'Куклы' || activePlayer.race === 'Скелеты')) {
                 const immunityType = activePlayer.bonuses.includes('Иммунитет к огню') ? 'огню' : 'льду';
                 turnLog.push(`Иммунитет к ${immunityType}: урон от "${p}" не получен.`);
                 return;
@@ -310,6 +327,21 @@ export default function DuelPage() {
         if (activePlayer.om === 0 && activePlayer.bonuses.includes('Потеря формы (-10 ОЗ при ОМ=0)')) {
             activePlayer.oz -= 10;
             turnLog.push(`Пассивная способность (Нимфилус): ОМ на нуле, ${activePlayer.name} теряет 10 ОЗ.`);
+        }
+        
+        const autoDodgeIndex = activePlayer.bonuses.findIndex(b => b.startsWith('Авто-уклонение'));
+        if (autoDodgeIndex > -1) {
+            const match = activePlayer.bonuses[autoDodgeIndex].match(/\((\d+)\)/);
+            if (match) {
+                let duration = parseInt(match[1], 10) - 1;
+                activePlayer.isDodging = true;
+                turnLog.push(`Пассивная способность (Хамелеоны): ${activePlayer.name} автоматически уклоняется.`);
+                if (duration > 0) {
+                    activePlayer.bonuses[autoDodgeIndex] = `Авто-уклонение (${duration})`;
+                } else {
+                    activePlayer.bonuses.splice(autoDodgeIndex, 1);
+                }
+            }
         }
 
         if (turnSkipped) {
@@ -351,9 +383,9 @@ export default function DuelPage() {
                  turnLog.push(`${target.name} имеет иммунитет к эффекту "${effectName}" и он не был наложен.`);
                  return;
             }
-            if (effectName === 'Горение' && target.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду')) {
-                const immunityType = target.bonuses.includes('Иммунитет к огню') ? 'огню' : 'льду';
-                turnLog.push(`${target.name} имеет иммунитет к ${immunityType}, и эффект "${effectName}" не был наложен.`);
+            if ((effectName === 'Горение' && (target.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду') || target.race === 'Куклы' || target.race === 'Скелеты')) ||
+                (effectName === 'Отравление' && (target.race === 'Куклы' || target.race === 'Скелеты'))) {
+                turnLog.push(`${target.name} имеет иммунитет к ${effectName}, и эффект не был наложен.`);
                 return;
             }
             if (effectName.includes('замедления') && target.bonuses.includes('Иммунитет к паутине')) {
@@ -390,8 +422,8 @@ export default function DuelPage() {
                 return;
             }
 
-            if (isPhysical && target.bonuses.includes('Временной отпечаток (иммунитет к физ. урону)')) {
-                turnLog.push(`Пассивная способность (Нетленные): ${target.name} имеет иммунитет к физическому урону.`);
+            if ((isPhysical && target.bonuses.includes('Временной отпечаток (иммунитет к физ. урону)')) || (isPhysical && target.race === 'Призраки')) {
+                turnLog.push(`Пассивная способность (${target.race}): ${target.name} имеет иммунитет к физическому урону.`);
                 return;
             }
 
@@ -402,6 +434,10 @@ export default function DuelPage() {
 
             if (isSpell && spellElement) {
                 const immunityString = `Иммунитет к ${spellElement.toLowerCase()}`;
+                 if (target.race === 'Духи' && target.bonuses.includes('Сопротивление воздействию (-20 урона от стихий)')) {
+                    finalDamage = Math.max(0, finalDamage - 20);
+                    turnLog.push(`Пассивная способность (Духи): ${target.name} получает на 20 меньше урона от стихий.`);
+                }
                 if (target.bonuses.some(b => b === `Лёд в венах (-30 урона от атак стихии льда)` && spellElement === 'Лёд')) {
                     finalDamage = Math.max(0, finalDamage - 30);
                     turnLog.push(`Пассивная способность (Снежные эльфы): ${target.name} получает на 30 меньше урона от льда.`);
@@ -494,9 +530,17 @@ export default function DuelPage() {
                 finalDamage = Math.max(0, finalDamage - 10);
                 turnLog.push(`Пассивная способность (${target.race}): урон снижен на 10.`);
             }
+             if (target.bonuses.includes('Танец грации (-10 урона при ОЗ > 100)') && target.oz > 100) {
+                 finalDamage = Math.max(0, finalDamage - 10);
+                 turnLog.push(`Пассивная способность (Цынаре): урон снижен на 10.`);
+            }
             if (target.bonuses.includes('Проницательность (-5 урон)') || target.bonuses.includes('Разрыв личности (-5 урон)') || target.bonuses.includes('Уворот (-5 урон от всех атак)')) {
                 finalDamage = Math.max(0, finalDamage - 5);
                 turnLog.push(`Пассивная способность (${target.race}): урон снижен на 5.`);
+            }
+             if (target.bonuses.includes('Магическое тело (-5 урона при ОМ > 50)') && target.om > 50) {
+                 finalDamage = Math.max(0, finalDamage - 5);
+                 turnLog.push(`Пассивная способность (Ятанаги): урон снижен на 5.`);
             }
             if (target.bonuses.includes('Облик желания (-5 урон)')) {
                  finalDamage = Math.max(0, finalDamage - 5);
@@ -533,6 +577,10 @@ export default function DuelPage() {
 
             // --- Physical/Spell Specific ---
             if(isPhysical) {
+                 if (target.bonuses.includes('Ипостась силы (-10 урона от физических атак)')) {
+                    finalDamage = Math.max(0, finalDamage - 10);
+                    turnLog.push(`Пассивная способность (Химеры): физ. урон снижен на 10.`);
+                }
                  if (target.bonuses.includes('Гибкость (-5 физ. урон)') || target.bonuses.includes('Шестиглазое зрение (-5 физ. урон)') || target.bonuses.includes('Воинская форма (-5 физ. урон)') || target.bonuses.includes('Насекомая стойкость (-5 физ. урон)') || target.bonuses.includes('Прочная шкура (-5 урона от физических атак)') || target.bonuses.includes('Грация охотника (-5 урона от физических атак)')) {
                     finalDamage = Math.max(0, finalDamage - 5);
                     turnLog.push(`Пассивная способность (${target.race}): физ. урон снижен на 5.`);
@@ -544,6 +592,10 @@ export default function DuelPage() {
                  if (target.bonuses.includes('Лёгкие кости (+5 урона к получаемым физическим атакам)')) {
                     finalDamage += 5;
                     turnLog.push(`Пассивная способность (Дриды): физ. урон увеличен на 5.`);
+                 }
+                 if (target.race === 'Энергетические вампиры' && target.bonuses.includes('Аура желания (враг теряет 10 ОМ при физ. атаке)')) {
+                    attacker.om = Math.max(0, attacker.om - 10);
+                    turnLog.push(`Пассивная способность (Энергетические вампиры): ${attacker.name} теряет 10 ОМ.`);
                  }
             }
             if(isSpell) {
@@ -557,10 +609,12 @@ export default function DuelPage() {
                  }
                 if (target.bonuses.includes('Земная устойчивость (-10 урона от магических атак врага)') || target.bonuses.includes('Иллюзорный обман (-10 урона от магических атак врага)') || target.bonuses.includes('Светлая душа (-10 урона от магии эфира, света и иллюзий)') || target.bonuses.includes('Око истины (-30 урона от иллюзий и заклинаний)')) {
                     let text = `Пассивная способность (${target.race}):`;
-                    if(target.race === 'Светлая душа' && spellElement && !['Эфир', 'Свет', 'Иллюзии'].includes(spellElement)){
+                    if(target.race === 'Кунари' && spellElement && !['Эфир', 'Свет', 'Иллюзии'].includes(spellElement)){
+                       // no reduction
+                    } else if (target.race === 'Сфинксы' && spellElement && !['Иллюзии'].includes(spellElement)) {
                        // no reduction
                     } else {
-                        const reduction = target.race === 'Око истины (-30 урона от иллюзий и заклинаний)' ? 30 : 10;
+                        const reduction = target.race === 'Сфинксы' ? 30 : 10;
                         finalDamage = Math.max(0, finalDamage - reduction);
                         turnLog.push(`${text} магический урон снижен на ${reduction}.`);
                     }
@@ -642,6 +696,10 @@ export default function DuelPage() {
                 turnLog.push(`${target.name} получает ${finalDamage} урона.`);
             }
             
+             if (damageDealtToTarget > 40 && target.race === 'Химеры') {
+                 target.oz = Math.min(target.maxOz, target.oz + 10);
+                 turnLog.push(`Пассивная способность (Химеры): ${target.name} восстанавливает 10 ОЗ после получения сильного урона.`);
+             }
              if (damageDealtToTarget > 40 && target.race === 'Бракованные пересмешники') {
                  target.bonuses.push('Облик желания (-5 урон)');
                  turnLog.push(`Пассивная способность (Бракованные пересмешники): ${target.name} получает бонус "Облик желания" после получения сильного урона.`);
@@ -716,6 +774,9 @@ export default function DuelPage() {
             
             const getOdCostPenalty = (player: CharacterStats): number => {
                 let penalty = 0;
+                 if (player.race === 'Куклы' && player.bonuses.includes('Абсолютная память (не тратится ОД)')) {
+                    return -Infinity; // Special value to indicate zero cost
+                }
                 for (const wound of RULES.WOUND_PENALTIES) {
                     if (player.oz < wound.threshold) {
                         penalty = wound.penalty;
@@ -854,6 +915,10 @@ export default function DuelPage() {
 
             let damageDealt = 0;
             const odPenalty = getOdCostPenalty(activePlayer);
+            const getFinalOdCost = (baseCost: number) => {
+                if (odPenalty === -Infinity) return 0;
+                return baseCost + odPenalty;
+            };
 
             switch(action.type) {
                 case 'strong_spell':
@@ -886,7 +951,7 @@ export default function DuelPage() {
                     break;
                 case 'dodge':
                     {
-                        let cost = RULES.NON_MAGIC_COSTS.dodge + odPenalty;
+                        let cost = getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge);
                         if (activePlayer.bonuses.includes('Лёгкость (-5 ОД на уклонение)')) {
                             cost = Math.max(0, cost - 5);
                             turnLog.push(`Пассивная способность (Неземные): Лёгкость снижает стоимость уклонения.`);
@@ -897,15 +962,15 @@ export default function DuelPage() {
                         }
                         activePlayer.od -= cost;
                         activePlayer.isDodging = true;
-                        turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки. Затраты ОД: ${cost}${odPenalty > 0 ? ` (включая штраф ${odPenalty})` : ''}.`);
+                        turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
                     }
                     break;
                 case 'use_item':
                      {
-                        const cost = RULES.NON_MAGIC_COSTS.use_item + odPenalty;
+                        const cost = getFinalOdCost(RULES.NON_MAGIC_COSTS.use_item);
                         activePlayer.od -= cost;
                         activePlayer.cooldowns.item = RULES.COOLDOWNS.item;
-                        turnLog.push(`${activePlayer.name} использует предмет. Затраты ОД: ${cost}${odPenalty > 0 ? ` (включая штраф ${odPenalty})` : ''}.`);
+                        turnLog.push(`${activePlayer.name} использует предмет. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
                         
                         if (activePlayer.inventory.length > 0) {
                             const item = activePlayer.inventory[0];
@@ -923,7 +988,7 @@ export default function DuelPage() {
                     break;
                 case 'prayer':
                     {
-                        const cost = RULES.NON_MAGIC_COSTS.prayer + odPenalty;
+                        const cost = getFinalOdCost(RULES.NON_MAGIC_COSTS.prayer);
                         activePlayer.od -= cost;
                         activePlayer.cooldowns.prayer = RULES.COOLDOWNS.prayer;
                         
@@ -931,7 +996,7 @@ export default function DuelPage() {
                         const requiredRoll = RULES.PRAYER_CHANCE[String(activePlayer.faithLevel)] || 0;
                         const isSuccess = activePlayer.faithLevel === 10 || (activePlayer.faithLevel > -1 && roll <= requiredRoll);
 
-                        turnLog.push(`${activePlayer.name} молится о "${getActionLabel(action.type, action.payload)}". Бросок: ${roll}, нужно <= ${requiredRoll}. Затраты ОД: ${cost}${odPenalty > 0 ? ` (включая штраф ${odPenalty})` : ''}.`);
+                        turnLog.push(`${activePlayer.name} молится о "${getActionLabel(action.type, action.payload)}". Бросок: ${roll}, нужно <= ${requiredRoll}. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
 
                         if (isSuccess) {
                             turnLog.push(`Молитва услышана!`);
@@ -982,9 +1047,9 @@ export default function DuelPage() {
                             turnLog.push(`Затраты ОМ: ${ability.cost.om}.`);
                          }
                          if(ability.cost?.od) {
-                            const cost = ability.cost.od + odPenalty;
+                            const cost = getFinalOdCost(ability.cost.od);
                             activePlayer.od -= cost;
-                            turnLog.push(`Затраты ОД: ${cost}${odPenalty > 0 ? ` (включая штраф ${odPenalty})` : ''}.`);
+                            turnLog.push(`Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
                          }
                          if(ability.cost?.oz) {
                             activePlayer.oz -= ability.cost.oz;
@@ -1279,6 +1344,39 @@ export default function DuelPage() {
                                  activePlayer.bonuses.push('Авто-уклонение (3)');
                                  turnLog.push(`${activePlayer.name} будет автоматически уклоняться 3 хода.`);
                                  break;
+                            case 'Переворот':
+                                applyDamage(activePlayer, opponent, 40, false);
+                                applyEffect(opponent, 'Потеря действия', 1);
+                                break;
+                            case 'Порыв харизмы':
+                                applyEffect(opponent, 'Удержание', 1);
+                                break;
+                            case 'Энергозахват':
+                                applyDamage(activePlayer, opponent, 30, false);
+                                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 20);
+                                turnLog.push(`${activePlayer.name} восстанавливает 20 ОЗ.`);
+                                break;
+                            case 'Поток стихий':
+                                applyDamage(activePlayer, opponent, 60, true, 'Эфир');
+                                break;
+                            case 'Заряд артефакта':
+                                if (Math.random() < 0.5) {
+                                    activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 40);
+                                    turnLog.push(`Заряд артефакта восстанавливает ${activePlayer.name} 40 ОЗ.`);
+                                } else {
+                                    applyDamage(activePlayer, opponent, 40, false);
+                                }
+                                break;
+                            case 'Страх из-за занавеси':
+                                applyEffect(opponent, 'Потеря действия', 1);
+                                applyDamage(activePlayer, opponent, 20, false);
+                                break;
+                            case 'Эхо мира духов':
+                                applyDamage(activePlayer, opponent, 50, true, 'Эфир');
+                                break;
+                            case 'Некросотрясение':
+                                applyDamage(activePlayer, opponent, 60, false);
+                                break;
                          }
                     }
                     break;
