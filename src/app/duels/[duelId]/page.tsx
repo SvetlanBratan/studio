@@ -968,7 +968,7 @@ export default function DuelPage() {
                     activePlayer.od -= cost;
                     const weapon = WEAPONS[activePlayer.weapon];
                     damageDealt = calculateDamage(weapon.damage, false);
-                    applyDamage(activePlayer, opponent, damageDealt, true, undefined, true);
+                    applyDamage(activePlayer, opponent, damageDealt, false, undefined, true);
                     activePlayer.cooldowns.physical_attack = RULES.COOLDOWNS.physical_attack;
                     break;
                 }
@@ -1523,7 +1523,7 @@ export default function DuelPage() {
     return null;
   }
   
-  if (duelError && !isLocalSolo) {
+  if (onlineDuelError && !isLocalSolo) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
           <p className="text-destructive">Не удалось загрузить дуэль. Возможно, ID неверный.</p>
