@@ -1510,42 +1510,41 @@ export default function DuelPage() {
       );
   }
   
+  // Define players for the current view
   const currentPlayerId = user.uid === duelData.player1.id ? 'player1' : 'player2';
-  const player = currentPlayerId === 'player1' ? duelData.player1 : duelData.player2;
-  const opponent = currentPlayerId === 'player1' ? duelData.player2 : duelData.player1;
+  const player = (isLocalSolo || user.uid === duelData.player1.id) ? duelData.player1 : duelData.player2;
+  const opponent = (isLocalSolo || user.uid === duelData.player1.id) ? duelData.player2 : duelData.player1;
+
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
   const opponentPlayer = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
   const isMyTurn = isLocalSolo || (duelData.activePlayerId === currentPlayerId);
 
-  type DuelStage = 'loading' | 'error' | 'waiting_for_opponent' | 'setup_player' | 'setup_opponent' | 'duel_started' | 'duel_ended';
+  // Determine Duel Stage
+  let duelStage: 'loading' | 'error' | 'waiting_for_opponent' | 'setup_player' | 'setup_opponent' | 'duel_started' | 'duel_ended';
 
-  let duelStage: DuelStage = 'loading';
-
-  if (duelError) {
-      duelStage = 'error';
-  } else if (!isLocalSolo && !duelData.player2?.id) {
-      duelStage = 'waiting_for_opponent';
-  } else if (!player.isSetupComplete) {
+  if (!isLocalSolo && !duelData.player2?.id) {
+    duelStage = 'waiting_for_opponent';
+  } else if (!duelData.player1.isSetupComplete) {
       duelStage = 'setup_player';
-  } else if (isLocalSolo && !opponent.isSetupComplete) {
+  } else if (!duelData.player2.isSetupComplete) {
       duelStage = 'setup_opponent';
-  } else if (!isLocalSolo && !opponent.isSetupComplete) {
-      duelStage = 'waiting_for_opponent';
   } else if (duelData.winner) {
       duelStage = 'duel_ended';
   } else if (duelData.duelStarted) {
       duelStage = 'duel_started';
-  }
-
-
-  if (duelStage === 'loading') {
-    return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
-        </div>
-    );
+  } else {
+      duelStage = 'loading';
   }
   
+  // Render based on Duel Stage
+  if (duelStage === 'loading') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
+      </div>
+    );
+  }
+
   if (duelStage === 'error') {
      return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -1557,33 +1556,33 @@ export default function DuelPage() {
       </div>
     );
   }
-
-  if (duelStage === 'waiting_for_opponent') {
-      if (!isLocalSolo && !duelData.player2?.id) {
-        return (
-          <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
-              <Card className="w-full max-w-md">
-                  <CardHeader>
-                      <CardTitle>Ожидание второго игрока...</CardTitle>
-                      <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                          <Input value={duelId} readOnly className="flex-1" />
-                          <Button onClick={copyDuelId} size="icon">
-                              {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
-                          </Button>
-                      </div>
-                      <Button onClick={() => router.push('/duels')} variant="outline">
-                          <ArrowLeft className="mr-2" />
-                          Выбрать другую дуэль
-                      </Button>
-                  </CardContent>
-              </Card>
-          </div>
-        );
-      }
+  
+  if (duelStage === 'waiting_for_opponent' && !isLocalSolo) {
+    if (!duelData.player2?.id) {
       return (
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+            <Card className="w-full max-w-md">
+                <CardHeader>
+                    <CardTitle>Ожидание второго игрока...</CardTitle>
+                    <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                        <Input value={duelId} readOnly className="flex-1" />
+                        <Button onClick={copyDuelId} size="icon">
+                            {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                    <Button onClick={() => router.push('/duels')} variant="outline">
+                        <ArrowLeft className="mr-2" />
+                        Выбрать другую дуэль
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+      );
+    }
+     return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
             <Card className="w-full max-w-md">
                 <CardHeader>
@@ -1601,13 +1600,12 @@ export default function DuelPage() {
   }
 
   if (duelStage === 'setup_player') {
-    return <CharacterSetupModal character={player} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+      return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
   }
   
   if (duelStage === 'setup_opponent') {
-     return <CharacterSetupModal character={opponent} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+      return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
   }
-
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1701,3 +1699,5 @@ export default function DuelPage() {
     </div>
   );
 }
+
+    
