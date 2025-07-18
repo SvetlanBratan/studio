@@ -656,7 +656,7 @@ export default function DuelPage() {
                 } else {
                     turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
                 }
-                target.isDodging = false;
+                target.isDodging = false; // Dodge is consumed after one attempt
             }
             finalDamage = Math.round(finalDamage);
 
@@ -1618,4 +1618,3 @@ export default function DuelPage() {
     </div>
   );
 }
-
