@@ -12,17 +12,26 @@ import { Checkbox } from './ui/checkbox';
 import { ScrollArea } from './ui/scroll-area';
 import { PlusCircle, Trash2, Settings, ShieldCheck } from 'lucide-react';
 import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz, getFaithLevelFromString } from '@/lib/rules';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from './ui/dialog';
 import { Badge } from './ui/badge';
 
 
 interface CharacterSetupModalProps {
   character: CharacterStats;
   onSave: (character: CharacterStats) => void;
+  onCancel: () => void;
 }
 
-export default function CharacterSetupModal({ character, onSave }: CharacterSetupModalProps) {
+export default function CharacterSetupModal({ character, onSave, onCancel }: CharacterSetupModalProps) {
   const [editableCharacter, setEditableCharacter] = useState<CharacterStats>(character);
+  const [isOpen, setIsOpen] = useState(true);
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+        onCancel();
+    }
+    setIsOpen(open);
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -97,6 +106,7 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
         isSetupComplete: true 
     };
     onSave(finalCharacter);
+    setIsOpen(false);
   };
   
   const renderInventoryEditor = () => (
@@ -137,7 +147,7 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
   );
 
   return (
-    <Dialog open={true}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-xl">
             <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
@@ -233,6 +243,9 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
                 </div>
             </div>
             <DialogFooter>
+                 <DialogClose asChild>
+                    <Button variant="outline" onClick={onCancel}>Отмена</Button>
+                </DialogClose>
                 <Button onClick={handleSave} size="lg">
                     <ShieldCheck className="mr-2"/>
                     Готов к бою
@@ -242,3 +255,5 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
     </Dialog>
   );
 }
+
+    

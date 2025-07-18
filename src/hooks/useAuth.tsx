@@ -28,28 +28,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isFirebaseEnabled) {
-      setUser(null);
       setLoading(false);
-      // If firebase is not configured, we don't need auth.
-      // We can let the user proceed without being logged in if they are not on the login page.
-      if (pathname !== '/login') {
-         // Potentially handle this case, for now, it allows access to other pages
-         // without forcing a login, which might be desired if firebase isn't set up.
-      }
+      // Mock user for development without firebase
+      const mockUser = { uid: 'mock-user', displayName: 'Guest' } as User;
+      setUser(mockUser);
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
-      if (currentUser) {
-        if (pathname === '/login') {
-            router.push('/');
-        }
-      } else {
-        if (pathname !== '/login') {
+      if (!currentUser && pathname !== '/login') {
           router.push('/login');
-        }
+      } else if (currentUser && pathname === '/login') {
+          router.push('/');
       }
     });
 
@@ -58,21 +50,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInAsGuest = async () => {
     if (!isFirebaseEnabled || !auth) return;
+    setLoading(true);
     try {
       await signInAnonymously(auth);
       router.push('/');
     } catch (error) {
       console.error("Ошибка анонимного входа:", error);
+    } finally {
+        setLoading(false);
     }
   };
 
   const signOut = async () => {
     if (!isFirebaseEnabled || !auth) return;
+    setLoading(true);
     try {
       await firebaseSignOut(auth);
       router.push('/login');
     } catch (error) {
       console.error("Ошибка выхода:", error);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -80,7 +78,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {loading ? (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
+        </div>
+      ) : children}
     </AuthContext.Provider>
   );
 }
@@ -92,3 +94,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    
