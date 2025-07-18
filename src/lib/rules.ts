@@ -124,7 +124,7 @@ export const RACES: Race[] = [
     { name: 'Цынаре', passiveBonuses: ['Гипнотический взгляд (враг теряет 10 ОД/ход)', 'Танец грации (-10 урона от атак, пока ОЗ выше 100)'], activeAbilities: [{ name: 'Порыв харизмы', description: 'накладывает эффект удержания.', cost: { om: 30 } }] },
     { name: 'Человек', passiveBonuses: [], activeAbilities: [] },
     { name: 'Энергетические вампиры', passiveBonuses: ['Энергетический резонанс (+1 ОЗ/ход)', 'Аура желания (враг теряет 10 ОМ при физической атаке)'], activeAbilities: [{ name: 'Энергозахват', description: 'наносит 30 урона и восстанавливает +20 ОЗ.', cost: { om: 30 } }] },
-    { name: 'Ятанаги', passiveBonuses: ['Эфирная стабильность (+10 ОМ/ход)', 'Магическое тело (-5 урона от всех атак, если текущий ОМ выше 50)'], activeAbilities: [{ name: 'Поток стихий', description: 'наносит 60 урона (эфир).', cost: { om: 40 } }] },
+    { name: 'Ятанаги', passiveBonuses: ['Эфирная стабильность (+10 ОМ/ход)', 'Магический тело (-5 урона от всех атак, если текущий ОМ выше 50)'], activeAbilities: [{ name: 'Поток стихий', description: 'наносит 60 урона (эфир).', cost: { om: 40 } }] },
 ];
 
 export const getOmFromReserve = (reserve: ReserveLevel): number => RESERVE_LEVELS[reserve] || 90;
@@ -304,7 +304,9 @@ export const PENALTY_EFFECTS: string[] = [
 ];
 
 export const initialPlayerStats = (id: string, name: string): CharacterStats => {
-    const race = RACES.find(r => r.name === 'Человек') || RACES[0];
+    const race = RACES.find(r => r.name === 'Человек');
+    if (!race) throw new Error("Could not find 'Человек' race."); // Should not happen
+
     const reserve = 'Неофит';
     const maxOm = getOmFromReserve(reserve);
     
