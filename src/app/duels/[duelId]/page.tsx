@@ -13,10 +13,10 @@ import TurnForm from '@/components/turn-form';
 import DuelLog from '@/components/duel-log';
 import CharacterSetupModal from '@/components/character-setup-modal';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Swords, Gamepad2, ShieldAlert, Users, Link, Check, ClipboardCopy, ArrowLeft, Info, Settings2 } from 'lucide-react';
+import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RULES, getOmFromReserve, getFaithLevelFromString, getActionLabel, RACES, initialPlayerStats, ELEMENTS } from '@/lib/rules';
+import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { updateDuel, joinDuel } from '@/lib/firestore';
@@ -45,7 +45,7 @@ export default function DuelPage() {
   const [onlineDuel, onlineDuelLoading, onlineDuelError] = useDocumentData(duelRef);
 
   const duelData = isLocalSolo ? localDuelState : (onlineDuel as DuelState | undefined);
-  const duelLoading = isLocalSolo ? (localDuelState === null) : onlineDuelLoading;
+  const duelLoading = isLocalSolo ? false : onlineDuelLoading;
   const duelError = isLocalSolo ? null : onlineDuelError;
 
   useEffect(() => {
@@ -73,13 +73,13 @@ export default function DuelPage() {
   }, [user, onlineDuel, duelId, isLocalSolo]);
 
   useEffect(() => {
-    if (duelData?.player1.isSetupComplete && duelData.player2?.isSetupComplete && !duelData.duelStarted) {
+    if (duelData && duelData.player1.isSetupComplete && duelData.player2?.isSetupComplete && !duelData.duelStarted) {
         handleUpdateDuelState({
             duelStarted: true,
             activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
         });
     }
-  }, [duelData?.player1, duelData?.player2, duelData?.duelStarted]);
+  }, [duelData]);
 
   const handleUpdateDuelState = (updatedDuel: Partial<DuelState>) => {
     if (isLocalSolo) {
@@ -192,12 +192,10 @@ export default function DuelPage() {
                  return;
             }
 
-            if (p.startsWith('Горение') && activePlayer.bonuses.includes('Иммунитет к огню')) {
-                turnLog.push(`Иммунитет к огню: урон от "${p}" не получен.`);
-                return;
-            }
-             if (p.startsWith('Горение') && activePlayer.bonuses.includes('Иммунитет к льду')) {
-                turnLog.push(`Иммунитет ко льду: урон от "${p}" не получен.`);
+            const isBurning = p.startsWith('Горение');
+            if (isBurning && activePlayer.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду')) {
+                const immunityType = activePlayer.bonuses.includes('Иммунитет к огню') ? 'огню' : 'льду';
+                turnLog.push(`Иммунитет к ${immunityType}: урон от "${p}" не получен.`);
                 return;
             }
 
@@ -255,12 +253,9 @@ export default function DuelPage() {
                  turnLog.push(`${target.name} имеет иммунитет к эффекту "${effectName}" и он не был наложен.`);
                  return;
             }
-            if (effectName === 'Горение' && target.bonuses.includes('Иммунитет к огню')) {
-                turnLog.push(`${target.name} имеет иммунитет к огню, и эффект "${effectName}" не был наложен.`);
-                return;
-            }
-             if (effectName === 'Горение' && target.bonuses.includes('Иммунитет к льду')) {
-                turnLog.push(`${target.name} имеет иммунитет ко льду, и эффект "${effectName}" не был наложен.`);
+            if (effectName === 'Горение' && target.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду')) {
+                const immunityType = target.bonuses.includes('Иммунитет к огню') ? 'огню' : 'льду';
+                turnLog.push(`${target.name} имеет иммунитет к ${immunityType}, и эффект "${effectName}" не был наложен.`);
                 return;
             }
 
@@ -678,7 +673,7 @@ export default function DuelPage() {
         handleUpdateDuelState(updatedDuel);
   };
   
-  if (loading || duelLoading) {
+  if (loading || duelLoading || (isLocalSolo && !localDuelState)) {
     return (
         <div className="flex items-center justify-center min-h-screen">
           <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
@@ -730,7 +725,12 @@ export default function DuelPage() {
 
   const currentPlayerId = user.uid === duelData.player1.id ? 'player1' : 'player2';
   const player = currentPlayerId === 'player1' ? duelData.player1 : duelData.player2!;
-  const opponent = currentPlayerId === 'player1' ? duelData.player2! : duelData.player1;
+  const opponent = currentPlayerId === 'player1' ? (isLocalSolo ? duelData.player2! : duelData.player2) : duelData.player1;
+
+  if (!player) {
+     return <div className="flex items-center justify-center min-h-screen">Загрузка игрока...</div>;
+  }
+  
   const isMyTurn = isLocalSolo || (duelData.duelStarted && duelData.activePlayerId === currentPlayerId);
 
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2!;
@@ -763,51 +763,59 @@ export default function DuelPage() {
             onSave={handleCharacterUpdate}
          />
       )}
+      
+      {isLocalSolo && duelData.player2 && !duelData.player2.isSetupComplete && (
+         <CharacterSetupModal 
+            character={duelData.player2} 
+            onSave={handleCharacterUpdate}
+         />
+      )}
+
 
       <header className="p-4 border-b border-border shadow-md bg-card">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Swords className="text-primary w-8 h-8" />
-            <h1 className="text-2xl md:text-3xl font-headline font-bold text-primary-foreground">
+            <h1 className="text-xl md:text-2xl font-headline font-bold text-primary-foreground">
               Magic Duel Assistant
             </h1>
           </div>
-           <Button onClick={() => router.push('/duels')} variant="secondary">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Покинуть дуэль
+           <Button onClick={() => router.push('/duels')} variant="secondary" size="sm">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Покинуть
           </Button>
         </div>
       </header>
-
+      
       {!duelData.duelStarted && !isLocalSolo && opponent && !opponent.isSetupComplete && player.isSetupComplete && renderWaitingScreen()}
       
-      {((isLocalSolo && bothPlayersSetup) || (!isLocalSolo && duelData.duelStarted)) && (
-        <main className="container mx-auto p-4 md:p-8">
+      {(bothPlayersSetup) && (
+        <main className="container mx-auto p-2 md:p-4">
             {duelData.winner ? (
-            <Card className="text-center p-8">
-                <CardTitle className="text-3xl font-bold text-accent mb-4">Дуэль Окончена!</CardTitle>
+            <Card className="text-center p-4 md:p-8 mt-4">
+                <CardTitle className="text-2xl md:text-3xl font-bold text-accent mb-4">Дуэль Окончена!</CardTitle>
                 <CardContent>
-                <p className="text-xl">Победитель: {duelData.winner}</p>
+                <p className="text-lg md:text-xl">Победитель: {duelData.winner}</p>
                 <Button onClick={() => router.push('/duels')} className="mt-6">Начать новую</Button>
                 </CardContent>
             </Card>
             ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-1 flex flex-col gap-8">
-                <CharacterPanel 
-                    character={duelData.player1} 
-                    isActive={duelData.activePlayerId === 'player1'} 
-                />
-                {duelData.player2 && 
-                    <CharacterPanel 
-                        character={duelData.player2} 
-                        isActive={duelData.activePlayerId === 'player2'} 
-                    />}
+            <div className="flex flex-col lg:flex-row gap-4">
+                <div className="w-full lg:w-1/3 flex flex-col gap-4">
+                  <CharacterPanel 
+                      character={duelData.player1} 
+                      isActive={duelData.activePlayerId === 'player1'} 
+                  />
+                  {duelData.player2 && 
+                      <CharacterPanel 
+                          character={duelData.player2} 
+                          isActive={duelData.activePlayerId === 'player2'} 
+                      />}
                 </div>
 
-                <div className="lg:col-span-2 flex flex-col gap-8">
+                <div className="w-full lg:w-2/3 flex flex-col gap-4">
                 <Card>
                     <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
+                    <CardTitle className="flex items-center justify-between text-lg md:text-xl">
                         <span>Ход {duelData.currentTurn}: {activePlayer.name}</span>
                         <span className={`text-sm font-medium ${isMyTurn ? 'text-accent' : 'text-muted-foreground'}`}>
                             {isMyTurn ? "Ваш ход" : `Ход ${opponentPlayer.name}`}
@@ -822,7 +830,7 @@ export default function DuelPage() {
                             onSubmit={executeTurn}
                         />
                     ) : (
-                        <div className="text-center text-muted-foreground p-8">
+                        <div className="text-center text-muted-foreground p-4 md:p-8">
                             Ожидание хода оппонента...
                         </div>
                     )}

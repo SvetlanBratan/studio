@@ -3,8 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import type { CharacterStats, ReserveLevel, FaithLevel, InventoryItem } from '@/types/duel';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,8 +11,10 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Checkbox } from './ui/checkbox';
 import { ScrollArea } from './ui/scroll-area';
 import { PlusCircle, Trash2, Settings, ShieldCheck } from 'lucide-react';
-import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz, PENALTY_EFFECTS, getFaithLevelFromString } from '@/lib/rules';
+import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz, getFaithLevelFromString } from '@/lib/rules';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Badge } from './ui/badge';
+
 
 interface CharacterSetupModalProps {
   character: CharacterStats;
@@ -36,7 +36,8 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
 
   const handleSelectChange = (field: 'reserve' | 'faithLevelName' | 'race', value: string) => {
     setEditableCharacter(prev => {
-        let newState = { ...prev, [field]: value };
+        let newState = { ...prev };
+        
         if (field === 'race') {
             const selectedRace = RACES.find(r => r.name === value);
             if (selectedRace) {
@@ -45,8 +46,12 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
                 const newMaxOz = calculateMaxOz(newBonuses);
                 newState.maxOz = newMaxOz;
                 newState.oz = newMaxOz;
+                newState.race = value;
             }
+        } else {
+            (newState as any)[field] = value;
         }
+
         if (field === 'reserve') {
             const newMaxOm = getOmFromReserve(value as ReserveLevel);
             newState.maxOm = newMaxOm;
@@ -100,13 +105,6 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
     setIsOpen(false);
   };
   
-  const renderStatDisplay = (label: string, value: number) => (
-    <div className="grid grid-cols-2 gap-2 items-center">
-      <Label>{label}</Label>
-      <Input value={value} disabled className="h-8 bg-muted/50" />
-    </div>
-  );
-
   const renderInventoryEditor = () => (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
@@ -146,11 +144,11 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
 
   return (
     <Dialog open={isOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-xl">
             <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                     <Settings />
-                    Настройка персонажа
+                    Настройка персонажа: {character.name}
                 </DialogTitle>
                 <DialogDescription>
                     Выберите расу, резерв и другие параметры вашего персонажа перед началом дуэли.
@@ -219,12 +217,12 @@ export default function CharacterSetupModal({ character, onSave }: CharacterSetu
                                     return (
                                     <div key={element.name} className="flex items-center space-x-2">
                                         <Checkbox
-                                        id={`element-${element.name}`}
+                                        id={`element-${element.name}-${character.id}`}
                                         checked={isSelected}
                                         onCheckedChange={(checked) => handleMultiSelectChange(element.name, !!checked)}
                                         />
                                         <label
-                                        htmlFor={`element-${element.name}`}
+                                        htmlFor={`element-${element.name}-${character.id}`}
                                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                         >
                                         {element.name}

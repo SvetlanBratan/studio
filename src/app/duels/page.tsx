@@ -17,13 +17,19 @@ export default function DuelsPage() {
   const [joinDuelId, setJoinDuelId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
       </div>
     );
   }
+  
+  if (!user) {
+    // This case is handled by useAuth hook redirecting to /login, but as a fallback:
+    return null;
+  }
+
 
   const handleCreateDuel = async () => {
     if (!user) return;
@@ -54,12 +60,12 @@ export default function DuelsPage() {
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center gap-3">
               <Swords className="text-primary w-8 h-8" />
-              <h1 className="text-2xl md:text-3xl font-headline font-bold text-primary-foreground">
+              <h1 className="text-xl md:text-2xl font-headline font-bold text-primary-foreground">
                 Magic Duel Assistant
               </h1>
             </div>
             {user && (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 md:gap-4">
                   <span className="text-sm text-muted-foreground hidden sm:inline">
                       {user.isAnonymous ? 'Гость' : (user.displayName || user.email)}
                   </span>
