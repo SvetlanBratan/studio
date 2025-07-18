@@ -82,7 +82,7 @@ export default function CharacterPanel({ character, isActive }: CharacterPanelPr
                     {renderCooldown('Молитва', character.cooldowns.prayer)}
                     {Object.entries(character.cooldowns).map(([key, value]) => {
                         if (key !== 'strongSpell' && key !== 'item' && key !== 'prayer' && value > 0) {
-                            return renderCooldown(key, value);
+                            return <div key={key}>{renderCooldown(key, value)}</div>;
                         }
                         return null;
                     })}
