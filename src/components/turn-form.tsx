@@ -7,7 +7,7 @@ import type { Action, CharacterStats, ActionType, PrayerEffectType, WeaponType }
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Trash2, Send, ShieldCheck, HeartPulse, SparklesIcon, Heart, Zap, MoveHorizontal, Crosshair } from 'lucide-react';
-import { RULES, getActionLabel, RACES, WEAPONS } from '@/lib/rules';
+import { RULES, getActionLabel, RACES, WEAPONS, ARMORS } from '@/lib/rules';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -132,7 +132,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
             penalty = wound.penalty;
         }
     }
-    const armorPenalty = RULES.ARMORS[player.armor]?.odPenalty ?? 0;
+    const armorPenalty = ARMORS[player.armor]?.odPenalty ?? 0;
     return penalty + armorPenalty;
   };
 
