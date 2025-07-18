@@ -1,4 +1,5 @@
 
+
 import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element, CharacterStats } from "@/types/duel";
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
@@ -32,18 +33,18 @@ export const RESERVE_LEVELS: Record<ReserveLevel, number> = {
 export const RACES: Race[] = [
     { name: 'Алахоры', passiveBonuses: ['Беззвучие', 'Гибкость (-5 физ. урон)'], activeAbilities: [{ name: 'Железный ёж', description: 'Поглощает урон от след. заклинания и дает физ. щит.', cost: {om: 30} }] },
     { name: 'Алариены', passiveBonuses: ['Меткость (+10 урон)'], activeAbilities: [{ name: 'Дождь из осколков', description: 'Наносит 40 урона.', cost: {om: 30} }] },
-    { name: 'Амфибии', passiveBonuses: ['Аморфное тело (-10 урон)', '+5 ОЗ/ход'], activeAbilities: [{ name: 'Водяной захват', description: 'Лишает врага одного действия.', cost: {om: 30} }] },
-    { name: 'Антаресы', passiveBonuses: ['+10 ОЗ/ход', 'Проницательность (-5 урон)'], activeAbilities: [{ name: 'Самоисцеление', description: 'Восстанавливает +50 ОЗ.', cost: {om: 30} }] },
-    { name: 'Антропоморфы', passiveBonuses: ['Животная реакция (скидка 5 ОД)', '-10 урон от звука'], activeAbilities: [{ name: 'Ипостась зверя', description: 'Наносит 40 урона.', cost: {om: 30} }] },
-    { name: 'Арахнии', passiveBonuses: ['Ловкие конечности (скидка 5 ОД)', 'Иммунитет к замедлению'], activeAbilities: [{ name: 'Паутина', description: 'Лишает врага 1 действия и наносит 20 урона.', cost: {om: 30} }] },
+    { name: 'Амфибии', passiveBonuses: ['Аморфное тело (-10 урон)', 'Глубинная стойкость (+5 ОЗ/ход)'], activeAbilities: [{ name: 'Водяной захват', description: 'Лишает врага одного действия.', cost: {om: 30} }] },
+    { name: 'Антаресы', passiveBonuses: ['Исцеление (+10 ОЗ/ход)', 'Проницательность (-5 урон)'], activeAbilities: [{ name: 'Самоисцеление', description: 'Восстанавливает +50 ОЗ.', cost: {om: 30} }] },
+    { name: 'Антропоморфы', passiveBonuses: ['Животная реакция (-5 ОД)', 'Слух обострён (-10 урон от звука)'], activeAbilities: [{ name: 'Ипостась зверя', description: 'Наносит 40 урона.', cost: {om: 30} }] },
+    { name: 'Арахнии', passiveBonuses: ['Ловкие конечности (-5 ОД)', 'Иммунитет к паутине'], activeAbilities: [{ name: 'Паутина', description: 'Лишает врага 1 действия и наносит 20 урона.', cost: {om: 30} }] },
     { name: 'Арахниды', passiveBonuses: ['Экзоскелет (-10 урон)', 'Шестиглазое зрение (-5 физ. урон)'], activeAbilities: [{ name: 'Жало-хищника', description: 'Наносит 50 урона.', cost: {om: 30} }] },
     { name: 'Аспиды', passiveBonuses: ['Иммунитет к яду', 'Изворотливость (-10 урон)'], activeAbilities: [{ name: 'Окаменяющий взгляд', description: 'Лишает врага одного действия.', cost: {om: 30} }] },
-    { name: 'Астролоиды', passiveBonuses: ['+10 ОМ/ход', 'Понимание звёзд (-5 урон от света/эфира)'], activeAbilities: [{ name: 'Метеорит', description: 'Наносит 60 урона.', cooldown: 3, cost: {om: 40}} ] },
-    { name: 'Бабочки', passiveBonuses: ['+3 исцеления/ход'], activeAbilities: [{name: 'Танец лепестков', description: '+10 ОЗ', cost: {om: 10}}] },
+    { name: 'Астролоиды', passiveBonuses: ['Звёздный резонанс (+10 ОМ/ход)', 'Понимание звёзд (-5 урон от света/эфира)'], activeAbilities: [{ name: 'Метеорит', description: 'Наносит 60 урона.', cooldown: 3, cost: {om: 40}} ] },
+    { name: 'Бабочки', passiveBonuses: ['Иллюзорное движение (-10 урон от первой атаки)'], activeAbilities: [{ name: 'Трепет крыльев', description: 'Лишает врага одного действия и наносит 10 урона.', cost: {om: 30}}] },
     { name: 'Безликие', passiveBonuses: ['Отзеркаливание урона'], activeAbilities: [] },
-    { name: 'Белояры', passiveBonuses: ['+5 к физической атаке'], activeAbilities: [{ name: 'Пронзающий удар', description: '+20 ОЗ физурона', cost: {od: 30} }] },
-    { name: 'Бракованные пересмешники', passiveBonuses: ['+4 к урону/исцелению (описательно)'], activeAbilities: [{ name: 'Песня влюблённого', description: '-10 ОЗ врагу, +10 ОЗ себе', cost: {om: 30} }] },
-    { name: 'Вампиры', passiveBonuses: ['+3 к восстановлению ОМ при укусе'], activeAbilities: [{ name: 'Укус', description: '-10 ОЗ врагу', cost: {od: 10} }] },
+    { name: 'Белояры', passiveBonuses: ['Стойкость гиганта (-10 урон)', 'Воинская слава (+10 урон при контратаке)'], activeAbilities: [{ name: 'Удар предков', description: 'Наносит 60 урона.', cost: {om: 40} }] },
+    { name: 'Бракованные пересмешники', passiveBonuses: ['Разрыв личности (-5 урон)'], activeAbilities: [{ name: 'Зеркальная любовь', description: 'Лишает врага одного действия и наносит 20 урона.', cost: {om: 30} }] },
+    { name: 'Вампиры', passiveBonuses: ['Кровавое могущество (+10 урон, если ОЗ врага < 100)', 'Регенерация (+5 ОЗ каждый второй ход)'], activeAbilities: [{ name: 'Укус', description: 'Наносит 40 урона и восстанавливает +20 ОЗ.', cost: {od: 30} }] },
     { name: 'Вансаэльцы', passiveBonuses: ['+5 ОМ (описательно)'], activeAbilities: [{ name: 'Обратиться к духам', description: 'призыв духа-хранителя', cost: {om: 90} }] },
     { name: 'Василиски', passiveBonuses: ['Укус (+10 ОЗ)'], activeAbilities: [{ name: 'Окаменение взглядом', description: 'враг теряет ход', cooldown: 5, cost: {om: 90} }, { name: 'Укус', description: 'Наносит 10 урона', cost: { od: 15 } }] },
     { name: 'Веспы', passiveBonuses: ['-1 ОД у врага/ход'], activeAbilities: [{ name: 'Вспышка зрения', description: 'ослепление на 1 ход', cost: {om: 10} }] },
@@ -91,7 +92,7 @@ export const RACES: Race[] = [
     { name: 'Сирены', passiveBonuses: ['-5 ОД у врага/ход'], activeAbilities: [{ name: 'Песнь чар', description: 'транс на 1 ход', cost: {om: 30} }] },
     { name: 'Слизни', passiveBonuses: ['+10 ОЗ/ход', 'Штраф к отравлению (3)'], activeAbilities: [{ name: 'Склизкий отпор', description: 'враг соскальзывает, теряет действие', cost: {om: 10} }] },
     { name: 'Снежные эльфы', passiveBonuses: ['+5 урона льдом', 'Иммунитет к льду'], activeAbilities: [{ name: 'Ледяной вихрь', description: '-15 ОЗ, замедление', cost: {om: 30} }] },
-    { name: 'Солнечные эльфы', passiveBonuses: ['+10 ОЗ/ход'], activeAbilities: [{ name: 'Луч истины', description: 'раскрытие маскировки, урон светом 15', cost: {om: 10} }] },
+    { name: 'Солнечные эльфы', passiveBonuses: ['+10 ОЗ/ход'], activeAbilities: [{ name: 'Луч истины', description: 'Раскрытие маскировки, урон светом 15', cost: {om: 10} }] },
     { name: 'Сфинксы', passiveBonuses: ['+10 ОЗ/щит'], activeAbilities: [{ name: 'Загадка Сфинкса', description: '-20 ОЗ', cost: {om: 30} }] },
     { name: 'Тальены', passiveBonuses: [], activeAbilities: [{ name: 'Психостенка', description: 'отражение дебаффов', cost: {om: 30} }] },
     { name: 'Тени', passiveBonuses: ['-5 урона по себе'], activeAbilities: [{ name: 'Теневой шаг', description: 'перемещение без траты ОД', cost: {om: 10} }] },
