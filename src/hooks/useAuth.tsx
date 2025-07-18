@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth, isFirebaseEnabled } from '@/lib/firebase';
 import { 
@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isFirebaseEnabled) {
+    if (!isFirebaseEnabled || !auth) {
       setLoading(false);
       return;
     }
@@ -44,7 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await signInAnonymously(auth);
-      // onAuthStateChanged will set the user, then the root page will redirect.
       router.push('/duels');
     } catch (error) {
       console.error("Ошибка анонимного входа:", error);
