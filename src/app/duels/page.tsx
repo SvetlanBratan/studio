@@ -83,7 +83,7 @@ export default function DuelsPage() {
                     <CardDescription>Создайте новую дуэль или войдите в существующую по ID.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Button onClick={handleCreateDuel} disabled={isCreating} className="w-full" size="lg">
+                    <Button onClick={handleCreateDuel} disabled={isCreating || loading} className="w-full" size="lg">
                         <Dices className="mr-2" />
                         {isCreating ? 'Создание...' : 'Создать новую дуэль (Онлайн)'}
                     </Button>

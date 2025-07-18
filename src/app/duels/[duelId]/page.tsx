@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { doc } from 'firebase/firestore';
@@ -95,11 +95,19 @@ export default function DuelPage() {
   const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
     if (!duelData) return;
     const isPlayer1 = duelData.player1.id === updatedCharacter.id;
-    const updatedDuel: Partial<DuelState> = {
-        player1: isPlayer1 ? updatedCharacter : duelData.player1,
-        player2: !isPlayer1 ? updatedCharacter : duelData.player2,
-    };
-    handleUpdateDuelState(updatedDuel);
+    const key = isPlayer1 ? 'player1' : 'player2';
+
+    if (isLocalSolo) {
+        setLocalDuelState(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                [key]: updatedCharacter
+            }
+        });
+    } else {
+        updateDuel(duelId, { [key]: updatedCharacter });
+    }
   };
   
   const copyDuelId = () => {
@@ -156,15 +164,15 @@ export default function DuelPage() {
             }
         }
         
-        if (opponent.race === 'Цынаре' && opponent.bonuses.includes('Гипнотический взгляд (враг теряет 10 ОД/ход)')) {
+        if (opponent.race === 'Цынаре' && opponent.bonuses.includes('Гипнотический взгляд — враг теряет 10 ОД каждый ход.')) {
             activePlayer.od = Math.max(0, activePlayer.od - 10);
             turnLog.push(`Пассивная способность (Цынаре): ${opponent.name} влияет на ${activePlayer.name}, который теряет 10 ОД.`);
         }
-        if (opponent.race === 'Призраки' && opponent.bonuses.includes('Ясновидение (враг теряет 5 ОМ/ход)')) {
+        if (opponent.race === 'Призраки' && opponent.bonuses.includes('Ясновидение — враг теряет 5 ОМ каждый ход.')) {
             activePlayer.om = Math.max(0, activePlayer.om - 5);
             turnLog.push(`Пассивная способность (Призраки): ${opponent.name} влияет на ${activePlayer.name}, который теряет 5 ОМ.`);
         }
-        if (opponent.race === 'Скелеты' && opponent.bonuses.includes('Холод нежизни (враг теряет 2 ОЗ/ход)')) {
+        if (opponent.race === 'Скелеты' && opponent.bonuses.includes('Холод нежизни — враг теряет 2 ОЗ каждый ход.')) {
             activePlayer.oz -= 2;
             turnLog.push(`Пассивная способность (Скелеты): ${opponent.name} влияет на ${activePlayer.name}, который теряет 2 ОЗ.`);
         }
@@ -188,7 +196,7 @@ export default function DuelPage() {
                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + healAmount);
                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${healAmount} ОЗ.`);
             }
-             if (bonus === 'Энергетический резонанс (+1 ОЗ/ход)') {
+             if (bonus === 'Энергетический резонанс — +1 ОЗ каждый ход.') {
                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 1);
                 turnLog.push(`Пассивная способность (Энергетические вампиры): ${activePlayer.name} восстанавливает 1 ОЗ.`);
             }
@@ -210,12 +218,12 @@ export default function DuelPage() {
 
 
             // OM Regen
-            if (bonus === 'Этикет крови (+1 ОМ/ход)' || bonus === 'Холодный ум (+5 ОМ/ход)' || bonus === 'Слияние со стихией (+5 ОМ/ход)') {
+            if (bonus === 'Этикет крови (+1 ОМ/ход)' || bonus === 'Холодный ум (+5 ОМ/ход)' || bonus === 'Слияние со стихией — +5 ОМ каждый ход.') {
                 const omAmount = bonus.includes('5') ? 5 : 1;
                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omAmount);
                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omAmount} ОМ.`);
             }
-            if (bonus === 'Звёздный резонанс (+10 ОМ/ход)' || bonus === 'Кристальная стабильность (+10 ОМ/ход)' || bonus === 'Единение с природой (+10 ОМ/ход)' || bonus === 'Друидическая связь (+10 ОМ/ход)' || bonus === 'Озарение (+10 ОМ каждый ход)' || bonus === 'Светлая энергия (+10 ОМ/ход)' || bonus === 'Эфирная стабильность (+10 ОМ/ход)') {
+            if (bonus === 'Звёздный резонанс (+10 ОМ/ход)' || bonus === 'Кристальная стабильность (+10 ОМ/ход)' || bonus === 'Единение с природой (+10 ОМ/ход)' || bonus === 'Друидическая связь (+10 ОМ/ход)' || bonus === 'Озарение (+10 ОМ каждый ход)' || bonus === 'Светлая энергия (+10 ОМ/ход)' || bonus === 'Эфирная стабильность — +10 ОМ каждый ход.') {
                 const omAmount = 10;
                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omAmount);
                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omAmount} ОМ.`);
@@ -291,7 +299,7 @@ export default function DuelPage() {
 
         activePlayer.penalties.forEach(p => {
             const isPoisonEffect = RULES.POISON_EFFECTS.some(dot => p.startsWith(dot.replace(/ \(\d+\)/, '')));
-            if (isPoisonEffect && (activePlayer.bonuses.includes('Иммунитет к яду') || activePlayer.race === 'Куклы' || activePlayer.race === 'Скелеты')) {
+            if (isPoisonEffect && (activePlayer.bonuses.includes('Иммунитет к яду') || activePlayer.race === 'Куклы' || activePlayer.race === 'Скелеты' || activePlayer.bonuses.includes('Безжизненность — иммунитет к ядам и горению') || activePlayer.bonuses.includes('Бессмертие костей — иммунитет к ядам и горению'))) {
                  turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} имеет иммунитет к яду, урон от "${p}" не получен.`);
                  return;
             }
@@ -302,7 +310,7 @@ export default function DuelPage() {
             }
 
             const isBurning = p.startsWith('Горение');
-            if (isBurning && (activePlayer.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду') || activePlayer.race === 'Куклы' || activePlayer.race === 'Скелеты' || (activePlayer.race === 'Саламандры' && activePlayer.bonuses.includes('Огненная суть — иммунитет к огню')))) {
+            if (isBurning && (activePlayer.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду') || activePlayer.race === 'Куклы' || activePlayer.race === 'Скелеты' || (activePlayer.race === 'Саламандры' && activePlayer.bonuses.includes('Огненная суть — иммунитет к огню')) || activePlayer.bonuses.includes('Безжизненность — иммунитет к ядам и горению') || activePlayer.bonuses.includes('Бессмертие костей — иммунитет к ядам и горению'))) {
                 const immunityType = activePlayer.bonuses.includes('Иммунитет к огню') ? 'огню' : 'льду';
                 turnLog.push(`Иммунитет к ${immunityType}: урон от "${p}" не получен.`);
                 return;
@@ -387,8 +395,8 @@ export default function DuelPage() {
                  turnLog.push(`${target.name} имеет иммунитет к эффекту "${effectName}" и он не был наложен.`);
                  return;
             }
-            if ((effectName === 'Горение' && (target.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду') || target.race === 'Куклы' || target.race === 'Скелеты')) ||
-                (effectName === 'Отравление' && (target.race === 'Куклы' || target.race === 'Скелеты'))) {
+            if ((effectName === 'Горение' && (target.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду') || target.race === 'Куклы' || target.race === 'Скелеты' || target.bonuses.includes('Безжизненность — иммунитет к ядам и горению') || target.bonuses.includes('Бессмертие костей — иммунитет к ядам и горению'))) ||
+                (effectName === 'Отравление' && (target.race === 'Куклы' || target.race === 'Скелеты' || target.bonuses.includes('Безжизненность — иммунитет к ядам и горению') || target.bonuses.includes('Бессмертие костей — иммунитет к ядам и горению')))) {
                 turnLog.push(`${target.name} имеет иммунитет к ${effectName}, и эффект не был наложен.`);
                 return;
             }
@@ -426,7 +434,7 @@ export default function DuelPage() {
                 return;
             }
 
-            if ((isPhysical && (target.bonuses.includes('Временной отпечаток (иммунитет к физическому урону)') || target.race === 'Призраки' || target.race === 'Жнецы'))) {
+            if ((isPhysical && (target.bonuses.includes('Временной отпечаток (иммунитет к физическому урону)') || target.race === 'Призраки' || target.bonuses.includes('Эфирная форма — иммунитет к физическим атакам.') || target.race === 'Жнецы'))) {
                 turnLog.push(`Пассивная способность (${target.race}): ${target.name} имеет иммунитет к физическому урону.`);
                 return;
             }
@@ -455,7 +463,7 @@ export default function DuelPage() {
 
             if (isSpell && spellElement) {
                 const immunityString = `Иммунитет к ${spellElement.toLowerCase()}`;
-                 if (target.race === 'Духи' && target.bonuses.includes('Сопротивление воздействию (-20 урона от стихий)')) {
+                 if (target.race === 'Духи' && target.bonuses.includes('Сопротивление воздействию — -20 урона от стихий.')) {
                     finalDamage = Math.max(0, finalDamage - 20);
                     turnLog.push(`Пассивная способность (Духи): ${target.name} получает на 20 меньше урона от стихий.`);
                 }
@@ -551,7 +559,7 @@ export default function DuelPage() {
                 finalDamage = Math.max(0, finalDamage - 10);
                 turnLog.push(`Пассивная способность (${target.race}): урон снижен на 10.`);
             }
-             if (target.bonuses.includes('Танец грации (-10 урона от атак, пока ОЗ выше 100)') && target.oz > 100) {
+             if (target.bonuses.includes('Танец грации — -10 урона от атак, пока ОЗ выше 100.') && target.oz > 100) {
                  finalDamage = Math.max(0, finalDamage - 10);
                  turnLog.push(`Пассивная способность (Цынаре): урон снижен на 10.`);
             }
@@ -559,7 +567,7 @@ export default function DuelPage() {
                 finalDamage = Math.max(0, finalDamage - 5);
                 turnLog.push(`Пассивная способность (${target.race}): урон снижен на 5.`);
             }
-             if (target.bonuses.includes('Магическое тело (-5 урона от всех атак, если текущий ОМ выше 50)') && target.om > 50) {
+             if (target.bonuses.includes('Магическое тело — -5 урона от всех атак, если текущий ОМ выше 50.') && target.om > 50) {
                  finalDamage = Math.max(0, finalDamage - 5);
                  turnLog.push(`Пассивная способность (Ятанаги): урон снижен на 5.`);
             }
@@ -598,7 +606,7 @@ export default function DuelPage() {
 
             // --- Physical/Spell Specific ---
             if(isPhysical) {
-                 if (target.bonuses.includes('Ипостась силы (-10 урона от физических атак)')) {
+                 if (target.bonuses.includes('Ипостась силы — -10 урона от физических атак.')) {
                     finalDamage = Math.max(0, finalDamage - 10);
                     turnLog.push(`Пассивная способность (Химеры): физ. урон снижен на 10.`);
                 }
@@ -614,7 +622,7 @@ export default function DuelPage() {
                     finalDamage += 5;
                     turnLog.push(`Пассивная способность (Дриды): физ. урон увеличен на 5.`);
                  }
-                 if (attacker.race === 'Энергетические вампиры' && attacker.bonuses.includes('Аура желания (враг теряет 10 ОМ при физической атаке)')) {
+                 if (attacker.race === 'Энергетические вампиры' && attacker.bonuses.includes('Аура желания — враг теряет 10 ОМ при физической атаке.')) {
                     target.om = Math.max(0, target.om - 10);
                     turnLog.push(`Пассивная способность (Энергетические вампиры): ${target.name} теряет 10 ОМ.`);
                  }
@@ -786,7 +794,7 @@ export default function DuelPage() {
             
             const getOdCostPenalty = (player: CharacterStats): number => {
                 let penalty = 0;
-                 if (player.race === 'Куклы' && player.bonuses.includes('Абсолютная память (не тратится ОД)')) {
+                 if (player.race === 'Куклы' && player.bonuses.includes('Абсолютная память — не тратится ОД.')) {
                     return -Infinity; // Special value to indicate zero cost
                 }
                 for (const wound of RULES.WOUND_PENALTIES) {
@@ -807,8 +815,17 @@ export default function DuelPage() {
                 return penalty;
             };
             
-            const isSpellAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield', 'racial_ability'].includes(action.type);
-            if (isSpellAction) {
+            const isSpellAction = ['strong_spell', 'medium_spell', 'small_spell', 'shield', 'racial_ability'].includes(action.type);
+            const isHouseholdSpell = action.type === 'household_spell';
+
+            if ((isSpellAction || isHouseholdSpell) && activePlayer.race === 'Безликие') {
+                if (!isHouseholdSpell) {
+                    turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: Безликие не могут использовать магию, кроме бытовой.`);
+                    return; // Skip this action
+                }
+            }
+
+            if (isSpellAction || isHouseholdSpell) {
                 const spellRange = RULES.SPELL_RANGES[activePlayer.reserve];
                 if (newDistance > spellRange) {
                     turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: цель слишком далеко (${newDistance}м > ${spellRange}м).`);
@@ -1504,26 +1521,33 @@ export default function DuelPage() {
     );
   }
 
-  if (!duelData || !duelData.player1 || !duelData.player2) {
+  if (!duelData || !duelData.player1) {
       return (
         <div className="flex items-center justify-center min-h-screen">
           <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
         </div>
       );
   }
+
+  const duelStage = useMemo(() => {
+    if (!duelData.player2) {
+      return isLocalSolo ? 'setup_solo_p2' : 'waiting_for_opponent';
+    }
+    if (!duelData.player1.isSetupComplete) return 'setup_p1';
+    if (!duelData.player2.isSetupComplete) return 'setup_p2';
+    if (!duelData.duelStarted) return 'waiting_for_start';
+    return 'in_progress';
+  }, [duelData, isLocalSolo]);
+
+
+  const localPlayer = useMemo(() => {
+      if (!duelData || !user) return null;
+      return duelData.player1.id === user.uid ? duelData.player1 : duelData.player2;
+  }, [duelData, user]);
+
   
-  const currentPlayerIsP1 = user.uid === duelData.player1.id;
-  const localPlayer = currentPlayerIsP1 ? duelData.player1 : duelData.player2;
-  const opponentPlayer = currentPlayerIsP1 ? duelData.player2 : duelData.player1;
-  const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
-  const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
-
-  const isMyTurn = isLocalSolo || localPlayer.id === activePlayer.id;
-
-  // --- Render logic based on duel stage ---
-
-  // 1. Online game, waiting for opponent to join
-  if (!isLocalSolo && !duelData.player2?.id) {
+  // --- Stage: Waiting for opponent ---
+  if (duelStage === 'waiting_for_opponent' && !isLocalSolo) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
           <Card className="w-full max-w-md">
@@ -1548,19 +1572,13 @@ export default function DuelPage() {
     );
   }
 
-  // 2. A player needs to set up their character
-  if (!localPlayer.isSetupComplete) {
-      return <CharacterSetupModal character={localPlayer} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
-  }
-  
-  // 3. In solo mode, opponent needs to set up
-  if (isLocalSolo && !duelData.player2.isSetupComplete) {
-      return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
-  }
-  
-  // 4. Waiting for opponent to finish setup
-  if (!isLocalSolo && !opponentPlayer.isSetupComplete) {
-     return (
+  // --- Stage: Setup P1 ---
+  if (duelStage === 'setup_p1') {
+      const isMyCharacter = localPlayer?.id === duelData.player1.id;
+      if (isMyCharacter || isLocalSolo) {
+          return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+      }
+      return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
             <Card className="w-full max-w-md">
                 <CardHeader>
@@ -1569,13 +1587,48 @@ export default function DuelPage() {
                         Ожидание оппонента
                     </CardTitle>
                     <CardDescription>
-                        Ваш оппонент еще настраивает своего персонажа. Дуэль начнется, как только он будет готов.
+                        Ваш оппонент еще настраивает своего персонажа.
                     </CardDescription>
                 </CardHeader>
             </Card>
         </div>
       );
   }
+
+  // --- Stage: Setup P2 ---
+  if (duelStage === 'setup_p2' || duelStage === 'setup_solo_p2') {
+      const isMyCharacter = localPlayer?.id === duelData.player2?.id;
+      if (isMyCharacter || isLocalSolo) {
+          return <CharacterSetupModal character={duelData.player2!} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+      }
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+            <Card className="w-full max-w-md">
+                <CardHeader>
+                    <CardTitle className="flex items-center justify-center gap-2">
+                        <Settings2 className="animate-spin" />
+                        Ожидание оппонента
+                    </CardTitle>
+                    <CardDescription>
+                        Ваш оппонент еще настраивает своего персонажа.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+        </div>
+      );
+  }
+  
+  if (!duelData.player2) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
+        </div>
+      );
+  }
+
+  const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
+  const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
+  const isMyTurn = isLocalSolo || (localPlayer && localPlayer.id === activePlayer.id);
 
   // --- Main Duel Interface ---
   return (
