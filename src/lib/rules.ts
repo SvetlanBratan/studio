@@ -31,7 +31,7 @@ export const RESERVE_LEVELS: Record<ReserveLevel, number> = {
 };
 
 export const RACES: Race[] = [
-    { name: 'Алахоры', passiveBonuses: ['Беззвучие', 'Гибкость (-5 физ. урон)'], activeAbilities: [{ name: 'Железный ёж', description: 'Поглощает урон от след. заклинания и дает физ. щит.', cost: {om: 30} }] },
+    { name: 'Алахоры', passiveBonuses: ['Беззвучие (+5 ОМ)', 'Гибкость (-5 физ. урон)'], activeAbilities: [{ name: 'Железный ёж', description: 'Поглощает урон от след. заклинания и дает физ. щит.', cost: {om: 30} }] },
     { name: 'Алариены', passiveBonuses: ['Меткость (+10 к урону)'], activeAbilities: [{ name: 'Дождь из осколков', description: 'Наносит 40 урона.', cost: {om: 30} }] },
     { name: 'Амфибии', passiveBonuses: ['Аморфное тело (-10 урон)', 'Глубинная стойкость (+5 ОЗ/ход)'], activeAbilities: [{ name: 'Водяной захват', description: 'Лишает врага одного действия.', cost: {om: 30} }] },
     { name: 'Антаресы', passiveBonuses: ['Исцеление (+10 ОЗ/ход)', 'Проницательность (-5 урон)'], activeAbilities: [{ name: 'Самоисцеление', description: 'Восстанавливает +50 ОЗ.', cost: {om: 30} }] },
@@ -60,7 +60,7 @@ export const RACES: Race[] = [
     { name: 'Дроу', passiveBonuses: ['Темная выдержка (-10 урон от тьмы)', 'Воинская форма (-5 физ. урон)'], activeAbilities: [{ name: 'Лунный кнут', description: 'Наносит 55 урона.', cost: { om: 30 } }] },
     { name: 'Инсектоиды', passiveBonuses: ['Живучесть (+5 ОЗ/ход)', 'Насекомая стойкость (-5 физ. урон)'], activeAbilities: [{ name: 'Кислотное жало', description: 'Наносит 50 урона.', cost: { om: 30 } }] },
     { name: 'Друиды', passiveBonuses: ['Друидическая связь (+10 ОМ/ход)', 'Мелодия исцеления (+5 ОЗ/ход)'], activeAbilities: [{ name: 'Песня стихий', description: 'Наносит 45 урона или восстанавливает 45 ОЗ.', cost: { om: 30 } }] },
-    { name: 'Ихо', passiveBonuses: ['Вибрация чувств (-5 урона от звука/эфира)', 'Призыв сердца (+10 ОМ каждый третий ход)'], activeAbilities: [{ name: 'Голос рода', description: 'Лишает врага одного действия и наносит 30 урона.', cost: {om: 30} }] },
+    { name: 'Ихо', passiveBonuses: ['Вибрация чувств (-5 урон от звука/эфира)', 'Призыв сердца (+10 ОМ каждый третий ход)'], activeAbilities: [{ name: 'Голос рода', description: 'Лишает врага одного действия и наносит 30 урона.', cost: {om: 30} }] },
     { name: 'Карлики', passiveBonuses: ['Земная устойчивость (-10 урона от магических атак)', 'Сила кузни (+10 к физ. атакам)'], activeAbilities: [{ name: 'Кузнечный молот', description: 'Наносит 50 урона.', cost: {om: 30} }] },
     { name: 'Кентавры', passiveBonuses: ['Галоп (-5 ОД)'], activeAbilities: [{ name: 'Копыта бури', description: 'Наносит 55 урона.', cost: {om: 30} }] },
     { name: 'Кицунэ', passiveBonuses: ['Иллюзорный обман (-10 урона от магических атак)', 'Хвостовой резерв (+10 ОМ каждый четный ход)'], activeAbilities: [{ name: 'Танец девяти хвостов', description: 'Лишает врага одного действия и наносит 35 урона.', cost: {om: 30} }] },
@@ -70,6 +70,11 @@ export const RACES: Race[] = [
     { name: 'Лартисты', passiveBonuses: ['Картина боли (+5 урона при повторной атаке)', 'Цикличность (+5 ОЗ при пропуске)'], activeAbilities: [{ name: 'Затягивание в полотно', description: 'Блокирует все магические способности.', cost: {om: 30} }] },
     { name: 'Лепреконы', passiveBonuses: ['Иллюзии (-10 ОМ при первой способности)', 'Уворот (-5 урон от всех атак)'], activeAbilities: [{ name: 'Подменный клад', description: 'Скрывается на 1 ход и восстанавливает 40 ОЗ.', cost: {om: 30} }] },
     { name: 'Миканиды', passiveBonuses: ['Грибница (+10 ОЗ/ход)', 'Споры (-10 урона следующей атаке)'], activeAbilities: [{ name: 'Споровый взрыв', description: 'Наносит 40 урона и ослабляет врага.', cost: {om: 30} }] },
+    { name: 'Мириоды', passiveBonuses: ['Хитиновый покров (-10 физ. урон)', 'Боль превращения (+10 урон)'], activeAbilities: [{ name: 'Смертельный рывок', description: 'Наносит 60 урона.', cost: {om: 40} }] },
+    { name: 'Нарраторы', passiveBonuses: ['Повесть боли (+10 ОМ)', 'Истинное слово (-5 урона от заклинаний)'], activeAbilities: [{ name: 'Конец главы', description: 'Наносит 50 урона и накладывает Удержание.', cost: {om: 50} }] },
+    { name: 'Неземные', passiveBonuses: ['Воздушный рывок (-10 физ. урон)', 'Лёгкость (-5 ОД на уклонение)'], activeAbilities: [{ name: 'Прыжок веры', description: 'Уклонение от след. атаки и +30 ОМ.', cost: {om: 30} }] },
+    { name: 'Неониды', passiveBonuses: ['Биосвечение (-5 урон от света/воды)', 'Очищение (+5 ОЗ от яда)'], activeAbilities: [{ name: 'Световой взрыв', description: 'Наносит 40 урона и ослепляет врага.', cost: {om: 30} }] },
+    { name: 'Нетленные', passiveBonuses: ['Боль в отдалении (-10 урон)', 'Временной отпечаток (иммунитет к физ. урону)'], activeAbilities: [{ name: 'Откат', description: 'Полностью восстанавливает ОЗ и снимает 1 негативный эффект.', cost: {} }] },
     { name: 'Ир Эйн', passiveBonuses: ['+2 ОМ/ход'], activeAbilities: [{ name: 'Пивной рев', description: 'деморализация врага (-ОД)', cost: {od: 10} }] },
     { name: 'Мириоды', passiveBonuses: [], activeAbilities: [{ name: 'Кислотное дыхание', description: '-10 ОЗ, игнорирует броню', cost: {om: 10} }] },
     { name: 'Нарраторы', passiveBonuses: ['-5 ОД у врага/ход'], activeAbilities: [{ name: 'Печать Слова', description: 'враг не может повторить последнее заклинание', cost: {om: 30} }] },

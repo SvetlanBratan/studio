@@ -140,6 +140,15 @@ export default function DuelPage() {
                         damageTakenLastTurn += parseInt(match[1], 10);
                     }
                 });
+
+                if (damageTakenLastTurn > 50 && activePlayer.bonuses.includes('Боль превращения (+10 урон)')) {
+                    turnLog.push(`Пассивная способность (Мириоды): ${activePlayer.name} получил сильный урон и его следующая атака будет усилена.`);
+                }
+                
+                if (damageTakenLastTurn > 30 && activePlayer.bonuses.includes('Повесть боли (+10 ОМ)')) {
+                    activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + 10);
+                    turnLog.push(`Пассивная способность (Нарраторы): ${activePlayer.name} получил сильный урон и восстанавливает 10 ОМ.`);
+                }
             }
         }
 
@@ -212,8 +221,8 @@ export default function DuelPage() {
                 }
                 
                 if (name === 'Ослепление') {
-                    actions = []; 
-                    turnLog.push(`${activePlayer.name} ослеплен и не может совершать действия в этом ходу!`);
+                    activePlayer.od = Math.max(0, activePlayer.od - 10);
+                    turnLog.push(`${activePlayer.name} ослеплен и теряет 10 ОД!`);
                 }
                 
                 if (name === 'Скрытность') {
@@ -221,7 +230,7 @@ export default function DuelPage() {
                 }
                 
                 if (name === 'Удержание') {
-                    turnLog.push(`${activePlayer.name} находится под эффектом "Удержание".`);
+                    turnLog.push(`${activePlayer.name} находится под эффектом "Удержание", магические способности недоступны.`);
                 }
 
                 if (duration > 0) {
@@ -258,6 +267,11 @@ export default function DuelPage() {
             if (isPoisonEffect && activePlayer.bonuses.includes('Иммунитет к яду')) {
                  turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} имеет иммунитет к яду, урон от "${p}" не получен.`);
                  return;
+            }
+            if (isPoisonEffect && activePlayer.bonuses.includes('Очищение (+5 ОЗ от яда)')) {
+                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 5);
+                turnLog.push(`Пассивная способность (Неониды): ${activePlayer.name} очищает яд и восстанавливает 5 ОЗ.`);
+                return;
             }
 
             const isBurning = p.startsWith('Горение');
@@ -356,6 +370,11 @@ export default function DuelPage() {
         const applyDamage = (attacker: CharacterStats, target: CharacterStats, amount: number, isSpell: boolean, spellElement?: string, isPhysical: boolean = !isSpell) => {
             let finalDamage = amount;
 
+            if (isPhysical && target.bonuses.includes('Временной отпечаток (иммунитет к физ. урону)')) {
+                turnLog.push(`Пассивная способность (Нетленные): ${target.name} имеет иммунитет к физическому урону.`);
+                return;
+            }
+
             if (target.penalties.some(p => p.startsWith('Скрытность'))) {
                 turnLog.push(`${target.name} находится в скрытности и избегает урона.`);
                 return;
@@ -371,13 +390,17 @@ export default function DuelPage() {
                     finalDamage = Math.max(0, finalDamage - 5);
                     turnLog.push(`Пассивная способность (Астролоиды): ${target.name} получает на 5 меньше урона от света/эфира.`);
                 }
-                 if (target.bonuses.includes('Вибрация чувств (-5 урона от звука/эфира)') && (spellElement === 'Звук' || spellElement === 'Эфир')) {
+                 if (target.bonuses.includes('Вибрация чувств (-5 урон от звука/эфира)') && (spellElement === 'Звук' || spellElement === 'Эфир')) {
                     finalDamage = Math.max(0, finalDamage - 5);
                     turnLog.push(`Пассивная способность (Ихо): ${target.name} получает на 5 меньше урона от звука/эфира.`);
                 }
                 if (target.bonuses.includes('Чуткий слух (-10 урон от звука/воздуха)') && (spellElement === 'Звук' || spellElement === 'Воздух')) {
                     finalDamage = Math.max(0, finalDamage - 10);
                     turnLog.push(`Пассивная способность (Джакали): ${target.name} получает на 10 меньше урона от звука/воздуха.`);
+                }
+                if (target.bonuses.includes('Биосвечение (-5 урон от света/воды)') && (spellElement === 'Свет' || spellElement === 'Вода')) {
+                    finalDamage = Math.max(0, finalDamage - 5);
+                    turnLog.push(`Пассивная способность (Неониды): ${target.name} получает на 5 меньше урона от света/воды.`);
                 }
                 if (target.bonuses.includes('Хрупкость (+10 урон от огня/льда)') && (spellElement === 'Огонь' || spellElement === 'Лёд')) {
                     finalDamage += 10;
@@ -403,7 +426,7 @@ export default function DuelPage() {
             }
 
             // --- Damage Reduction Passives ---
-            if (target.bonuses.includes('Аморфное тело (-10 урон)') || target.bonuses.includes('Экзоскелет (-10 урон)') || target.bonuses.includes('Изворотливость (-10 урон)') || target.bonuses.includes('Стойкость гиганта (-10 урон)')) {
+            if (target.bonuses.includes('Аморфное тело (-10 урон)') || target.bonuses.includes('Экзоскелет (-10 урон)') || target.bonuses.includes('Изворотливость (-10 урон)') || target.bonuses.includes('Стойкость гиганта (-10 урон)') || target.bonuses.includes('Боль в отдалении (-10 урон)') ) {
                 finalDamage = Math.max(0, finalDamage - 10);
                 turnLog.push(`Пассивная способность (${target.race}): урон снижен на 10.`);
             }
@@ -442,7 +465,7 @@ export default function DuelPage() {
                     finalDamage = Math.max(0, finalDamage - 5);
                     turnLog.push(`Пассивная способность (${target.race}): физ. урон снижен на 5.`);
                  }
-                 if (target.bonuses.includes('Скальная шкура (-10 физ. урон)') || target.bonuses.includes('Чешуя предков (-10 физ. урон)')) {
+                 if (target.bonuses.includes('Скальная шкура (-10 физ. урон)') || target.bonuses.includes('Чешуя предков (-10 физ. урон)') || target.bonuses.includes('Хитиновый покров (-10 физ. урон)') || target.bonuses.includes('Воздушный рывок (-10 физ. урон)')) {
                     finalDamage = Math.max(0, finalDamage - 10);
                     turnLog.push(`Пассивная способность (${target.race}): физ. урон снижен на 10.`);
                  }
@@ -452,9 +475,9 @@ export default function DuelPage() {
                  }
             }
             if(isSpell) {
-                if (target.bonuses.includes('Магический резонанс (-5 урона от заклинаний)')) {
+                if (target.bonuses.includes('Магический резонанс (-5 урона от заклинаний)') || target.bonuses.includes('Истинное слово (-5 урона от заклинаний)')) {
                     finalDamage = Math.max(0, finalDamage - 5);
-                    turnLog.push(`Пассивная способность (Дарнатиаре): магический урон снижен на 5.`);
+                    turnLog.push(`Пассивная способность (${target.race}): магический урон снижен на 5.`);
                 }
                 if (target.bonuses.includes('Земная устойчивость (-10 урона от магических атак)') || target.bonuses.includes('Иллюзорный обман (-10 урона от магических атак)') || target.bonuses.includes('Светлая душа (-10 урона от магии эфира, света и иллюзий)')) {
                     let text = `Пассивная способность (${target.race}):`;
@@ -626,6 +649,14 @@ export default function DuelPage() {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Алариены): "Меткость" увеличивает урон на 10.`);
                 }
+                 if (activePlayer.bonuses.includes('Боль превращения (+10 урон)')) {
+                    const bonusIndex = activePlayer.bonuses.indexOf('Боль превращения (+10 урон)');
+                    if (bonusIndex > -1) {
+                        damage += 10;
+                        activePlayer.bonuses.splice(bonusIndex, 1);
+                        turnLog.push(`Пассивная способность (Мириоды) "Боль превращения" увеличивает урон на 10.`);
+                    }
+                }
                 if (activePlayer.bonuses.includes('Воинская слава (+10 урон при контратаке)') && wasAttackedLastTurn) {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Белояры): "Воинская слава" увеличивает урон на 10.`);
@@ -666,7 +697,7 @@ export default function DuelPage() {
             };
             
             const isSpellAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield'].includes(action.type);
-            if(isSpellAction && opponent.bonuses.includes('Беззвучие')) {
+            if(isSpellAction && opponent.bonuses.includes('Беззвучие (+5 ОМ)')) {
                 activePlayer.om = Math.max(0, activePlayer.om - 5);
                 turnLog.push(`Пассивная способность (Алахоры): ${opponent.name} искажает восприятие, ${activePlayer.name} теряет 5 ОМ.`);
             }
@@ -713,7 +744,11 @@ export default function DuelPage() {
                     break;
                 case 'dodge':
                     {
-                        const cost = RULES.NON_MAGIC_COSTS.dodge + odPenalty;
+                        let cost = RULES.NON_MAGIC_COSTS.dodge + odPenalty;
+                        if (activePlayer.bonuses.includes('Лёгкость (-5 ОД на уклонение)')) {
+                            cost = Math.max(0, cost - 5);
+                            turnLog.push(`Пассивная способность (Неземные): Лёгкость снижает стоимость уклонения.`);
+                        }
                         activePlayer.od -= cost;
                         activePlayer.isDodging = true;
                         turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки. Затраты ОД: ${cost}${odPenalty > 0 ? ` (включая штраф ${odPenalty})` : ''}.`);
@@ -987,6 +1022,35 @@ export default function DuelPage() {
                                     activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 45);
                                     turnLog.push(`${activePlayer.name} восстанавливает 45 ОЗ.`);
                                 }
+                                break;
+                            // Myriads
+                            case 'Смертельный рывок':
+                                applyDamage(activePlayer, opponent, 60, false);
+                                break;
+                            // Narrators
+                            case 'Конец главы':
+                                applyDamage(activePlayer, opponent, 50, true);
+                                applyEffect(opponent, 'Удержание', 1);
+                                break;
+                            // Ethereals
+                            case 'Прыжок веры':
+                                activePlayer.isDodging = true;
+                                activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + 30);
+                                turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки и восстанавливает 30 ОМ.`);
+                                break;
+                            // Neonids
+                            case 'Световой взрыв':
+                                applyDamage(activePlayer, opponent, 40, true, 'Свет');
+                                applyEffect(opponent, 'Ослепление', 1);
+                                break;
+                            // Incorruptible
+                            case 'Откат':
+                                activePlayer.oz = activePlayer.maxOz;
+                                if (activePlayer.penalties.length > 0) {
+                                    const removedEffect = activePlayer.penalties.shift();
+                                    turnLog.push(`${activePlayer.name} снимает эффект "${removedEffect}".`);
+                                }
+                                turnLog.push(`${activePlayer.name} полностью восстанавливает ОЗ.`);
                                 break;
                          }
                     }
