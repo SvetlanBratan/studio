@@ -89,11 +89,11 @@ export interface CharacterStats {
 
 export type PrayerEffectType = 'eternal_shield' | 'full_heal_oz' | 'full_heal_om';
 
-export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'household_spell' | 'dodge' | 'use_item' | 'shield' | 'prayer' | 'remove_effect' | 'rest' | 'racial_ability';
+export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'household_spell' | 'dodge' | 'use_item' | 'shield' | 'prayer' | 'remove_effect' | 'rest' | 'racial_ability' | 'move';
 
 export interface Action {
   type: ActionType;
-  payload?: any & { element?: string };
+  payload?: any & { element?: string; distance?: number };
 }
 
 export interface Turn {
@@ -116,4 +116,5 @@ export interface DuelState {
   log: string[];
   createdAt: any; // Using 'any' for Firebase Timestamp compatibility
   duelStarted: boolean;
+  distance: number;
 }

@@ -13,7 +13,7 @@ import TurnForm from '@/components/turn-form';
 import DuelLog from '@/components/duel-log';
 import CharacterSetupModal from '@/components/character-setup-modal';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft } from 'lucide-react';
+import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS } from '@/lib/rules';
@@ -62,6 +62,7 @@ export default function DuelPage() {
             log: [],
             createdAt: new Date(),
             duelStarted: false,
+            distance: RULES.INITIAL_DISTANCE,
         });
     }
   }, [isLocalSolo, localDuelState, user]);
@@ -113,6 +114,7 @@ export default function DuelPage() {
         const turnLog: string[] = [];
         let activePlayer = deepClone(duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2);
         let opponent = deepClone(duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1);
+        let newDistance = duelData.distance;
         
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) };
         
@@ -217,7 +219,7 @@ export default function DuelPage() {
                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omAmount);
                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omAmount} ОМ.`);
             }
-            if ((bonus === 'Энергетический сосуд (+10 ОМ каждый второй ход)' || bonus === 'Хвостовой резерв (+10 ОМ каждый четный ход)' || bonus === 'Ритм крови (+10 ОМ/ход каждый второй ход)') && duelData.currentTurn % 2 === 0) {
+            if ((bonus === 'Энергетический сосуд (+10 ОМ каждый второй ход)' || bonus === 'Хвостовой резерв (+10 ОМ каждый четный ход)' || bonus === 'Ритм крови (+10 ОМ в начале каждого второго хода)') && duelData.currentTurn % 2 === 0) {
                  const omAmount = 10;
                  activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omAmount);
                  turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omAmount} ОМ.`);
@@ -325,7 +327,7 @@ export default function DuelPage() {
             }
         });
 
-        if (activePlayer.om === 0 && activePlayer.bonuses.includes('Потеря формы (-10 ОЗ при ОМ=0)')) {
+        if (activePlayer.om === 0 && activePlayer.bonuses.includes('Потеря формы (при снижении ОМ до 0 теряют 10 ОЗ)')) {
             activePlayer.oz -= 10;
             turnLog.push(`Пассивная способность (Нимфилус): ОМ на нуле, ${activePlayer.name} теряет 10 ОЗ.`);
         }
@@ -423,7 +425,7 @@ export default function DuelPage() {
                 return;
             }
 
-            if ((isPhysical && target.bonuses.includes('Временной отпечаток (иммунитет к физ. урону)')) || (isPhysical && target.race === 'Призраки')) {
+            if ((isPhysical && target.bonuses.includes('Временной отпечаток (иммунитет к физическому урону)')) || (isPhysical && target.race === 'Призраки')) {
                 turnLog.push(`Пассивная способность (${target.race}): ${target.name} имеет иммунитет к физическому урону.`);
                 return;
             }
@@ -431,6 +433,23 @@ export default function DuelPage() {
             if (target.penalties.some(p => p.startsWith('Скрытность'))) {
                 turnLog.push(`${target.name} находится в скрытности и избегает урона.`);
                 return;
+            }
+            
+            if (target.isDodging) {
+                if (isSpell && newDistance < 10) {
+                    finalDamage = Math.max(0, finalDamage - RULES.DODGE_VS_STRONG_SPELL_DMG_REDUCTION);
+                    turnLog.push(`Уворот от мощного заклинания вблизи! ${target.name} поглощает ${RULES.DODGE_VS_STRONG_SPELL_DMG_REDUCTION} урона.`);
+                } else {
+                    const dodgeRoll = Math.floor(Math.random() * 10) + 1;
+                    turnLog.push(`${target.name} пытается увернуться... Бросок: ${dodgeRoll}.`);
+                    if (dodgeRoll >= 6) {
+                        finalDamage *= 0.5;
+                        turnLog.push(`Уворот успешен! ${target.name} получает на 50% меньше урона.`);
+                    } else {
+                        turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
+                    }
+                }
+                target.isDodging = false; // Dodge is consumed after one attempt
             }
 
             if (isSpell && spellElement) {
@@ -455,15 +474,15 @@ export default function DuelPage() {
                     turnLog.push(`${target.name} имеет иммунитет к стихии "${spellElement}" и не получает урон.`);
                     return;
                 }
-                 if (target.bonuses.includes('Понимание звёзд (-5 урон от света/эфира)') && (spellElement === 'Свет' || spellElement === 'Эфир')) {
+                 if (target.bonuses.includes('Понимание звёзд (-5 урона от стихий света и эфира)') && (spellElement === 'Свет' || spellElement === 'Эфир')) {
                     finalDamage = Math.max(0, finalDamage - 5);
                     turnLog.push(`Пассивная способность (Астролоиды): ${target.name} получает на 5 меньше урона от света/эфира.`);
                 }
-                 if (target.bonuses.includes('Вибрация чувств (-5 урон от звука/эфира)') && (spellElement === 'Звук' || spellElement === 'Эфир')) {
+                 if (target.bonuses.includes('Вибрация чувств (-5 урона от звуковых и эфирных атак)') && (spellElement === 'Звук' || spellElement === 'Эфир')) {
                     finalDamage = Math.max(0, finalDamage - 5);
                     turnLog.push(`Пассивная способность (Ихо): ${target.name} получает на 5 меньше урона от звука/эфира.`);
                 }
-                if (target.bonuses.includes('Чуткий слух (-10 урон от звука/воздуха)') && (spellElement === 'Звук' || spellElement === 'Воздух')) {
+                if (target.bonuses.includes('Чуткий слух (-10 урона от атак, связанных со звуком или воздушной магией)') && (spellElement === 'Звук' || spellElement === 'Воздух')) {
                     finalDamage = Math.max(0, finalDamage - 10);
                     turnLog.push(`Пассивная способность (Джакали): ${target.name} получает на 10 меньше урона от звука/воздуха.`);
                 }
@@ -471,7 +490,7 @@ export default function DuelPage() {
                     finalDamage = Math.max(0, finalDamage - 10);
                     turnLog.push(`Пассивная способность (Рариты): ${target.name} получает на 10 меньше урона от воздуха.`);
                 }
-                if (target.bonuses.includes('Биосвечение (-5 урон от света/воды)') && (spellElement === 'Свет' || spellElement === 'Вода')) {
+                if (target.bonuses.includes('Биосвечение (-5 урона от получаемых атак света и воды)') && (spellElement === 'Свет' || spellElement === 'Вода')) {
                     finalDamage = Math.max(0, finalDamage - 5);
                     turnLog.push(`Пассивная способность (Неониды): ${target.name} получает на 5 меньше урона от света/воды.`);
                 }
@@ -483,7 +502,7 @@ export default function DuelPage() {
                     finalDamage += 10;
                     turnLog.push(`Пассивная способность (Дриады): ${target.name} получает на 10 больше урона от огня/льда.`);
                 }
-                if (target.bonuses.includes('Уязвимость к свету и огню (+10 урона)') && (spellElement === 'Свет' || spellElement === 'Огонь')) {
+                if (target.bonuses.includes('Уязвимость к свету и огню (+10 урона от этих стихий)') && (spellElement === 'Свет' || spellElement === 'Огонь')) {
                     finalDamage += 10;
                     turnLog.push(`Пассивная способность (Кордеи): ${target.name} получает на 10 больше урона от света/огня.`);
                 }
@@ -527,19 +546,19 @@ export default function DuelPage() {
             }
 
             // --- Damage Reduction Passives ---
-            if (target.bonuses.includes('Аморфное тело (-10 урон)') || target.bonuses.includes('Экзоскелет (-10 урон)') || target.bonuses.includes('Изворотливость (-10 урон)') || target.bonuses.includes('Стойкость гиганта (-10 урон)') || target.bonuses.includes('Боль в отдалении (-10 урон)') ) {
+            if (target.bonuses.includes('Аморфное тело (-10 урон)') || target.bonuses.includes('Экзоскелет (-10 урона от атак)') || target.bonuses.includes('Изворотливость (-10 урона от всех атак)') || target.bonuses.includes('Стойкость гиганта (-10 урона от всех атак)') || target.bonuses.includes('Боль в отдалении (-10 урона от всех атак)') ) {
                 finalDamage = Math.max(0, finalDamage - 10);
                 turnLog.push(`Пассивная способность (${target.race}): урон снижен на 10.`);
             }
-             if (target.bonuses.includes('Танец грации (-10 урона при ОЗ > 100)') && target.oz > 100) {
+             if (target.bonuses.includes('Танец грации (-10 урона от атак, пока ОЗ выше 100)') && target.oz > 100) {
                  finalDamage = Math.max(0, finalDamage - 10);
                  turnLog.push(`Пассивная способность (Цынаре): урон снижен на 10.`);
             }
-            if (target.bonuses.includes('Проницательность (-5 урон)') || target.bonuses.includes('Разрыв личности (-5 урон)') || target.bonuses.includes('Уворот (-5 урон от всех атак)')) {
+            if (target.bonuses.includes('Проницательность (-5 урона от любого источника)') || target.bonuses.includes('Разрыв личности (-5 урона от всех атак)') || target.bonuses.includes('Уворот (-5 урона от всех атак)')) {
                 finalDamage = Math.max(0, finalDamage - 5);
                 turnLog.push(`Пассивная способность (${target.race}): урон снижен на 5.`);
             }
-             if (target.bonuses.includes('Магическое тело (-5 урона при ОМ > 50)') && target.om > 50) {
+             if (target.bonuses.includes('Магическое тело (-5 урона от всех атак, если текущий ОМ выше 50)') && target.om > 50) {
                  finalDamage = Math.max(0, finalDamage - 5);
                  turnLog.push(`Пассивная способность (Ятанаги): урон снижен на 5.`);
             }
@@ -551,7 +570,7 @@ export default function DuelPage() {
                  finalDamage = Math.max(0, finalDamage - 5);
                  turnLog.push(`Пассивная способность (${target.race}): урон снижен на 5.`);
             }
-            if (target.bonuses.includes('Иллюзорное движение (-10 урона от первой атаки в каждом ходе)') || target.bonuses.includes('Смена облика (-10 урона от первой атаки противника)') || target.bonuses.includes('Скрытность (-10 урона от первой атаки)')) {
+            if (target.bonuses.includes('Иллюзорное движение — -10 урона от первой атаки в каждом ходе.') || target.bonuses.includes('Смена облика (-10 урона от первой атаки противника)') || target.bonuses.includes('Скрытность (-10 урона от первой атаки)')) {
                  const firstHitIndex = target.bonuses.findIndex(b => b.startsWith('Иллюзорное движение') || b.startsWith('Смена облика') || b.startsWith('Скрытность'));
                  if (firstHitIndex > -1) {
                     finalDamage = Math.max(0, finalDamage - 10);
@@ -582,7 +601,7 @@ export default function DuelPage() {
                     finalDamage = Math.max(0, finalDamage - 10);
                     turnLog.push(`Пассивная способность (Химеры): физ. урон снижен на 10.`);
                 }
-                 if (target.bonuses.includes('Гибкость (-5 физ. урон)') || target.bonuses.includes('Шестиглазое зрение (-5 физ. урон)') || target.bonuses.includes('Воинская форма (-5 физ. урон)') || target.bonuses.includes('Насекомая стойкость (-5 физ. урон)') || target.bonuses.includes('Прочная шкура (-5 урона от физических атак)') || target.bonuses.includes('Грация охотника (-5 урона от физических атак)')) {
+                 if (target.bonuses.includes('Гибкость (-5 урона от физических атак)') || target.bonuses.includes('Шестиглазое зрение (- 5 от урона физических атак)') || target.bonuses.includes('Воинская форма (-5 урона от физических атак)') || target.bonuses.includes('Насекомая стойкость (-5 урона от физических атак)') || target.bonuses.includes('Прочная шкура (-5 урона от физических атак)') || target.bonuses.includes('Грация охотника (-5 урона от физических атак)')) {
                     finalDamage = Math.max(0, finalDamage - 5);
                     turnLog.push(`Пассивная способность (${target.race}): физ. урон снижен на 5.`);
                  }
@@ -594,7 +613,7 @@ export default function DuelPage() {
                     finalDamage += 5;
                     turnLog.push(`Пассивная способность (Дриды): физ. урон увеличен на 5.`);
                  }
-                 if (target.race === 'Энергетические вампиры' && target.bonuses.includes('Аура желания (враг теряет 10 ОМ при физ. атаке)')) {
+                 if (target.race === 'Энергетические вампиры' && target.bonuses.includes('Аура желания (враг теряет 10 ОМ при физической атаке)')) {
                     attacker.om = Math.max(0, attacker.om - 10);
                     turnLog.push(`Пассивная способность (Энергетические вампиры): ${attacker.name} теряет 10 ОМ.`);
                  }
@@ -647,17 +666,7 @@ export default function DuelPage() {
                 }
             }
             
-            if (target.isDodging) {
-                const dodgeRoll = Math.floor(Math.random() * 10) + 1;
-                turnLog.push(`${target.name} пытается увернуться... Бросок: ${dodgeRoll}.`);
-                if (dodgeRoll >= 6) {
-                    finalDamage *= 0.5;
-                    turnLog.push(`Уворот успешен! ${target.name} получает на 50% меньше урона.`);
-                } else {
-                    turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
-                }
-                target.isDodging = false; // Dodge is consumed after one attempt
-            }
+
             finalDamage = Math.round(finalDamage);
 
             let damageDealtToTarget = 0;
@@ -707,15 +716,15 @@ export default function DuelPage() {
              }
 
             if (damageDealtToTarget > 0) {
-                if(attacker.bonuses.includes('Скверна (+5 ОМ потеря)')) {
+                if(attacker.bonuses.includes('Скверна (при получении урона, противник теряет дополнительно 5 ОМ)')) {
                     target.om = Math.max(0, target.om - 5);
                     turnLog.push(`Пассивная способность (Проклятые): ${target.name} теряет 5 ОМ из-за скверны.`);
                 }
-                 if(target.bonuses.includes('Хищный флирт (противник теряет 1 ОМ)')) {
+                 if(target.bonuses.includes('Хищный флирт (при получении урона противник теряет 1 ОМ из-за ментального сбоя)')) {
                     attacker.om = Math.max(0, attacker.om - 1);
                     turnLog.push(`Пассивная способность (Рариты): ${attacker.name} теряет 1 ОМ из-за флирта.`);
                 }
-                 if(target.bonuses.includes('Отражение страха (враг теряет 10 ОМ)') && damageDealtToTarget > 40) {
+                 if(target.bonuses.includes('Отражение страха (при получении урона выше 40, враг теряет 10 ОМ)') && damageDealtToTarget > 40) {
                     attacker.om = Math.max(0, attacker.om - 10);
                     turnLog.push(`Пассивная способность (Тени): ${attacker.name} теряет 10 ОМ из-за страха.`);
                 }
@@ -783,18 +792,27 @@ export default function DuelPage() {
                         penalty = wound.penalty;
                     }
                 }
-                 if (player.bonuses.includes('Животная реакция (-5 ОД)') || player.bonuses.includes('Ловкие конечности (-5 ОД)') || player.bonuses.includes('Галоп (-5 ОД)')) {
+                 if (player.bonuses.includes('Животная реакция (-5 ОД на физические действия)') || player.bonuses.includes('Ловкие конечности (-5 ОД на действия)') || player.bonuses.includes('Галоп (-5 ОД на действия)')) {
                     penalty -= 5;
                 }
                  if (player.bonuses.includes('Быстрые мышцы (-5 ОД на действия, связанные с перемещением)')) {
                      // Specific to move actions, handled elsewhere for now.
                  }
-                 if(opponent.bonuses.includes('Очарование (враг тратит 10 ОД при атаке)')) {
+                 if(opponent.bonuses.includes('Очарование (враг тратит 10 ОД при атаке по сирене)')) {
                     penalty += 10;
                     turnLog.push(`Пассивная способность (Сирены): ${player.name} очарован и тратит на 10 ОД больше.`);
                  }
                 return penalty;
             };
+            
+            const isSpellAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield', 'racial_ability'].includes(action.type);
+            if (isSpellAction) {
+                const spellRange = RULES.SPELL_RANGES[activePlayer.reserve];
+                if (newDistance > spellRange) {
+                    turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: цель слишком далеко (${newDistance}м > ${spellRange}м).`);
+                    return; // Skip this action
+                }
+            }
 
             const calculateDamage = (spellType: 'household' | 'small' | 'medium' | 'strong', isPhysical: boolean = false, spellElement?: string): number => {
                 let damage = RULES.RITUAL_DAMAGE[activePlayer.reserve]?.[spellType] ?? 0;
@@ -873,7 +891,7 @@ export default function DuelPage() {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Веспы): "Эхолокация" увеличивает урон первой атаки на 10.`);
                 }
-                if (activePlayer.bonuses.includes('Драконья ярость (+10 урона)') && damageTakenLastTurn > 40) {
+                if (activePlayer.bonuses.includes('Драконья ярость (+10 урона, если получено более 40 урона за прошлый ход)') && damageTakenLastTurn > 40) {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Драконы): "Драконья ярость" увеличивает урон на 10.`);
                 }
@@ -889,7 +907,7 @@ export default function DuelPage() {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Карлики): "Сила кузни" увеличивает физический урон на 10.`);
                 }
-                 if (opponent.bonuses.includes('Картина боли (+5 урона, если атакует дважды подряд)')) {
+                 if (opponent.bonuses.includes('Картина боли (враг получает +5 урона, если атакует дважды подряд)')) {
                     const playerLastTurn = duelData.turnHistory.find(t => t.turnNumber === duelData.currentTurn - 2);
                     if (playerLastTurn && playerLastTurn.actions.some(a => ['strong_spell', 'medium_spell', 'small_spell', 'household_spell'].includes(a.type))) {
                         damage += 5;
@@ -900,13 +918,12 @@ export default function DuelPage() {
                 return Math.round(damage);
             };
             
-            const isSpellAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield'].includes(action.type);
             if(isSpellAction && opponent.bonuses.includes('Беззвучие (противник теряет 5 ОМ)')) {
                 activePlayer.om = Math.max(0, activePlayer.om - 5);
                 turnLog.push(`Пассивная способность (Алахоры): ${opponent.name} искажает восприятие, ${activePlayer.name} теряет 5 ОМ.`);
             }
-             if (opponent.bonuses.includes('Иллюзии (противник теряет 10 ОМ)')) {
-                const illusionIndex = opponent.bonuses.indexOf('Иллюзии (противник теряет 10 ОМ)');
+             if (opponent.bonuses.includes('Иллюзии (противник теряет 10 ОМ при первом применении любой способности)')) {
+                const illusionIndex = opponent.bonuses.indexOf('Иллюзии (противник теряет 10 ОМ при первом применении любой способности)');
                 if (illusionIndex > -1) {
                     activePlayer.om = Math.max(0, activePlayer.om - 10);
                     opponent.bonuses.splice(illusionIndex, 1);
@@ -964,6 +981,18 @@ export default function DuelPage() {
                         activePlayer.od -= cost;
                         activePlayer.isDodging = true;
                         turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
+                    }
+                    break;
+                case 'move':
+                    {
+                        const distanceToMove = action.payload?.distance || 0;
+                        let cost = getFinalOdCost(distanceToMove * RULES.NON_MAGIC_COSTS.move_per_meter);
+                         if (activePlayer.bonuses.includes('Быстрые мышцы (-5 ОД на действия, связанные с перемещением)')) {
+                            cost = Math.max(0, cost - 5);
+                         }
+                        activePlayer.od -= cost;
+                        newDistance = Math.max(0, newDistance + distanceToMove);
+                        turnLog.push(`${activePlayer.name} изменяет дистанцию на ${distanceToMove}м. Новая дистанция: ${newDistance}м. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
                     }
                     break;
                 case 'use_item':
@@ -1437,6 +1466,7 @@ export default function DuelPage() {
             activePlayerId: duelData.activePlayerId === 'player1' ? 'player2' : 'player1',
             winner: winner,
             log: turnLog,
+            distance: newDistance,
         };
 
         handleUpdateDuelState(updatedDuel);
@@ -1577,7 +1607,13 @@ export default function DuelPage() {
             <Card>
                 <CardHeader>
                 <CardTitle className="flex items-center justify-between text-lg md:text-xl">
-                    <span>Ход {duelData.currentTurn}: {activePlayer.name}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1">
+                      <span>Ход {duelData.currentTurn}: {activePlayer.name}</span>
+                      <span className="flex items-center gap-2 text-base text-muted-foreground font-medium">
+                        <Ruler className="w-4 h-4"/>
+                        Дистанция: {duelData.distance}м
+                      </span>
+                    </div>
                     <span className={`text-sm font-medium ${isMyTurn ? 'text-accent' : 'text-muted-foreground'}`}>
                         {isMyTurn ? "Ваш ход" : `Ход ${opponentPlayer.name}`}
                     </span>
@@ -1589,6 +1625,7 @@ export default function DuelPage() {
                         player={activePlayer}
                         opponent={opponentPlayer}
                         onSubmit={executeTurn}
+                        distance={duelData.distance}
                     />
                 ) : (
                     <div className="text-center text-muted-foreground p-4 md:p-8">

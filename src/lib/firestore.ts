@@ -2,7 +2,7 @@
 import { getFirestore, doc, setDoc, updateDoc, getDoc, collection } from 'firebase/firestore';
 import { app } from './firebase';
 import type { DuelState, CharacterStats } from '@/types/duel';
-import { initialPlayerStats } from './rules';
+import { initialPlayerStats, RULES } from './rules';
 
 export const firestore = app ? getFirestore(app) : null;
 
@@ -23,6 +23,7 @@ export async function createDuel(player1Id: string, player1Name: string): Promis
         log: [],
         createdAt: new Date(),
         duelStarted: false,
+        distance: RULES.INITIAL_DISTANCE,
     };
 
     await setDoc(duelRef, initialState);
