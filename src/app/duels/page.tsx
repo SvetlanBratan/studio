@@ -35,7 +35,7 @@ export default function DuelsPage() {
     if (!user || isCreating) return;
     setIsCreating(true);
     try {
-      const duelId = await createDuel(user.uid, user.displayName || `Игрок ${user.uid.substring(0, 5)}`);
+      const duelId = await createDuel(user.uid, user.displayName || "Игрок 1");
       if (duelId) {
         router.push(`/duels/${duelId}`);
       } else {
@@ -74,7 +74,7 @@ export default function DuelsPage() {
             {user && (
               <div className="flex items-center gap-2 md:gap-4">
                   <span className="text-sm text-muted-foreground hidden sm:inline">
-                      {user.displayName || user.email || 'Гость'}
+                      {user.isAnonymous ? 'Гость' : (user.displayName || user.email)}
                   </span>
                   <Button onClick={signOut} variant="ghost" size="icon" aria-label="Выйти">
                       <LogOut className="w-5 h-5" />

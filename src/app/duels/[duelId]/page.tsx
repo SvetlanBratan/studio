@@ -54,7 +54,7 @@ export default function DuelPage() {
   useEffect(() => {
     if (isLocalSolo && !localDuelState && user) {
         const player1 = initialPlayerStats(user.uid, user.displayName || 'Игрок 1');
-        const player2 = initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2 (Соло)');
+        const player2 = initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
         setLocalDuelState({
             player1,
             player2,
@@ -1556,7 +1556,6 @@ export default function DuelPage() {
   }
 
   if (!user) {
-    // This case should not happen if useAuth() redirects, but it's a safeguard
     return null;
   }
   
@@ -1572,7 +1571,6 @@ export default function DuelPage() {
     );
   }
 
-  // Add a crucial null check for duelData
   if (!duelData) {
       return (
         <div className="flex items-center justify-center min-h-screen">
@@ -1598,7 +1596,7 @@ export default function DuelPage() {
       }
 
       // 3. Waiting for Player 2 to join
-      if (!duelData.player2) {
+      if (isPlayer1 && !duelData.player2) {
         return (
           <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
               <Card className="w-full max-w-md">
@@ -1624,12 +1622,12 @@ export default function DuelPage() {
       }
       
       // 4. Player 2 setup
-      if (isPlayer2 && !duelData.player2.isSetupComplete) {
+      if (isPlayer2 && duelData.player2 && !duelData.player2.isSetupComplete) {
           return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
       }
       
       // 5. Waiting for opponent to finish setup
-      if ((isPlayer1 && !duelData.player2.isSetupComplete) || (isPlayer2 && !duelData.player1.isSetupComplete)) {
+      if ((isPlayer1 && duelData.player2 && !duelData.player2.isSetupComplete) || (isPlayer2 && !duelData.player1.isSetupComplete)) {
            return (
               <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
                   <Card className="w-full max-w-md">
