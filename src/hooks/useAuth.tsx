@@ -22,7 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const router = useRouter();
   const pathname = usePathname();
 
@@ -37,27 +37,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
-      if (!currentUser && pathname !== '/login') {
-          router.push('/login');
-      } else if (currentUser && pathname === '/login') {
-          router.push('/');
-      }
+      setLoading(false); // Set loading to false after checking auth state
     });
 
     return () => unsubscribe();
-  }, [router, pathname]);
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user && pathname !== '/login') {
+        router.push('/login');
+      } else if (user && pathname === '/login') {
+        router.push('/duels');
+      }
+    }
+  }, [user, loading, router, pathname]);
 
   const signInAsGuest = async () => {
     if (!isFirebaseEnabled || !auth) return;
     setLoading(true);
     try {
       await signInAnonymously(auth);
-      router.push('/');
+      // The useEffect above will handle the redirect
     } catch (error) {
       console.error("Ошибка анонимного входа:", error);
-    } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -66,23 +70,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       await firebaseSignOut(auth);
-      router.push('/login');
+      // The useEffect above will handle the redirect
     } catch (error) {
       console.error("Ошибка выхода:", error);
-    } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
   const value = { user, loading, signInAsGuest, signOut };
 
+  // While loading, or if redirecting, show a spinner to prevent content flash
+  if (loading || (!user && pathname !== '/login') || (user && pathname ==='/login')) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <AuthContext.Provider value={value}>
-      {loading ? (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
-        </div>
-      ) : children}
+      {children}
     </AuthContext.Provider>
   );
 }
@@ -94,5 +102,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
