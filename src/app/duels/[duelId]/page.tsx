@@ -968,7 +968,7 @@ export default function DuelPage() {
                     activePlayer.od -= cost;
                     const weapon = WEAPONS[activePlayer.weapon];
                     damageDealt = calculateDamage(weapon.damage, false);
-                    applyDamage(activePlayer, opponent, damageDealt, false);
+                    applyDamage(activePlayer, opponent, damageDealt, true, undefined, true);
                     activePlayer.cooldowns.physical_attack = RULES.COOLDOWNS.physical_attack;
                     break;
                 }
