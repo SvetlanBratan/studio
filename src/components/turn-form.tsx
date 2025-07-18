@@ -5,16 +5,18 @@ import { useState } from 'react';
 import type { Action, CharacterStats, ActionType, PrayerEffectType } from '@/types/duel';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
-import { Trash2, Send, ShieldCheck, HeartPulse, SparklesIcon } from 'lucide-react';
+import { Trash2, Send, ShieldCheck, HeartPulse, SparklesIcon, Heart, Zap } from 'lucide-react';
 import { RULES, getActionLabel, RACES } from '@/lib/rules';
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
 interface TurnFormProps {
@@ -26,6 +28,7 @@ interface TurnFormProps {
 export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) {
   const [actions, setActions] = useState<Action[]>([]);
   const [isPrayerDialogOpen, setIsPrayerDialogOpen] = useState(false);
+  const [isDruidAbilityOpen, setIsDruidAbilityOpen] = useState(false);
   const [selectValue, setSelectValue] = useState('');
   const playerRaceInfo = RACES.find(r => r.name === player.race);
 
@@ -34,6 +37,11 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
 
     if (type === 'prayer') {
       setIsPrayerDialogOpen(true);
+      return;
+    }
+    
+    if (type === 'racial_Песня стихий') {
+      setIsDruidAbilityOpen(true);
       return;
     }
 
@@ -61,6 +69,14 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
     }
     setIsPrayerDialogOpen(false);
     setSelectValue('');
+  };
+
+  const handleDruidAbilitySelect = (subAction: 'damage' | 'heal') => {
+      if (actions.length < RULES.MAX_ACTIONS_PER_TURN) {
+          setActions([...actions, { type: 'racial_ability', payload: { name: 'Песня стихий', subAction } }]);
+      }
+      setIsDruidAbilityOpen(false);
+      setSelectValue('');
   };
 
   const removeAction = (index: number) => {
@@ -103,14 +119,17 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
 
   const racialAbilities = playerRaceInfo?.activeAbilities.map(ability => {
     const odCost = (ability.cost?.od ?? 0) + odPenalty;
+    const value = ability.name === 'Песня стихий' ? `racial_${ability.name}` : `racial_${ability.name}`;
+    
     return {
-      value: `racial_${ability.name}`,
+      value: value,
       label: `${ability.name}`,
       disabled: (player.cooldowns[ability.name] ?? 0) > 0 || (ability.cost?.om ?? 0) > player.om || odCost > player.od || actions.some(a => a.type === 'racial_ability' && a.payload.name === ability.name),
     }
   }) || [];
 
-  const spellActions: ActionType[] = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell'];
+  const spellActions: ActionType[] = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield'];
+  const spellActionsWithElement = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield', 'racial_ability'];
 
   return (
     <>
@@ -123,16 +142,16 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
                   <div key={index} className="flex flex-col sm:flex-row items-center justify-between gap-2 p-2 border rounded-lg bg-background/50">
                       <span className="flex-grow">{index + 1}. {getActionLabel(action.type, action.payload)}</span>
                       <div className="flex items-center gap-2">
-                        {(spellActions.includes(action.type) || action.type === 'shield') && player.elementalKnowledge.length > 0 && (
+                        {spellActionsWithElement.includes(action.type) && action.payload?.name !== 'Песня стихий' && player.elementalKnowledge.length > 0 && (
                           <Select
-                            value={action.payload?.element || 'physical'}
+                            value={action.payload?.element || (action.type === 'racial_ability' ? undefined : 'physical')}
                             onValueChange={(element) => updateActionPayload(index, { element })}
                           >
                             <SelectTrigger className="w-full sm:w-[180px] h-8">
                               <SelectValue placeholder="Стихия..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="physical">Физический урон</SelectItem>
+                              {action.type !== 'racial_ability' && <SelectItem value="physical">Физический урон</SelectItem>}
                               {player.elementalKnowledge.map(el => (
                                 <SelectItem key={el} value={el}>{el}</SelectItem>
                               ))}
@@ -211,6 +230,31 @@ export default function TurnForm({ player, opponent, onSubmit }: TurnFormProps) 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={isDruidAbilityOpen} onOpenChange={setIsDruidAbilityOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Песня стихий</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Выберите, как использовать способность: нанести урон или исцелить себя.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex flex-col space-y-2">
+                <Button variant="outline" className="justify-start" onClick={() => handleDruidAbilitySelect('damage')}>
+                    <Zap className="mr-2 h-4 w-4 text-destructive" />
+                    Нанести 45 урона
+                </Button>
+                <Button variant="outline" className="justify-start" onClick={() => handleDruidAbilitySelect('heal')}>
+                    <Heart className="mr-2 h-4 w-4 text-green-500" />
+                    Восстановить 45 ОЗ
+                </Button>
+            </div>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Отмена</AlertDialogCancel>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
     </>
   );
 }
