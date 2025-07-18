@@ -35,7 +35,7 @@ export default function DuelsPage() {
     if (!user) return;
     setIsCreating(true);
     try {
-      const duelId = await createDuel(user.uid, user.displayName || 'Игрок 1');
+      const duelId = await createDuel(user.uid, user.displayName || `Игрок ${user.uid.substring(0, 5)}`);
       router.push(`/duels/${duelId}`);
     } catch (error) {
       console.error("Не удалось создать дуэль:", error);

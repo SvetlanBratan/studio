@@ -255,5 +255,3 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
     </Dialog>
   );
 }
-
-    
