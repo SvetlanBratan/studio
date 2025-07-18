@@ -1,7 +1,7 @@
 
 import { getFirestore, doc, setDoc, updateDoc, getDoc, collection, addDoc } from 'firebase/firestore';
 import { app } from './firebase';
-import type { DuelState, CharacterStats } from '@/types/duel';
+import type { DuelState } from '@/types/duel';
 import { initialPlayerStats, RULES } from './rules';
 
 export const firestore = app ? getFirestore(app) : null;
