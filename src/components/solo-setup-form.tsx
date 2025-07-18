@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -35,7 +36,7 @@ export default function SoloSetupForm({ player1, player2, onSave, onCancel }: So
             Настройте обоих персонажей для начала сольного поединка.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4 max-h-[70vh] overflow-y-auto px-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4 max-h-[85vh] overflow-y-auto px-2 pr-4">
             <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><User/>Игрок 1</h3>
                 <CharacterSetupForm
