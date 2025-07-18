@@ -12,6 +12,7 @@ import type { DuelState, Turn, Action, CharacterStats, WeaponType } from '@/type
 import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import CharacterSetupModal from '@/components/character-setup-modal';
+import SoloSetupForm from '@/components/solo-setup-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { updateDuel, joinDuel } from '@/lib/firestore';
 import { deepClone } from '@/lib/utils';
+import DuelLog from '@/components/duel-log';
+
 
 const getPhysicalCondition = (oz: number, maxOz: number): string => {
     const healthPercentage = (oz / maxOz) * 100;
@@ -100,6 +103,16 @@ export default function DuelPage() {
         newState.activePlayerId = Math.random() < 0.5 ? 'player1' : 'player2';
     }
 
+    handleUpdateDuelState(newState);
+  };
+
+  const handleSoloSetupComplete = (player1: CharacterStats, player2: CharacterStats) => {
+    const newState: Partial<DuelState> = {
+        player1: { ...player1, isSetupComplete: true },
+        player2: { ...player2, isSetupComplete: true },
+        duelStarted: true,
+        activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2',
+    };
     handleUpdateDuelState(newState);
   };
   
@@ -1531,7 +1544,7 @@ export default function DuelPage() {
     );
   }
 
-  if (!duelData || !duelData.player1) {
+  if (!duelData || !duelData.player1 || !duelData.player2) {
       return (
         <div className="flex items-center justify-center min-h-screen">
           <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
@@ -1540,66 +1553,66 @@ export default function DuelPage() {
   }
 
   // --- STAGE LOGIC ---
-  if (!duelData.player1.isSetupComplete) {
-    return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+  
+  if (isLocalSolo && !duelData.duelStarted) {
+    return <SoloSetupForm player1={duelData.player1} player2={duelData.player2} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
   }
   
-  if (!duelData.player2) {
-    // This is for online duels, waiting for P2 to join
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
-          <Card className="w-full max-w-md">
-              <CardHeader>
-                  <CardTitle>Ожидание второго игрока...</CardTitle>
-                  <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                      <Input value={duelId} readOnly className="flex-1" />
-                      <Button onClick={copyDuelId} size="icon">
-                          {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
-                      </Button>
-                  </div>
-                  <Button onClick={() => router.push('/duels')} variant="outline">
-                      <ArrowLeft className="mr-2" />
-                      Выбрать другую дуэль
-                  </Button>
-              </CardContent>
-          </Card>
-      </div>
-    );
-  }
+  if (!isLocalSolo) {
+      if (!duelData.player1.isSetupComplete && user.uid === duelData.player1.id) {
+        return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+      }
 
-  if (!duelData.player2.isSetupComplete) {
-    const localPlayerIsP1 = user?.uid === duelData.player1.id;
-    const localPlayerIsP2 = user?.uid === duelData.player2.id;
-    const characterToSetup = isLocalSolo ? duelData.player2 : (localPlayerIsP2 ? duelData.player2 : null);
-
-    if (characterToSetup) {
-        return <CharacterSetupModal character={characterToSetup} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
-    } else {
-        // Online duel and this user is not P2, so wait for P2 to set up
+      if (!duelData.player2) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
-                <Card className="w-full max-w-md">
-                    <CardHeader>
-                        <CardTitle className="flex items-center justify-center gap-2">
-                            <Settings2 className="animate-spin" />
-                            Ожидание оппонента
-                        </CardTitle>
-                        <CardDescription>
-                            Ваш оппонент еще настраивает своего персонажа.
-                        </CardDescription>
-                    </CardHeader>
-                </Card>
-            </div>
+          <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+              <Card className="w-full max-w-md">
+                  <CardHeader>
+                      <CardTitle>Ожидание второго игрока...</CardTitle>
+                      <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                          <Input value={duelId} readOnly className="flex-1" />
+                          <Button onClick={copyDuelId} size="icon">
+                              {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
+                          </Button>
+                      </div>
+                      <Button onClick={() => router.push('/duels')} variant="outline">
+                          <ArrowLeft className="mr-2" />
+                          Выбрать другую дуэль
+                      </Button>
+                  </CardContent>
+              </Card>
+          </div>
         );
-    }
+      }
+      
+      if (!duelData.player2.isSetupComplete) {
+        if (user.uid === duelData.player2.id) {
+            return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+        } else {
+             return (
+                <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+                    <Card className="w-full max-w-md">
+                        <CardHeader>
+                            <CardTitle className="flex items-center justify-center gap-2">
+                                <Settings2 className="animate-spin" />
+                                Ожидание оппонента
+                            </CardTitle>
+                            <CardDescription>
+                                Ваш оппонент еще настраивает своего персонажа.
+                            </CardDescription>
+                        </CardHeader>
+                    </Card>
+                </div>
+            );
+        }
+      }
   }
 
 
   // At this point, setup is complete for both players.
-  // The main duel UI can be rendered.
   if (!duelData.duelStarted) {
       // This can happen briefly for online duels
       return <div className="flex items-center justify-center min-h-screen"><div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div></div>;
