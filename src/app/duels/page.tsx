@@ -69,7 +69,7 @@ export default function DuelsPage() {
             {user && (
               <div className="flex items-center gap-2 md:gap-4">
                   <span className="text-sm text-muted-foreground hidden sm:inline">
-                      {user.isAnonymous ? 'Гость' : (user.displayName || user.email)}
+                      {user.displayName || user.email || 'Гость'}
                   </span>
                   <Button onClick={signOut} variant="ghost" size="icon" aria-label="Выйти">
                       <LogOut className="w-5 h-5" />

@@ -27,24 +27,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    let unsubscribe: () => void;
-    
     if (!isFirebaseEnabled) {
-      const mockUser = { uid: 'mock-user-' + Math.random(), displayName: 'Guest', isAnonymous: true } as User;
-      setUser(mockUser);
       setLoading(false);
-    } else {
-      unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
-        setLoading(false);
-      });
+      return;
     }
+    
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
 
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
