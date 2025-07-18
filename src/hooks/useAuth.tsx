@@ -22,34 +22,38 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // Start with loading true
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
     if (!isFirebaseEnabled) {
-      setLoading(false);
-      // Mock user for development without firebase
-      const mockUser = { uid: 'mock-user', displayName: 'Guest' } as User;
+      // For development without firebase, create a mock user.
+      const mockUser = { uid: 'mock-user', displayName: 'Guest', isAnonymous: true } as User;
       setUser(mockUser);
+      setLoading(false);
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false); // Set loading to false after checking auth state
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!loading) {
-      if (!user && pathname !== '/login') {
-        router.push('/login');
-      } else if (user && pathname === '/login') {
-        router.push('/duels');
-      }
+    if (loading) {
+      return; // Wait until loading is false to check for redirects
+    }
+
+    const isAuthPage = pathname === '/login';
+    
+    if (!user && !isAuthPage) {
+      router.push('/login');
+    } else if (user && isAuthPage) {
+      router.push('/duels');
     }
   }, [user, loading, router, pathname]);
 
@@ -61,7 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // The useEffect above will handle the redirect
     } catch (error) {
       console.error("Ошибка анонимного входа:", error);
-      setLoading(false);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -73,20 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // The useEffect above will handle the redirect
     } catch (error) {
       console.error("Ошибка выхода:", error);
-      setLoading(false);
+    } finally {
+        setLoading(false);
     }
   };
 
   const value = { user, loading, signInAsGuest, signOut };
-
-  // While loading, or if redirecting, show a spinner to prevent content flash
-  if (loading || (!user && pathname !== '/login') || (user && pathname ==='/login')) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
-      </div>
-    );
-  }
 
   return (
     <AuthContext.Provider value={value}>

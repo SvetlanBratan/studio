@@ -1488,7 +1488,8 @@ export default function DuelPage() {
   }
 
   if (!user) {
-    return null; // Should be redirected by useAuth
+    // This case should not happen if useAuth() redirects, but it's a safeguard
+    return null;
   }
   
   if (duelError) {
@@ -1511,14 +1512,17 @@ export default function DuelPage() {
       );
   }
   
-  const currentPlayerId = user.uid === duelData.player1.id ? 'player1' : 'player2';
-  const player = (isLocalSolo || user.uid === duelData.player1.id) ? duelData.player1 : duelData.player2;
-  const opponent = (isLocalSolo || user.uid === duelData.player1.id) ? duelData.player2 : duelData.player1;
-
+  const currentPlayerIsP1 = user.uid === duelData.player1.id;
+  const localPlayer = currentPlayerIsP1 ? duelData.player1 : duelData.player2;
+  const opponentPlayer = currentPlayerIsP1 ? duelData.player2 : duelData.player1;
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
-  const opponentPlayer = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
-  const isMyTurn = isLocalSolo || (duelData.activePlayerId === currentPlayerId && player.id === activePlayer.id);
+  const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
 
+  const isMyTurn = isLocalSolo || localPlayer.id === activePlayer.id;
+
+  // --- Render logic based on duel stage ---
+
+  // 1. Online game, waiting for opponent to join
   if (!isLocalSolo && !duelData.player2?.id) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
@@ -1544,15 +1548,18 @@ export default function DuelPage() {
     );
   }
 
-  if (!player.isSetupComplete) {
-      return <CharacterSetupModal character={player} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+  // 2. A player needs to set up their character
+  if (!localPlayer.isSetupComplete) {
+      return <CharacterSetupModal character={localPlayer} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
   }
   
-  if (isLocalSolo && !opponent.isSetupComplete) {
-      return <CharacterSetupModal character={opponent} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+  // 3. In solo mode, opponent needs to set up
+  if (isLocalSolo && !duelData.player2.isSetupComplete) {
+      return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
   }
-
-  if (!isLocalSolo && !duelData.duelStarted) {
+  
+  // 4. Waiting for opponent to finish setup
+  if (!isLocalSolo && !opponentPlayer.isSetupComplete) {
      return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
             <Card className="w-full max-w-md">
@@ -1570,6 +1577,7 @@ export default function DuelPage() {
       );
   }
 
+  // --- Main Duel Interface ---
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="p-4 border-b border-border shadow-md bg-card">
@@ -1622,7 +1630,7 @@ export default function DuelPage() {
                       </span>
                     </div>
                     <span className={`text-sm font-medium ${isMyTurn ? 'text-accent' : 'text-muted-foreground'}`}>
-                        {isMyTurn ? "Ваш ход" : `Ход ${opponentPlayer.name}`}
+                        {isMyTurn ? "Ваш ход" : `Ход ${currentOpponent.name}`}
                     </span>
                 </CardTitle>
                 </CardHeader>
@@ -1630,7 +1638,7 @@ export default function DuelPage() {
                 {isMyTurn ? (
                     <TurnForm
                         player={activePlayer}
-                        opponent={opponentPlayer}
+                        opponent={currentOpponent}
                         onSubmit={executeTurn}
                         distance={duelData.distance}
                     />
