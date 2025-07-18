@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Dices, LogIn, LogOut, Swords, User as UserIcon } from 'lucide-react';
 
 export default function DuelsPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [joinDuelId, setJoinDuelId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -32,17 +32,15 @@ export default function DuelsPage() {
 
 
   const handleCreateDuel = async () => {
-    if (!user || isCreating) return;
+    if (!user || isCreating || loading) return;
     setIsCreating(true);
     try {
       const duelId = await createDuel(user.uid, user.displayName || `Игрок ${user.uid.substring(0, 5)}`);
       router.push(`/duels/${duelId}`);
-      // No need to reset isCreating here as we are navigating away.
-      // However, if navigation fails or user comes back, it should be reset.
-      // For simplicity, we can let it be, but a more robust solution might reset it.
     } catch (error) {
       console.error("Не удалось создать дуэль:", error);
-      setIsCreating(false); // Reset on error
+    } finally {
+        setIsCreating(false);
     }
   };
 
