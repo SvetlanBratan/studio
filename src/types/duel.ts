@@ -30,6 +30,22 @@ export interface InventoryItem {
     amount: number;
 }
 
+export type WeaponType = 'Меч' | 'Топор' | 'Копье' | 'Кинжал' | 'Сюрикены' | 'Лук' | 'Кулаки';
+export type ArmorType = 'Тканевая' | 'Кожаная' | 'Кольчуга' | 'Латная' | 'Зачарованная';
+
+export interface Weapon {
+    name: WeaponType;
+    damage: number;
+    range: number; // in meters
+}
+
+export interface Armor {
+    name: ArmorType;
+    shieldBonus: number;
+    odPenalty: number;
+}
+
+
 export interface RaceAbility {
     name:string;
     description: string;
@@ -63,13 +79,15 @@ export interface CharacterStats {
   name: string;
   race: string;
   reserve: ReserveLevel;
-  elementalKnowledge: string[]; // Changed from string to string[]
-  faithLevel: number; // The numeric value from -1 to 10
-  faithLevelName: FaithLevel; // The string name of the faith level
+  elementalKnowledge: string[];
+  faithLevel: number;
+  faithLevelName: FaithLevel;
   physicalCondition: string;
   bonuses: string[];
   penalties: string[];
   inventory: InventoryItem[];
+  weapon: WeaponType;
+  armor: ArmorType;
   oz: number; // Health
   maxOz: number;
   om: number; // Mana
@@ -82,6 +100,7 @@ export interface CharacterStats {
     strongSpell: number; // turns remaining
     item: number; // turns remaining
     prayer: number; // turns remaining
+    physical_attack: number;
     [key: string]: number; // For racial abilities
   };
   isSetupComplete: boolean;
@@ -89,7 +108,7 @@ export interface CharacterStats {
 
 export type PrayerEffectType = 'eternal_shield' | 'full_heal_oz' | 'full_heal_om';
 
-export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'household_spell' | 'dodge' | 'use_item' | 'shield' | 'prayer' | 'remove_effect' | 'rest' | 'racial_ability' | 'move';
+export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'household_spell' | 'dodge' | 'use_item' | 'shield' | 'prayer' | 'remove_effect' | 'rest' | 'racial_ability' | 'move' | 'physical_attack';
 
 export interface Action {
   type: ActionType;

@@ -1,5 +1,6 @@
 
-import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element, CharacterStats } from "@/types/duel";
+
+import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element, CharacterStats, WeaponType, ArmorType, Weapon, Armor } from "@/types/duel";
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
 
@@ -27,6 +28,24 @@ export const RESERVE_LEVELS: Record<ReserveLevel, number> = {
   'Архимаг': 540,
   'Архимагистр': 630,
   'Божественный сын': 1890,
+};
+
+export const WEAPONS: Record<WeaponType, Weapon> = {
+    'Меч': { name: 'Меч', damage: 35, range: 3 },
+    'Топор': { name: 'Топор', damage: 40, range: 3 },
+    'Копье': { name: 'Копье', damage: 30, range: 5 },
+    'Кинжал': { name: 'Кинжал', damage: 20, range: 10 },
+    'Сюрикены': { name: 'Сюрикены', damage: 25, range: 20 },
+    'Лук': { name: 'Лук', damage: 30, range: 30 },
+    'Кулаки': { name: 'Кулаки', damage: 10, range: 1 },
+};
+
+export const ARMORS: Record<ArmorType, Armor> = {
+    'Тканевая': { name: 'Тканевая', shieldBonus: 0, odPenalty: 0 },
+    'Кожаная': { name: 'Кожаная', shieldBonus: 20, odPenalty: 20 },
+    'Кольчуга': { name: 'Кольчуга', shieldBonus: 30, odPenalty: 30 },
+    'Латная': { name: 'Латная', shieldBonus: 50, odPenalty: 40 },
+    'Зачарованная': { name: 'Зачарованная', shieldBonus: 100, odPenalty: 40 },
 };
 
 export const RACES: Race[] = [
@@ -141,7 +160,8 @@ export const getActionLabel = (type: ActionType, payload?: any): string => {
       remove_effect: "Снять эффект",
       rest: "Отдых",
       racial_ability: "Расовая способность",
-      move: "Передвижение"
+      move: "Передвижение",
+      physical_attack: "Атака оружием"
   };
 
   let label = labels[type] || type;
@@ -150,8 +170,12 @@ export const getActionLabel = (type: ActionType, payload?: any): string => {
     return `${label}: ${payload.distance > 0 ? 'Разрыв' : 'Сокращение'} на ${Math.abs(payload.distance)}м`;
   }
   
-  if ((type.includes('spell') || type === 'shield') && payload?.element && payload.element !== 'physical') {
+  if ((type.includes('spell') || type === 'shield') && payload?.element) {
     label += ` (${payload.element})`;
+  }
+
+  if (type === 'physical_attack' && payload?.weapon) {
+      label += ` (${payload.weapon})`
   }
 
   if (type === 'prayer' && payload?.effect) {
@@ -204,12 +228,14 @@ export const RULES = {
     prayer: 30,
     order_familiar: 30,
     move_per_meter: 1,
+    physical_attack: 25,
   },
 
   COOLDOWNS: {
     strongSpell: 2,
     item: 3,
     prayer: 4,
+    physical_attack: 1,
   },
 
   SPELL_RANGES: {
@@ -300,6 +326,8 @@ export const initialPlayerStats = (id: string, name: string): CharacterStats => 
         bonuses,
         penalties: [],
         inventory: [],
+        weapon: 'Кулаки',
+        armor: 'Тканевая',
         oz: maxOz,
         maxOz: maxOz,
         om: maxOm,
@@ -308,7 +336,7 @@ export const initialPlayerStats = (id: string, name: string): CharacterStats => 
         maxOd: 100,
         shield: { hp: 0, element: null },
         isDodging: false,
-        cooldowns: { strongSpell: 0, item: 0, prayer: 0 },
+        cooldowns: { strongSpell: 0, item: 0, prayer: 0, physical_attack: 0 },
         isSetupComplete: false,
     };
 };

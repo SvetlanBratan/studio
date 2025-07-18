@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import { useState } from 'react';
-import type { CharacterStats, ReserveLevel, FaithLevel, InventoryItem } from '@/types/duel';
+import type { CharacterStats, ReserveLevel, FaithLevel, InventoryItem, WeaponType, ArmorType } from '@/types/duel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Checkbox } from './ui/checkbox';
 import { ScrollArea } from './ui/scroll-area';
 import { PlusCircle, Trash2, Settings, ShieldCheck } from 'lucide-react';
-import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz, getFaithLevelFromString } from '@/lib/rules';
+import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz, getFaithLevelFromString, ARMORS, WEAPONS } from '@/lib/rules';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from './ui/dialog';
 import { Badge } from './ui/badge';
 
@@ -38,7 +39,7 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
     setEditableCharacter(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (field: 'reserve' | 'faithLevelName' | 'race', value: string) => {
+  const handleSelectChange = (field: 'reserve' | 'faithLevelName' | 'race' | 'weapon' | 'armor', value: string) => {
     setEditableCharacter(prev => {
         let newState = { ...prev };
         
@@ -63,6 +64,12 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
         }
         if (field === 'faithLevelName') {
             newState.faithLevel = getFaithLevelFromString(value as FaithLevel);
+        }
+        if (field === 'armor') {
+            const armor = ARMORS[value as ArmorType];
+            if(armor) {
+                newState.shield.hp = armor.shieldBonus;
+            }
         }
         return newState;
     });
@@ -148,7 +155,7 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-3xl">
             <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                     <Settings />
@@ -158,7 +165,7 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
                     Выберите расу, резерв и другие параметры вашего персонажа перед началом дуэли.
                 </DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 py-4">
                 <div className="space-y-4">
                     <div className="grid w-full items-center gap-1.5">
                         <Label htmlFor="name">Имя</Label>
@@ -198,7 +205,27 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
                       </div>
                   </div>
                 </div>
+
                  <div className="space-y-4">
+                    <div className="grid w-full items-center gap-1.5">
+                        <Label>Оружие</Label>
+                        <Select value={editableCharacter.weapon} onValueChange={(v) => handleSelectChange('weapon', v as WeaponType)}>
+                            <SelectTrigger><SelectValue placeholder="Оружие" /></SelectTrigger>
+                            <SelectContent>
+                                {Object.values(WEAPONS).map(w => <SelectItem key={w.name} value={w.name}>{w.name} (Урон: {w.damage}, Дальность: {w.range}м)</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid w-full items-center gap-1.5">
+                        <Label>Броня</Label>
+                        <Select value={editableCharacter.armor} onValueChange={(v) => handleSelectChange('armor', v as ArmorType)}>
+                            <SelectTrigger><SelectValue placeholder="Броня" /></SelectTrigger>
+                            <SelectContent>
+                                {Object.values(ARMORS).map(a => <SelectItem key={a.name} value={a.name}>{a.name} (Щит: {a.shieldBonus}, Штраф ОД: {a.odPenalty})</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                      <div className="grid w-full items-center gap-1.5">
                         <Label>Знания стихий</Label>
                         <Popover>
@@ -239,6 +266,8 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
                             </PopoverContent>
                         </Popover>
                     </div>
+                </div>
+                <div className="space-y-4">
                     {renderInventoryEditor()}
                 </div>
             </div>

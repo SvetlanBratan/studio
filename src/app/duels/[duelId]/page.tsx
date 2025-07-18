@@ -1,13 +1,14 @@
 
+
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
 
-import type { DuelState, Turn, Action, CharacterStats } from '@/types/duel';
+import type { DuelState, Turn, Action, CharacterStats, WeaponType } from '@/types/duel';
 import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import DuelLog from '@/components/duel-log';
@@ -16,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS } from '@/lib/rules';
+import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS, WEAPONS, ARMORS } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { updateDuel, joinDuel } from '@/lib/firestore';
@@ -41,12 +42,12 @@ export default function DuelPage() {
   const [localDuelState, setLocalDuelState] = useState<DuelState | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const duelRef = !isLocalSolo ? doc(firestore, 'duels', duelId) : null;
+  // This hook must be called unconditionally at the top level.
+  const duelRef = isLocalSolo ? null : doc(firestore, 'duels', duelId);
   const [onlineDuel, onlineDuelLoading, onlineDuelError] = useDocumentData(duelRef);
 
   const duelData = isLocalSolo ? localDuelState : (onlineDuel as DuelState | undefined);
-  const duelLoading = isLocalSolo ? false : onlineDuelLoading;
-  const duelError = isLocalSolo ? null : onlineDuelError;
+  const duelLoading = authLoading || (isLocalSolo ? false : onlineDuelLoading);
 
   useEffect(() => {
     if (isLocalSolo && !localDuelState && user) {
@@ -71,7 +72,17 @@ export default function DuelPage() {
     if (!isLocalSolo && user && onlineDuel && !onlineDuel.player2 && onlineDuel.player1.id !== user.uid) {
         joinDuel(duelId, user.uid, user.displayName || "Игрок 2");
     }
-  }, [user, onlineDuel, duelId, isLocalSolo, router]);
+  }, [user, onlineDuel, duelId, isLocalSolo]);
+
+  const handleUpdateDuelState = useCallback((updatedDuel: Partial<DuelState>) => {
+    if (isLocalSolo) {
+        setLocalDuelState(prev => prev ? { ...prev, ...updatedDuel } as DuelState : null);
+    } else {
+        if (duelId) {
+            updateDuel(duelId, updatedDuel);
+        }
+    }
+  }, [isLocalSolo, duelId]);
 
   useEffect(() => {
     if (duelData && duelData.player1.isSetupComplete && duelData.player2?.isSetupComplete && !duelData.duelStarted) {
@@ -80,34 +91,20 @@ export default function DuelPage() {
             activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2'
         });
     }
-  }, [duelData]);
+  }, [duelData, handleUpdateDuelState]);
 
-  const handleUpdateDuelState = (updatedDuel: Partial<DuelState>) => {
-    if (isLocalSolo) {
-        setLocalDuelState(prev => prev ? { ...prev, ...updatedDuel } as DuelState : null);
-    } else {
-        if (duelId) {
-            updateDuel(duelId, updatedDuel);
-        }
-    }
-  }
+
 
   const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
     if (!duelData) return;
     const isPlayer1 = duelData.player1.id === updatedCharacter.id;
     const key = isPlayer1 ? 'player1' : 'player2';
-
-    if (isLocalSolo) {
-        setLocalDuelState(prev => {
-            if (!prev) return null;
-            return {
-                ...prev,
-                [key]: updatedCharacter
-            }
-        });
-    } else {
-        updateDuel(duelId, { [key]: updatedCharacter });
-    }
+    
+    const updatedState = {
+        [key]: { ...updatedCharacter, isSetupComplete: true }
+    };
+    
+    handleUpdateDuelState(updatedState);
   };
   
   const copyDuelId = () => {
@@ -802,6 +799,9 @@ export default function DuelPage() {
                         penalty = wound.penalty;
                     }
                 }
+                const armorPenalty = ARMORS[player.armor]?.odPenalty ?? 0;
+                penalty += armorPenalty;
+
                  if (player.bonuses.includes('Животная реакция (-5 ОД на физические действия)') || player.bonuses.includes('Ловкие конечности (-5 ОД на действия)') || player.bonuses.includes('Галоп (-5 ОД на действия)')) {
                     penalty -= 5;
                 }
@@ -825,6 +825,11 @@ export default function DuelPage() {
                 }
             }
 
+            if ((isSpellAction || isHouseholdSpell) && activePlayer.elementalKnowledge.length === 0) {
+                 turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: у персонажа нет знаний стихий.`);
+                 return;
+            }
+
             if (isSpellAction || isHouseholdSpell) {
                 const spellRange = RULES.SPELL_RANGES[activePlayer.reserve];
                 if (newDistance > spellRange) {
@@ -833,11 +838,11 @@ export default function DuelPage() {
                 }
             }
 
-            const calculateDamage = (spellType: 'household' | 'small' | 'medium' | 'strong', isPhysical: boolean = false, spellElement?: string): number => {
-                let damage = RULES.RITUAL_DAMAGE[activePlayer.reserve]?.[spellType] ?? 0;
+            const calculateDamage = (baseDamage: number, isSpell: boolean = false, spellElement?: string): number => {
+                let damage = baseDamage;
                 
                 if (opponent.penalties.includes('Уязвимость')) {
-                    const bonus = RULES.DAMAGE_BONUS.vulnerability[spellType];
+                    const bonus = isSpell ? RULES.DAMAGE_BONUS.vulnerability.medium : 5; // Placeholder for physical
                     damage += bonus;
                     turnLog.push(`Эффект "Уязвимость" увеличивает урон на ${bonus}.`);
                 }
@@ -857,11 +862,11 @@ export default function DuelPage() {
                         turnLog.push(`Пассивная способность (Нимфилус): "Трансформация" увеличивает урон на 30.`);
                     }
                 }
-                 if (activePlayer.bonuses.includes('Единение с духами (+10 к урону от стихийных атак)') && !isPhysical) {
+                 if (activePlayer.bonuses.includes('Единение с духами (+10 к урону от стихийных атак)') && isSpell) {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Псилаты): "Единение с духами" увеличивает урон на 10.`);
                 }
-                 if (activePlayer.bonuses.includes('Стихийная преданность (+5 урона при атаке своей стихией)') && !isPhysical && spellElement && activePlayer.elementalKnowledge.includes(spellElement)) {
+                 if (activePlayer.bonuses.includes('Стихийная преданность (+5 урона при атаке своей стихией)') && isSpell && spellElement && activePlayer.elementalKnowledge.includes(spellElement)) {
                     damage += 5;
                     turnLog.push(`Пассивная способность (Нимфилус): "Стихийная преданность" увеличивает урон на 5.`);
                 }
@@ -873,8 +878,8 @@ export default function DuelPage() {
                     damage += 5;
                     turnLog.push(`Пассивная способность (Саламандры): "Пылающий дух" увеличивает урон на 5.`);
                 }
-                if (activePlayer.bonuses.includes('Боевая магия')) {
-                    const bonus = RULES.DAMAGE_BONUS.battle_magic[spellType];
+                if (isSpell && activePlayer.bonuses.includes('Боевая магия')) {
+                    const bonus = RULES.DAMAGE_BONUS.battle_magic[action.type as keyof typeof RULES.DAMAGE_BONUS.battle_magic] ?? 0;
                     damage += bonus;
                     turnLog.push(`Пассивный бонус "Боевая магия" увеличивает урон на ${bonus}.`);
                 }
@@ -914,21 +919,21 @@ export default function DuelPage() {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Драконы): "Драконья ярость" увеличивает урон на 10.`);
                 }
-                if (isPhysical && activePlayer.bonuses.includes('Удар крыла (+10 к физическим атакам)')) {
+                if (!isSpell && activePlayer.bonuses.includes('Удар крыла (+10 к физическим атакам)')) {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Веспы): "Удар крыла" увеличивает физический урон на 10.`);
                 }
-                 if (isPhysical && activePlayer.bonuses.includes('Уверенность в прыжке (+10 к физическим атакам)')) {
+                 if (!isSpell && activePlayer.bonuses.includes('Уверенность в прыжке (+10 к физическим атакам)')) {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Полукоты): "Уверенность в прыжке" увеличивает физический урон на 10.`);
                 }
-                if (isPhysical && activePlayer.bonuses.includes('Сила кузни (+10 урона к физическим атакам по врагу)')) {
+                if (!isSpell && activePlayer.bonuses.includes('Сила кузни (+10 урона к физическим атакам по врагу)')) {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Карлики): "Сила кузни" увеличивает физический урон на 10.`);
                 }
                  if (opponent.bonuses.includes('Картина боли (враг получает +5 урона, если атакует дважды подряд)')) {
                     const playerLastTurn = duelData.turnHistory.find(t => t.turnNumber === duelData.currentTurn - 2);
-                    if (playerLastTurn && playerLastTurn.actions.some(a => ['strong_spell', 'medium_spell', 'small_spell', 'household_spell'].includes(a.type))) {
+                    if (playerLastTurn && playerLastTurn.actions.some(a => ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'physical_attack'].includes(a.type))) {
                         damage += 5;
                         turnLog.push(`Пассивная способность (Лартисты): Враг атаковал дважды подряд, урон увеличен на 5.`);
                     }
@@ -958,31 +963,40 @@ export default function DuelPage() {
             };
 
             switch(action.type) {
+                case 'physical_attack': {
+                    const cost = getFinalOdCost(RULES.NON_MAGIC_COSTS.physical_attack);
+                    activePlayer.od -= cost;
+                    const weapon = WEAPONS[activePlayer.weapon];
+                    damageDealt = calculateDamage(weapon.damage, false);
+                    applyDamage(activePlayer, opponent, damageDealt, false);
+                    activePlayer.cooldowns.physical_attack = RULES.COOLDOWNS.physical_attack;
+                    break;
+                }
                 case 'strong_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.strong;
-                    damageDealt = calculateDamage('strong', false, action.payload?.element);
+                    damageDealt = calculateDamage(RULES.RITUAL_DAMAGE[activePlayer.reserve]?.strong ?? 0, true, action.payload?.element);
                     applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
                     activePlayer.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
                     break;
                 case 'medium_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
-                    damageDealt = calculateDamage('medium', false, action.payload?.element);
+                    damageDealt = calculateDamage(RULES.RITUAL_DAMAGE[activePlayer.reserve]?.medium ?? 0, true, action.payload?.element);
                     applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
                     break;
                 case 'small_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.small;
-                    damageDealt = calculateDamage('small', false, action.payload?.element);
+                    damageDealt = calculateDamage(RULES.RITUAL_DAMAGE[activePlayer.reserve]?.small ?? 0, true, action.payload?.element);
                     applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
                     break;
                 case 'household_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.household;
-                    damageDealt = calculateDamage('household', false, action.payload?.element);
+                    damageDealt = calculateDamage(RULES.RITUAL_DAMAGE[activePlayer.reserve]?.household ?? 0, true, action.payload?.element);
                     applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
                     break;
                 case 'shield':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
                     activePlayer.shield.hp += RULES.BASE_SHIELD_VALUE;
-                    activePlayer.shield.element = action.payload?.element === 'physical' ? null : action.payload?.element || null;
+                    activePlayer.shield.element = action.payload?.element || null;
                     const shieldType = activePlayer.shield.element ? `${activePlayer.shield.element} щит` : "Физический щит";
                     turnLog.push(`${activePlayer.name} создает ${shieldType} прочностью ${RULES.BASE_SHIELD_VALUE}.`);
                     break;
@@ -1496,7 +1510,7 @@ export default function DuelPage() {
         handleUpdateDuelState(updatedDuel);
   };
   
-  if (authLoading || duelLoading) {
+  if (duelLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
           <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
@@ -1509,7 +1523,7 @@ export default function DuelPage() {
     return null;
   }
   
-  if (duelError) {
+  if (duelError && !isLocalSolo) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
           <p className="text-destructive">Не удалось загрузить дуэль. Возможно, ID неверный.</p>
@@ -1529,56 +1543,54 @@ export default function DuelPage() {
       );
   }
 
-  const duelStage = useMemo(() => {
-    if (!duelData.player2) {
-      return isLocalSolo ? 'setup_solo_p2' : 'waiting_for_opponent';
+  // --- STAGE LOGIC ---
+  const localPlayerIsP1 = user?.uid === duelData.player1.id;
+  const localPlayerIsP2 = user?.uid === duelData.player2?.id;
+
+  if (isLocalSolo) {
+    if (!duelData.player1.isSetupComplete) {
+      return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
     }
-    if (!duelData.player1.isSetupComplete) return 'setup_p1';
-    if (!duelData.player2.isSetupComplete) return 'setup_p2';
-    if (!duelData.duelStarted) return 'waiting_for_start';
-    return 'in_progress';
-  }, [duelData, isLocalSolo]);
-
-
-  const localPlayer = useMemo(() => {
-      if (!duelData || !user) return null;
-      return duelData.player1.id === user.uid ? duelData.player1 : duelData.player2;
-  }, [duelData, user]);
-
-  
-  // --- Stage: Waiting for opponent ---
-  if (duelStage === 'waiting_for_opponent' && !isLocalSolo) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
-          <Card className="w-full max-w-md">
-              <CardHeader>
-                  <CardTitle>Ожидание второго игрока...</CardTitle>
-                  <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                      <Input value={duelId} readOnly className="flex-1" />
-                      <Button onClick={copyDuelId} size="icon">
-                          {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
-                      </Button>
-                  </div>
-                  <Button onClick={() => router.push('/duels')} variant="outline">
-                      <ArrowLeft className="mr-2" />
-                      Выбрать другую дуэль
-                  </Button>
-              </CardContent>
-          </Card>
-      </div>
-    );
-  }
-
-  // --- Stage: Setup P1 ---
-  if (duelStage === 'setup_p1') {
-      const isMyCharacter = localPlayer?.id === duelData.player1.id;
-      if (isMyCharacter || isLocalSolo) {
-          return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
-      }
+    if (duelData.player2 && !duelData.player2.isSetupComplete) {
+      return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+    }
+  } else {
+    // Online Duel
+    if (!duelData.player2) {
       return (
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+            <Card className="w-full max-w-md">
+                <CardHeader>
+                    <CardTitle>Ожидание второго игрока...</CardTitle>
+                    <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                        <Input value={duelId} readOnly className="flex-1" />
+                        <Button onClick={copyDuelId} size="icon">
+                            {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                    <Button onClick={() => router.push('/duels')} variant="outline">
+                        <ArrowLeft className="mr-2" />
+                        Выбрать другую дуэль
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+      );
+    }
+
+    if (localPlayerIsP1 && !duelData.player1.isSetupComplete) {
+      return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+    }
+
+    if (localPlayerIsP2 && !duelData.player2.isSetupComplete) {
+      return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+    }
+    
+    if (!duelData.player1.isSetupComplete || !duelData.player2.isSetupComplete) {
+       return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
             <Card className="w-full max-w-md">
                 <CardHeader>
@@ -1593,42 +1605,19 @@ export default function DuelPage() {
             </Card>
         </div>
       );
+    }
   }
 
-  // --- Stage: Setup P2 ---
-  if (duelStage === 'setup_p2' || duelStage === 'setup_solo_p2') {
-      const isMyCharacter = localPlayer?.id === duelData.player2?.id;
-      if (isMyCharacter || isLocalSolo) {
-          return <CharacterSetupModal character={duelData.player2!} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
-      }
-      return (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <CardTitle className="flex items-center justify-center gap-2">
-                        <Settings2 className="animate-spin" />
-                        Ожидание оппонента
-                    </CardTitle>
-                    <CardDescription>
-                        Ваш оппонент еще настраивает своего персонажа.
-                    </CardDescription>
-                </CardHeader>
-            </Card>
-        </div>
-      );
-  }
-  
+  // At this point, setup is complete or it's an online duel where we are waiting.
+  // The main duel UI can be rendered.
   if (!duelData.player2) {
-    return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
-        </div>
-      );
+      // This can happen briefly for online duels
+      return <div className="flex items-center justify-center min-h-screen"><div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div></div>;
   }
 
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
   const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
-  const isMyTurn = isLocalSolo || (localPlayer && localPlayer.id === activePlayer.id);
+  const isMyTurn = isLocalSolo || (user && user.uid === activePlayer.id);
 
   // --- Main Duel Interface ---
   return (
