@@ -1,5 +1,5 @@
 
-import { getFirestore, doc, setDoc, updateDoc, getDoc, collection } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, updateDoc, getDoc, collection, addDoc } from 'firebase/firestore';
 import { app } from './firebase';
 import type { DuelState, CharacterStats } from '@/types/duel';
 import { initialPlayerStats, RULES } from './rules';
@@ -10,9 +10,7 @@ export async function createDuel(player1Id: string, player1Name: string): Promis
     if (!firestore) {
         throw new Error("Firestore is not initialized.");
     }
-    const duelId = doc(collection(firestore, 'duels')).id;
-    const duelRef = doc(firestore, 'duels', duelId);
-
+    
     const initialState: DuelState = {
         player1: initialPlayerStats(player1Id, player1Name),
         player2: null,
@@ -26,8 +24,8 @@ export async function createDuel(player1Id: string, player1Name: string): Promis
         distance: RULES.INITIAL_DISTANCE,
     };
 
-    await setDoc(duelRef, initialState);
-    return duelId;
+    const duelRef = await addDoc(collection(firestore, 'duels'), initialState);
+    return duelRef.id;
 }
 
 export async function joinDuel(duelId: string, player2Id: string, player2Name: string) {
