@@ -214,7 +214,7 @@ export default function DuelPage() {
                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omAmount);
                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omAmount} ОМ.`);
             }
-            if (bonus === 'Звёздный резонанс (+10 ОМ/ход)' || bonus === 'Кристальная стабильность (+10 ОМ/ход)' || bonus === 'Единение с природой (+10 ОМ/ход)' || bonus === 'Друидическая связь (+10 ОМ/ход)' || bonus === 'Озарение (+10 ОМ каждый ход)' || bonus === 'Светлая энергия (+10 ОМ каждый ход)' || bonus === 'Эфирная стабильность (+10 ОМ/ход)') {
+            if (bonus === 'Звёздный резонанс (+10 ОМ/ход)' || bonus === 'Кристальная стабильность (+10 ОМ/ход)' || bonus === 'Единение с природой (+10 ОМ/ход)' || bonus === 'Друидическая связь (+10 ОМ/ход)' || bonus === 'Озарение (+10 ОМ каждый ход)' || bonus === 'Светлая энергия (+10 ОМ/ход)' || bonus === 'Эфирная стабильность (+10 ОМ/ход)') {
                 const omAmount = 10;
                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omAmount);
                 turnLog.push(`Пассивная способность (${activePlayer.race}): ${activePlayer.name} восстанавливает ${omAmount} ОМ.`);
@@ -613,9 +613,9 @@ export default function DuelPage() {
                     finalDamage += 5;
                     turnLog.push(`Пассивная способность (Дриды): физ. урон увеличен на 5.`);
                  }
-                 if (target.race === 'Энергетические вампиры' && target.bonuses.includes('Аура желания (враг теряет 10 ОМ при физической атаке)')) {
-                    attacker.om = Math.max(0, attacker.om - 10);
-                    turnLog.push(`Пассивная способность (Энергетические вампиры): ${attacker.name} теряет 10 ОМ.`);
+                 if (attacker.race === 'Энергетические вампиры' && attacker.bonuses.includes('Аура желания (враг теряет 10 ОМ при физической атаке)')) {
+                    target.om = Math.max(0, target.om - 10);
+                    turnLog.push(`Пассивная способность (Энергетические вампиры): ${target.name} теряет 10 ОМ.`);
                  }
             }
             if(isSpell) {
@@ -706,6 +706,11 @@ export default function DuelPage() {
                 turnLog.push(`${target.name} получает ${finalDamage} урона.`);
             }
             
+            if (target.race === 'Безликие' && damageDealtToTarget > 0) {
+                attacker.oz -= damageDealtToTarget;
+                turnLog.push(`Пассивная способность (Безликий): отзеркаливает ${damageDealtToTarget} урона обратно в ${attacker.name}!`);
+            }
+
              if (damageDealtToTarget > 40 && target.race === 'Химеры') {
                  target.oz = Math.min(target.maxOz, target.oz + 10);
                  turnLog.push(`Пассивная способность (Химеры): ${target.name} восстанавливает 10 ОЗ после получения сильного урона.`);
@@ -763,11 +768,6 @@ export default function DuelPage() {
                     target.bonuses.splice(bonusIndex, 1);
                     turnLog.push(`Пассивная способность (Полукоты): ${target.name} использует одну из девяти жизней и восстанавливает 50 ОЗ.`);
                 }
-            }
-
-            if (target.race === 'Безликие' && damageDealtToTarget > 0) {
-                attacker.oz -= damageDealtToTarget;
-                turnLog.push(`Пассивная способность (Безликий): отзеркаливает ${damageDealtToTarget} урона обратно в ${attacker.name}!`);
             }
             
             if (isSpell && spellElement) {
@@ -986,13 +986,13 @@ export default function DuelPage() {
                 case 'move':
                     {
                         const distanceToMove = action.payload?.distance || 0;
-                        let cost = getFinalOdCost(distanceToMove * RULES.NON_MAGIC_COSTS.move_per_meter);
+                        let cost = getFinalOdCost(Math.abs(distanceToMove) * RULES.NON_MAGIC_COSTS.move_per_meter);
                          if (activePlayer.bonuses.includes('Быстрые мышцы (-5 ОД на действия, связанные с перемещением)')) {
                             cost = Math.max(0, cost - 5);
                          }
                         activePlayer.od -= cost;
                         newDistance = Math.max(0, newDistance + distanceToMove);
-                        turnLog.push(`${activePlayer.name} изменяет дистанцию на ${distanceToMove}м. Новая дистанция: ${newDistance}м. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
+                        turnLog.push(`${activePlayer.name} изменяет дистанцию на ${distanceToMove > 0 ? '+' : ''}${distanceToMove}м. Новая дистанция: ${newDistance}м. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
                     }
                     break;
                 case 'use_item':
@@ -1472,7 +1472,7 @@ export default function DuelPage() {
         handleUpdateDuelState(updatedDuel);
   };
   
-  if (authLoading || duelLoading || (isLocalSolo && !localDuelState)) {
+  if (authLoading || duelLoading) {
     return (
         <div className="flex items-center justify-center min-h-screen">
           <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
@@ -1497,8 +1497,17 @@ export default function DuelPage() {
       )
   }
 
+  // This covers the local solo case before state is initialized.
+  if (!duelData.player1 || !duelData.player2) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
+        </div>
+    );
+  }
+
   // Waiting for opponent to join
-  if (!isLocalSolo && !duelData.player2) {
+  if (!isLocalSolo && !duelData.player2.id) {
       return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
             <Card className="w-full max-w-md">
@@ -1524,23 +1533,19 @@ export default function DuelPage() {
   }
 
   const currentPlayerId = user.uid === duelData.player1.id ? 'player1' : 'player2';
-  const player = currentPlayerId === 'player1' ? duelData.player1 : duelData.player2!;
-  const opponent = currentPlayerId === 'player1' ? duelData.player2! : duelData.player1;
+  const player = currentPlayerId === 'player1' ? duelData.player1 : duelData.player2;
+  const opponent = currentPlayerId === 'player1' ? duelData.player2 : duelData.player1;
   
-  if (!player) {
-     return <div className="flex items-center justify-center min-h-screen">Загрузка игрока...</div>;
-  }
-
   // Character Setup Modals
-  if (player && !player.isSetupComplete) {
+  if (!player.isSetupComplete) {
     return <CharacterSetupModal character={player} onSave={handleCharacterUpdate} />;
   }
-  if (isLocalSolo && duelData.player2 && !duelData.player2.isSetupComplete) {
-    return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} />;
+  if (isLocalSolo && !opponent.isSetupComplete) {
+    return <CharacterSetupModal character={opponent} onSave={handleCharacterUpdate} />;
   }
   
   // Waiting for opponent to finish setup
-  if (!isLocalSolo && opponent && !opponent.isSetupComplete) {
+  if (!isLocalSolo && !opponent.isSetupComplete) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
             <Card className="w-full max-w-md">
@@ -1558,8 +1563,8 @@ export default function DuelPage() {
     );
   }
 
-  const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2!;
-  const opponentPlayer = duelData.activePlayerId === 'player1' ? duelData.player2! : duelData.player1;
+  const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
+  const opponentPlayer = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
   const isMyTurn = isLocalSolo || (duelData.activePlayerId === currentPlayerId);
 
   return (
@@ -1595,12 +1600,11 @@ export default function DuelPage() {
                   character={duelData.player1} 
                   isActive={duelData.activePlayerId === 'player1'} 
               />
-              {duelData.player2 && 
-                  <CharacterPanel 
-                      key={duelData.player2.id}
-                      character={duelData.player2} 
-                      isActive={duelData.activePlayerId === 'player2'} 
-                  />}
+              <CharacterPanel 
+                  key={duelData.player2.id}
+                  character={duelData.player2} 
+                  isActive={duelData.activePlayerId === 'player2'} 
+              />
             </div>
 
             <div className="w-full lg:w-2/3 flex flex-col gap-4">
@@ -1655,3 +1659,5 @@ export default function DuelPage() {
     </div>
   );
 }
+
+    
