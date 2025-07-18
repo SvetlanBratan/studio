@@ -32,15 +32,16 @@ export default function DuelsPage() {
 
 
   const handleCreateDuel = async () => {
-    if (!user || isCreating || loading) return;
+    if (!user || isCreating) return;
     setIsCreating(true);
     try {
       const duelId = await createDuel(user.uid, user.displayName || `Игрок ${user.uid.substring(0, 5)}`);
       router.push(`/duels/${duelId}`);
     } catch (error) {
       console.error("Не удалось создать дуэль:", error);
+      // Optionally show a toast message to the user here
     } finally {
-        setIsCreating(false);
+      setIsCreating(false);
     }
   };
 
