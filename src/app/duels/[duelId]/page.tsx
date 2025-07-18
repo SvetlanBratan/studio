@@ -8,7 +8,7 @@ import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
 
-import type { DuelState, Turn, Action, CharacterStats } from '@/types/duel';
+import type { DuelState, Turn, Action, CharacterStats, ArmorType, WeaponType } from '@/types/duel';
 import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import CharacterSetupModal from '@/components/character-setup-modal';
@@ -1572,7 +1572,8 @@ export default function DuelPage() {
     );
   }
 
-  if (!duelData || !duelData.player1) {
+  // Add a crucial null check for duelData
+  if (!duelData) {
       return (
         <div className="flex items-center justify-center min-h-screen">
           <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
