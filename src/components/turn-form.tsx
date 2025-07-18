@@ -115,6 +115,9 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   };
   
   const getOdCostPenalty = (player: CharacterStats): number => {
+    if (player.race === 'Куклы' && player.bonuses.includes('Абсолютная память (не тратится ОД)')) {
+        return -Infinity; // Special value for zero cost
+    }
     for (const wound of RULES.WOUND_PENALTIES) {
         if (player.oz < wound.threshold) {
             return wound.penalty;
@@ -138,7 +141,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     { value: 'medium_spell', label: 'Средний ритуал', disabled: isFaceless || player.om < RULES.RITUAL_COSTS.medium || !isOpponentInRange, tooltip: !isOpponentInRange ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : undefined },
     { value: 'small_spell', label: 'Малый ритуал', disabled: isFaceless || player.om < RULES.RITUAL_COSTS.small || !isOpponentInRange, tooltip: !isOpponentInRange ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : undefined },
     { value: 'household_spell', label: 'Бытовое заклинание', disabled: player.om < RULES.RITUAL_COSTS.household || !isOpponentInRange, tooltip: !isOpponentInRange ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : undefined },
-    { value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: player.om < RULES.RITUAL_COSTS.medium || hasAddedAction('shield') },
+    { value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: isFaceless || player.om < RULES.RITUAL_COSTS.medium || hasAddedAction('shield') },
     { value: 'dodge', label: `Уворот (${RULES.NON_MAGIC_COSTS.dodge + odPenalty} ОД)`, disabled: player.od < RULES.NON_MAGIC_COSTS.dodge + odPenalty || hasAddedAction('dodge') },
     { value: 'move', label: 'Передвижение', disabled: false },
     { value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < RULES.NON_MAGIC_COSTS.use_item + odPenalty || player.inventory.length === 0 || hasAddedAction('use_item') },

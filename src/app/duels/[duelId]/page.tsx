@@ -301,7 +301,7 @@ export default function DuelPage() {
             }
 
             const isBurning = p.startsWith('Горение');
-            if (isBurning && (activePlayer.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду') || activePlayer.race === 'Куклы' || activePlayer.race === 'Скелеты')) {
+            if (isBurning && (activePlayer.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду') || activePlayer.race === 'Куклы' || activePlayer.race === 'Скелеты' || (activePlayer.race === 'Саламандры' && activePlayer.bonuses.includes('Огненная суть — иммунитет к огню')))) {
                 const immunityType = activePlayer.bonuses.includes('Иммунитет к огню') ? 'огню' : 'льду';
                 turnLog.push(`Иммунитет к ${immunityType}: урон от "${p}" не получен.`);
                 return;
@@ -425,7 +425,7 @@ export default function DuelPage() {
                 return;
             }
 
-            if ((isPhysical && target.bonuses.includes('Временной отпечаток (иммунитет к физическому урону)')) || (isPhysical && target.race === 'Призраки')) {
+            if ((isPhysical && (target.bonuses.includes('Временной отпечаток (иммунитет к физическому урону)') || target.race === 'Призраки' || target.race === 'Жнецы'))) {
                 turnLog.push(`Пассивная способность (${target.race}): ${target.name} имеет иммунитет к физическому урону.`);
                 return;
             }
@@ -619,6 +619,10 @@ export default function DuelPage() {
                  }
             }
             if(isSpell) {
+                if (target.race === 'Ларимы' && target.bonuses.includes('Поглощение магии, регенерация от физ. атак')) {
+                    turnLog.push(`Пассивная способность (Ларимы): ${target.name} поглощает весь магический урон.`);
+                    return;
+                }
                 if (target.bonuses.includes('Магический резонанс (-5 урона от заклинаний)') || target.bonuses.includes('Истинное слово (-5 урона от заклинаний)')) {
                     finalDamage = Math.max(0, finalDamage - 5);
                     turnLog.push(`Пассивная способность (${target.race}): магический урон снижен на 5.`);
@@ -648,14 +652,6 @@ export default function DuelPage() {
             if(isSpell && spellElement === 'Звук' && target.bonuses.includes('Слух обострён (-10 урона от звуковых атак)')) {
                 finalDamage = Math.max(0, finalDamage - 10);
                 turnLog.push(`Пассивная способность (Антропоморфы): урон от звука снижен на 10.`);
-            }
-
-
-            if (target.bonuses.includes('Поглощение входящего магического урона') && isSpell) {
-                const restoredOm = Math.round(finalDamage); // use finalDamage after reductions
-                target.om = Math.min(target.maxOm, target.om + restoredOm);
-                turnLog.push(`Пассивная способность (Ларимы): ${target.name} поглощает ${restoredOm} магического урона и восстанавливает ОМ.`);
-                return;
             }
 
             if (isSpell && spellElement === 'Вода') {
@@ -710,6 +706,11 @@ export default function DuelPage() {
                 attacker.oz -= damageDealtToTarget;
                 turnLog.push(`Пассивная способность (Безликий): отзеркаливает ${damageDealtToTarget} урона обратно в ${attacker.name}!`);
             }
+             if (isPhysical && target.race === 'Ларимы' && damageDealtToTarget > 0) {
+                const healedAmount = Math.round(damageDealtToTarget / 2);
+                target.oz = Math.min(target.maxOz, target.oz + healedAmount);
+                turnLog.push(`Пассивная способность (Ларимы): регенерация от физической атаки восстанавливает ${healedAmount} ОЗ.`);
+             }
 
              if (damageDealtToTarget > 40 && target.race === 'Химеры') {
                  target.oz = Math.min(target.maxOz, target.oz + 10);
@@ -1209,6 +1210,11 @@ export default function DuelPage() {
                             case 'Лунный кнут':
                                 applyDamage(activePlayer, opponent, 55, true, 'Тьма');
                                 break;
+                             // Жнецы
+                             case 'Коса Смерти':
+                                 opponent.oz = 0;
+                                 turnLog.push(`${activePlayer.name} использует Косу Смерти... ${opponent.name} повержен.`);
+                                 break;
                             // Insektoidy
                             case 'Кислотное жало':
                                 applyDamage(activePlayer, opponent, 50, false);
@@ -1472,82 +1478,47 @@ export default function DuelPage() {
         handleUpdateDuelState(updatedDuel);
   };
   
-  if (authLoading || duelLoading) {
-    return (
-        <div className="flex items-center justify-center min-h-screen">
+  const renderLoading = () => (
+      <div className="flex items-center justify-center min-h-screen">
           <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
-        </div>
-    );
-  }
+      </div>
+  );
 
-  if (!user) {
-    // This should not be reached if useAuth redirects correctly.
-    return null;
-  }
+  const renderError = () => (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+          <p className="text-destructive">Не удалось загрузить дуэль. Возможно, ID неверный.</p>
+          <Button onClick={() => router.push('/duels')}>
+              <ArrowLeft className="mr-2" />
+              Вернуться к списку дуэлей
+          </Button>
+      </div>
+  );
+
+  const renderWaitingForOpponent = () => (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+          <Card className="w-full max-w-md">
+              <CardHeader>
+                  <CardTitle>Ожидание второго игрока...</CardTitle>
+                  <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                      <Input value={duelId} readOnly className="flex-1" />
+                      <Button onClick={copyDuelId} size="icon">
+                          {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
+                      </Button>
+                  </div>
+                  <Button onClick={() => router.push('/duels')} variant="outline">
+                      <ArrowLeft className="mr-2" />
+                      Выбрать другую дуэль
+                  </Button>
+              </CardContent>
+          </Card>
+      </div>
+  );
   
-  if (duelError || !duelData) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-            <p className="text-destructive">Не удалось загрузить дуэль. Возможно, ID неверный.</p>
-            <Button onClick={() => router.push('/duels')}>
-                <ArrowLeft className="mr-2" />
-                Вернуться к списку дуэлей
-            </Button>
-        </div>
-      )
-  }
-
-  // This covers the local solo case before state is initialized.
-  if (!duelData.player1 || !duelData.player2) {
-    return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
-        </div>
-    );
-  }
-
-  // Waiting for opponent to join
-  if (!isLocalSolo && !duelData.player2.id) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <CardTitle>Ожидание второго игрока...</CardTitle>
-                    <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                        <Input value={duelId} readOnly className="flex-1" />
-                        <Button onClick={copyDuelId} size="icon">
-                            {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
-                        </Button>
-                    </div>
-                     <Button onClick={() => router.push('/duels')} variant="outline">
-                        <ArrowLeft className="mr-2" />
-                        Выбрать другую дуэль
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
-      )
-  }
-
-  const currentPlayerId = user.uid === duelData.player1.id ? 'player1' : 'player2';
-  const player = currentPlayerId === 'player1' ? duelData.player1 : duelData.player2;
-  const opponent = currentPlayerId === 'player1' ? duelData.player2 : duelData.player1;
-  
-  // Character Setup Modals
-  if (!player.isSetupComplete) {
-    return <CharacterSetupModal character={player} onSave={handleCharacterUpdate} />;
-  }
-  if (isLocalSolo && !opponent.isSetupComplete) {
-    return <CharacterSetupModal character={opponent} onSave={handleCharacterUpdate} />;
-  }
-  
-  // Waiting for opponent to finish setup
-  if (!isLocalSolo && !opponent.isSetupComplete) {
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+  const renderWaitingForSetup = () => (
+     <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle className="flex items-center justify-center gap-2">
@@ -1560,7 +1531,42 @@ export default function DuelPage() {
                 </CardHeader>
             </Card>
         </div>
-    );
+  );
+
+  if (authLoading || duelLoading) {
+      return renderLoading();
+  }
+
+  if (!user) {
+    return null;
+  }
+  
+  if (duelError || !duelData) {
+      return renderError();
+  }
+
+  if (!duelData.player1 || !duelData.player2) {
+    return renderLoading();
+  }
+
+  if (!isLocalSolo && !duelData.player2.id) {
+      return renderWaitingForOpponent();
+  }
+  
+  const currentPlayerId = user.uid === duelData.player1.id ? 'player1' : 'player2';
+  const player = currentPlayerId === 'player1' ? duelData.player1 : duelData.player2;
+  const opponent = currentPlayerId === 'player1' ? duelData.player2 : duelData.player1;
+  
+  if (!player.isSetupComplete) {
+    return <CharacterSetupModal character={player} onSave={handleCharacterUpdate} />;
+  }
+  
+  if (isLocalSolo && !opponent.isSetupComplete) {
+    return <CharacterSetupModal character={opponent} onSave={handleCharacterUpdate} />;
+  }
+  
+  if (!isLocalSolo && !opponent.isSetupComplete) {
+    return renderWaitingForSetup();
   }
 
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
@@ -1659,5 +1665,3 @@ export default function DuelPage() {
     </div>
   );
 }
-
-    
