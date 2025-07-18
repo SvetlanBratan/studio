@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { createDuel } from '@/lib/firestore';
@@ -17,7 +17,13 @@ export default function DuelsPage() {
   const [joinDuelId, setJoinDuelId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+  
+  if (loading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div>
@@ -25,18 +31,17 @@ export default function DuelsPage() {
     );
   }
   
-  if (!user) {
-    // This case is handled by useAuth hook redirecting to /login, but as a fallback:
-    return null;
-  }
-
-
   const handleCreateDuel = async () => {
     if (!user || isCreating) return;
     setIsCreating(true);
     try {
       const duelId = await createDuel(user.uid, user.displayName || `Игрок ${user.uid.substring(0, 5)}`);
-      router.push(`/duels/${duelId}`);
+      if (duelId) {
+        router.push(`/duels/${duelId}`);
+      } else {
+        // Handle error case, maybe show a toast
+        console.error("Не удалось получить ID дуэли.");
+      }
     } catch (error) {
       console.error("Не удалось создать дуэль:", error);
       // Optionally show a toast message to the user here
@@ -85,7 +90,7 @@ export default function DuelsPage() {
                     <CardDescription>Создайте новую дуэль или войдите в существующую по ID.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Button onClick={handleCreateDuel} disabled={isCreating || loading} className="w-full" size="lg">
+                    <Button onClick={handleCreateDuel} disabled={isCreating} className="w-full" size="lg">
                         <Dices className="mr-2" />
                         {isCreating ? 'Создание...' : 'Создать новую дуэль (Онлайн)'}
                     </Button>
