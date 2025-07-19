@@ -180,7 +180,6 @@ export default function PixelCharacter({
   const renderPose = () => {
     let rightArm, leftArm;
     const hatColor = '#444';
-    const hatHighlight = '#555';
     switch (pose) {
       case 'attack':
         leftArm = <>{createPixel(6, 0, '#a07a5f', 1, 3)}{createPixel(5, 1, '#a07a5f', 1, 1)}</>;
@@ -203,14 +202,20 @@ export default function PixelCharacter({
     return (
         <>
             {/* Hat */}
-            {createPixel(0, 0, hatColor, 10, 1)}
-            {createPixel(-1, 1, hatColor, 8, 1)}
+            {createPixel(0, 2, hatColor, 6, 1)}
+            {createPixel(-1, 3, hatColor, 4, 1)}
+            {createPixel(-2, 4, hatColor, 2, 1)}
+            {createPixel(-3, 1, hatColor, 8, 1)}
             {createPixel(-2, 2, hatColor, 6, 1)}
-            {createPixel(-3, 3, hatColor, 4, 1)}
-            {createPixel(-4, 4, hatColor, 2, 1)}
+            {createPixel(-1, 3, hatColor, 4, 1)}
+            {createPixel(0, 4, hatColor, 2, 1)}
+            {createPixel(1, 0, hatColor, 10, 1)}
+            {createPixel(-4, 2, hatColor, 6, 1)}
+            {createPixel(-5, 3, hatColor, 4, 1)}
+            {createPixel(-6, 4, hatColor, 2, 1)}
+
 
             {/* Head */}
-            {createPixel(1, 3, '#f2d5ab', 4, 1)}
             {createPixel(2, 2, '#f2d5ab', 6, 2)}
             {renderFace()}
             {createPixel(4, 3, '#f2d5ab', 4, 1)}
@@ -247,6 +252,7 @@ export default function PixelCharacter({
     </div>
   );
 }
+
 
 
 
