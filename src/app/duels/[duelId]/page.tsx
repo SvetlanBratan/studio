@@ -1111,12 +1111,15 @@ export default function DuelPage() {
                     damageDealt = calculateDamage(RULES.RITUAL_DAMAGE[activePlayer.reserve]?.household ?? 0, true, action.payload?.element);
                     applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
                     break;
-                case 'heal_self':
-                    activePlayer.om -= RULES.NON_MAGIC_COSTS.heal_self;
-                    activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 50);
-                    turnLog.push(`${activePlayer.name} восстанавливает 50 ОЗ.`);
+                case 'heal_self': {
+                    const healAmount = action.payload?.amount || 0;
+                    const omCost = healAmount * 2;
+                    activePlayer.om -= omCost;
+                    activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + healAmount);
+                    turnLog.push(`${activePlayer.name} восстанавливает ${healAmount} ОЗ за ${omCost} ОМ.`);
                     activePlayer.cooldowns.heal_self = RULES.COOLDOWNS.heal_self;
                     break;
+                }
                 case 'shield':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
                     activePlayer.shield.hp += RULES.BASE_SHIELD_VALUE;
@@ -1429,7 +1432,7 @@ export default function DuelPage() {
                                 break;
                             // Lartisty
                             case 'Затягивание в полотно':
-                                applyEffect(opponent, 'Удержание', 2);
+                                applyEffect(opponent, 'Удержание', 1);
                                 turnLog.push(`${opponent.name} не может использовать магические способности.`);
                                 break;
                             // Leprekony

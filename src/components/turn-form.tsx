@@ -34,7 +34,9 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const [isPrayerDialogOpen, setIsPrayerDialogOpen] = useState(false);
   const [isDruidAbilityOpen, setIsDruidAbilityOpen] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+  const [isHealDialogOpen, setIsHealDialogOpen] = useState(false);
   const [moveAmount, setMoveAmount] = useState(1);
+  const [healAmount, setHealAmount] = useState(1);
   const [moveDirection, setMoveDirection] = useState<'closer' | 'further'>('further');
   const [selectValue, setSelectValue] = useState('');
   const playerRaceInfo = RACES.find(r => r.name === player.race);
@@ -66,7 +68,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     if (player.bonuses.includes('Драконья ярость (+10 урона, если получено более 40 урона за прошлый ход)') && damageTakenLastTurn > 40) damage += 10;
     if (!isSpell && player.bonuses.includes('Удар крыла (+10 к физическим атакам)')) damage += 10;
     if (!isSpell && player.bonuses.includes('Уверенность в прыжке (+10 к физическим атакам)')) damage += 10;
-    if (!isSpell && player.bonuses.includes('Сила кузни (+10 урона к физическим атакам по врагу)')) damage += 10;
+    if (!isSpell && player.bonuses.includes('Сила кузни (+10 к физическим атакам по врагу)')) damage += 10;
 
     return Math.round(damage);
   };
@@ -86,6 +88,11 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
 
     if (type === 'move') {
       setIsMoveDialogOpen(true);
+      return;
+    }
+
+    if (type === 'heal_self') {
+      setIsHealDialogOpen(true);
       return;
     }
     
@@ -145,6 +152,16 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     setSelectValue('');
     setMoveAmount(1);
   };
+
+  const handleHealSelect = () => {
+    if(actions.length < RULES.MAX_ACTIONS_PER_TURN) {
+      setActions([...actions, { type: 'heal_self', payload: { amount: healAmount } }]);
+    }
+    setIsHealDialogOpen(false);
+    setSelectValue('');
+    setHealAmount(1);
+  };
+
 
   const removeAction = (index: number) => {
     setActions(actions.filter((_, i) => i !== index));
@@ -219,7 +236,9 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   
   const getActionDisabledReason = (type: string, racialAbilityName?: string): string | null => {
       const racialAbility = racialAbilityName ? playerRaceInfo?.activeAbilities.find(a => a.name === racialAbilityName) : null;
-      const omCost = racialAbility?.cost?.om ?? RULES.RITUAL_COSTS[type.replace('_spell', '') as keyof typeof RULES.RITUAL_COSTS] ?? RULES.NON_MAGIC_COSTS[type as keyof typeof RULES.NON_MAGIC_COSTS] ?? 0;
+      let omCost = racialAbility?.cost?.om ?? RULES.RITUAL_COSTS[type.replace('_spell', '') as keyof typeof RULES.RITUAL_COSTS] ?? 0;
+      if (type === 'heal_self') omCost = 0; // Dynamic cost
+      
       const odCost = getFinalOdCost(racialAbility?.cost?.od ?? RULES.NON_MAGIC_COSTS[type as keyof typeof RULES.NON_MAGIC_COSTS] ?? 0);
       const cooldown = racialAbilityName ? (player.cooldowns[racialAbilityName] ?? 0) : (player.cooldowns[type as keyof typeof player.cooldowns] ?? 0);
       
@@ -270,6 +289,13 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const currentMoveCost = moveCostPerMeter * moveAmount;
   const canConfirmMove = currentMoveCost <= player.od;
 
+  const healCostPerOz = 2;
+  const missingHealth = player.maxOz - player.oz;
+  const maxHealFromOm = Math.floor(player.om / healCostPerOz);
+  const maxHealAmount = Math.min(missingHealth, maxHealFromOm);
+  const currentHealCost = healAmount * healCostPerOz;
+  const canConfirmHeal = currentHealCost <= player.om && healAmount <= missingHealth;
+
   const actionOptions = [
     // Physical
     { group: 'physical', value: 'physical_attack', label: `Атака (${weaponInfo.name}) - Урон: ${physicalAttackDamage}, Дальность: ${weaponInfo.range}м, ОД: ${physicalAttackCost}` },
@@ -280,7 +306,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     { group: 'magic', value: 'small_spell', label: `Малый ритуал - Урон: ${smallSpellDamage}, Дальность: ${spellRange}м` },
     { group: 'magic', value: 'household_spell', label: `Бытовое - Урон: ${householdSpellDamage}, Дальность: ${spellRange}м` },
     { group: 'magic', value: 'shield', label: 'Создать щит' },
-    { group: 'magic', value: 'heal_self', label: 'Исцелить себя (+50 ОЗ)' },
+    { group: 'magic', value: 'heal_self', label: 'Исцелить себя' },
 
     // Other
     { group: 'other', value: 'dodge', label: `Уворот (${getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge)} ОД)` },
@@ -519,6 +545,43 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
                 <AlertDialogAction onClick={handleMoveSelect} disabled={!canConfirmMove}>Подтвердить</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={isHealDialogOpen} onOpenChange={setIsHealDialogOpen}>
+      <AlertDialogContent>
+          <AlertDialogHeader>
+              <AlertDialogTitle>Исцелить себя</AlertDialogTitle>
+              <AlertDialogDescription>
+                  Выберите, сколько ОЗ вы хотите восстановить. Стоимость: 2 ОМ за 1 ОЗ.
+              </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="heal-amount">Очки здоровья (ОЗ)</Label>
+                  <Input 
+                      id="heal-amount"
+                      type="number"
+                      value={healAmount}
+                      onChange={e => {
+                          const val = Number(e.target.value);
+                          setHealAmount(Math.max(1, Math.min(val, maxHealAmount)));
+                      }}
+                      min={1}
+                      max={maxHealAmount}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Стоимость: {currentHealCost} ОМ. Текущие ОМ: {player.om}.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Максимум можно восстановить: {maxHealAmount} ОЗ.
+                </p>
+          </div>
+          <AlertDialogFooter>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogAction onClick={handleHealSelect} disabled={!canConfirmHeal}>Подтвердить</AlertDialogAction>
+          </AlertDialogFooter>
+      </AlertDialogContent>
     </AlertDialog>
 
     </TooltipProvider>

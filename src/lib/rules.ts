@@ -184,6 +184,10 @@ export const getActionLabel = (type: ActionType, payload?: any): string => {
     return `${label}: ${payload.distance > 0 ? 'Разрыв' : 'Сокращение'} на ${Math.abs(payload.distance)}м`;
   }
   
+  if (type === 'heal_self' && payload?.amount) {
+      return `${label}: ${payload.amount} ОЗ`
+  }
+  
   if ((type.includes('spell') || type === 'shield') && payload?.element) {
     label += ` (${payload.element})`;
   }
@@ -247,7 +251,6 @@ export const RULES = {
     order_familiar: 30,
     move_per_meter: 1,
     physical_attack: 25,
-    heal_self: 30,
   },
 
   COOLDOWNS: {
