@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS, WEAPONS, ARMORS } from '@/lib/rules';
+import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS, WEAPONS, ARMORS, ITEMS } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { updateDuel, joinDuel } from '@/lib/firestore';
@@ -1133,16 +1133,25 @@ export default function DuelPage() {
                         turnLog.push(`${activePlayer.name} использует предмет.`);
                         
                         if (activePlayer.inventory.length > 0) {
-                            const item = activePlayer.inventory[0];
-                            if (item.type === 'heal') {
-                                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + item.amount);
-                                turnLog.push(`${activePlayer.name} использует "${item.name}" и восстанавливает ${item.amount} ОЗ.`);
+                            const itemUsed = activePlayer.inventory.shift();
+                            if(itemUsed) {
+                                const itemData = ITEMS[itemUsed.name];
+                                if (itemData) {
+                                     turnLog.push(`${activePlayer.name} использует "${itemData.name}".`);
+                                    if (itemData.type === 'heal_oz') {
+                                        activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + itemData.amount);
+                                        turnLog.push(`Восстановлено ${itemData.amount} ОЗ.`);
+                                    }
+                                    if (itemData.type === 'heal_om') {
+                                        activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + itemData.amount);
+                                        turnLog.push(`Восстановлено ${itemData.amount} ОМ.`);
+                                    }
+                                    if (itemData.type === 'damage') {
+                                        applyDamage(activePlayer, opponent, itemData.amount, false);
+                                        turnLog.push(`Нанесено ${itemData.amount} урона.`);
+                                    }
+                                }
                             }
-                             if (item.type === 'damage') {
-                                applyDamage(activePlayer, opponent, item.amount, false);
-                                turnLog.push(`${activePlayer.name} использует "${item.name}" и наносит ${item.amount} урона.`);
-                            }
-                            activePlayer.inventory.shift();
                         }
                      }
                     break;

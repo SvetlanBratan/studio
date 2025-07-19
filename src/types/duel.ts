@@ -1,5 +1,7 @@
 
 
+import type { ITEMS } from '@/lib/rules';
+
 export type ReserveLevel =
   | 'Неофит'
   | 'Адепт'
@@ -24,10 +26,10 @@ export type FaithLevel =
   | 'Первожрец'
   | 'Верховный жрец/Мессия';
 
+export type ItemName = keyof typeof ITEMS;
+
 export interface InventoryItem {
-    name: string;
-    type: 'heal' | 'damage';
-    amount: number;
+    name: ItemName;
 }
 
 export type WeaponType = 'Меч' | 'Топор' | 'Копье' | 'Кинжал' | 'Сюрикены' | 'Лук' | 'Кулаки';

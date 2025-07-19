@@ -2,7 +2,7 @@
 
 'use client';
 
-import type { CharacterStats, ReserveLevel, FaithLevel, InventoryItem, WeaponType, ArmorType } from '@/types/duel';
+import type { CharacterStats, ReserveLevel, FaithLevel, WeaponType, ArmorType, ItemName } from '@/types/duel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Checkbox } from './ui/checkbox';
 import { ScrollArea } from './ui/scroll-area';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz, getFaithLevelFromString, ARMORS, WEAPONS } from '@/lib/rules';
+import { RULES, RESERVE_LEVELS, FAITH_LEVELS, ELEMENTS, RACES, getOmFromReserve, calculateMaxOz, getFaithLevelFromString, ARMORS, WEAPONS, ITEMS } from '@/lib/rules';
 import { Badge } from './ui/badge';
 
 interface CharacterSetupFormProps {
@@ -67,9 +67,9 @@ export default function CharacterSetupForm({ character, onCharacterChange }: Cha
         onCharacterChange({ ...character, elementalKnowledge: newValues });
     };
 
-    const handleInventoryChange = (index: number, field: keyof InventoryItem, value: string | number) => {
+    const handleInventoryChange = (index: number, itemName: ItemName) => {
         const newInventory = [...character.inventory];
-        (newInventory[index] as any)[field] = value;
+        newInventory[index] = { name: itemName };
         onCharacterChange({ ...character, inventory: newInventory });
     };
 
@@ -77,7 +77,7 @@ export default function CharacterSetupForm({ character, onCharacterChange }: Cha
         if (character.inventory.length < RULES.MAX_INVENTORY_ITEMS) {
             onCharacterChange({
                 ...character,
-                inventory: [...character.inventory, { name: 'Новый предмет', type: 'heal', amount: 10 }]
+                inventory: [...character.inventory, { name: 'Малое зелье лечения' }]
             });
         }
     };
@@ -201,26 +201,14 @@ export default function CharacterSetupForm({ character, onCharacterChange }: Cha
                         </Button>
                     </div>
                     {character.inventory.map((item, index) => (
-                        <div key={index} className="flex gap-2 p-2 border rounded">
-                            <Input
-                                value={item.name}
-                                onChange={(e) => handleInventoryChange(index, 'name', e.target.value)}
-                                placeholder="Название"
-                                className="h-8"
-                            />
-                            <Select value={item.type} onValueChange={(v: 'heal' | 'damage') => handleInventoryChange(index, 'type', v)}>
-                                <SelectTrigger className="h-8 w-[100px]"><SelectValue /></SelectTrigger>
+                        <div key={index} className="flex gap-2 p-2 border rounded items-center">
+                            <Select value={item.name} onValueChange={(v: ItemName) => handleInventoryChange(index, v)}>
+                                <SelectTrigger className="h-8 flex-grow"><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="heal">Лечение</SelectItem>
-                                    <SelectItem value="damage">Урон</SelectItem>
+                                    {Object.values(ITEMS).map(i => <SelectItem key={i.name} value={i.name}>{i.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Input
-                                type="number"
-                                value={item.amount}
-                                onChange={(e) => handleInventoryChange(index, 'amount', Number(e.target.value))}
-                                className="h-8 w-20"
-                            />
+                           
                             <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => removeInventoryItem(index)}>
                                 <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>

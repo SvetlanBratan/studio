@@ -9,6 +9,7 @@ import { Heart, Sparkles, Wind, Shield, BookOpen, Cross, Briefcase, Siren, Timer
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { ITEMS } from '@/lib/rules';
 
 interface CharacterPanelProps {
   character: CharacterStats;
@@ -119,7 +120,11 @@ export default function CharacterPanel({ character, isActive }: CharacterPanelPr
               <div>
                 <h4 className="font-semibold mb-2 text-sm">Инвентарь:</h4>
                 <div className="flex flex-wrap gap-1">
-                  {character.inventory.length > 0 ? character.inventory.map((item, i) => <Badge key={i} variant="outline" className="gap-1"><Package className="w-3 h-3" />{item.name} ({item.type === 'heal' ? 'Лечение' : 'Урон'}: {item.amount})</Badge>) : <span className="text-xs text-muted-foreground">Пусто</span>}
+                  {character.inventory.length > 0 ? character.inventory.map((item, i) => {
+                     const itemData = ITEMS[item.name];
+                     const typeLabel = itemData.type === 'heal_oz' ? 'Лечение ОЗ' : itemData.type === 'heal_om' ? 'Лечение ОМ' : 'Урон';
+                    return <Badge key={i} variant="outline" className="gap-1"><Package className="w-3 h-3" />{item.name} ({typeLabel}: {itemData.amount})</Badge>
+                  }) : <span className="text-xs text-muted-foreground">Пусто</span>}
                 </div>
               </div>
             </>

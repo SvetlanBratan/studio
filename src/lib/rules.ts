@@ -1,6 +1,6 @@
 
 
-import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element, CharacterStats, WeaponType, ArmorType, Weapon, Armor } from "@/types/duel";
+import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element, CharacterStats, WeaponType, ArmorType, Weapon, Armor, ItemName } from "@/types/duel";
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
 
@@ -47,6 +47,19 @@ export const ARMORS: Record<ArmorType, Armor> = {
     'Латная': { name: 'Латная', shieldBonus: 50, odPenalty: 40 },
     'Зачарованная': { name: 'Зачарованная', shieldBonus: 100, odPenalty: 40 },
 };
+
+export const ITEMS = {
+  'Малое зелье лечения': { name: 'Малое зелье лечения', type: 'heal_oz', amount: 10 },
+  'Среднее зелье лечения': { name: 'Среднее зелье лечения', type: 'heal_oz', amount: 25 },
+  'Большое зелье лечения': { name: 'Большое зелье лечения', type: 'heal_oz', amount: 50 },
+  'Малое зелье маны': { name: 'Малое зелье маны', type: 'heal_om', amount: 25 },
+  'Среднее зелье маны': { name: 'Среднее зелье маны', type: 'heal_om', amount: 40 },
+  'Большое зелье маны': { name: 'Большое зелье маны', type: 'heal_om', amount: 60 },
+  'Метательный кинжал': { name: 'Метательный кинжал', type: 'damage', amount: 15 },
+  'Бомба': { name: 'Бомба', type: 'damage', amount: 30 },
+  'Осколок кристалла': { name: 'Осколок кристалла', type: 'damage', amount: 45 },
+} as const;
+
 
 export const RACES: Race[] = [
     { name: 'Алахоры', passiveBonuses: ['Беззвучие (противник теряет 5 ОМ)', 'Гибкость (-5 урона от физических атак)'], activeAbilities: [{ name: 'Железный ёж', description: 'Поглощает урон от след. заклинания и дает физ. щит.', cost: {om: 30} }] },
