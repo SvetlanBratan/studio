@@ -12,6 +12,7 @@ interface PixelCharacterProps {
   shield?: Shield;
   isActive?: boolean;
   spellElement?: string;
+  penalties?: string[];
 }
 
 const ELEMENT_COLORS: Record<string, string> = {
@@ -43,6 +44,7 @@ export default function PixelCharacter({
   shield,
   isActive = false,
   spellElement,
+  penalties = [],
 }: PixelCharacterProps) {
   const pixelSize = '6px'; // Controls the size of each "pixel"
 
@@ -75,8 +77,9 @@ export default function PixelCharacter({
     '--lunge-distance': isFlipped ? '-20px' : '20px',
   } as React.CSSProperties;
   
-  const createPixel = (top: number, left: number, color: string, width = 1, height = 1) => (
+  const createPixel = (top: number, left: number, color: string, width = 1, height = 1, extraClasses = '') => (
     <div
+      className={extraClasses}
       style={{
         position: 'absolute',
         top: `calc(${top} * ${pixelSize})`,
@@ -124,6 +127,30 @@ export default function PixelCharacter({
       }
       
       return <>{leftEye}{rightEye}{mouth}</>
+  }
+
+  const renderStatusEffects = () => {
+    const isBurning = penalties.some(p => p.startsWith('Горение'));
+    const isPoisoned = penalties.some(p => p.startsWith('Отравление'));
+
+    return (
+        <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '4px' }}>
+            {isBurning && (
+                <>
+                    {createPixel(0, 0, '#FF4500', 1, 1, 'animate-flicker')}
+                    {createPixel(1, -1, '#FFA500', 1, 1, 'animate-flicker [animation-delay:-0.2s]')}
+                    {createPixel(0, 2, '#FF4500', 1, 1, 'animate-flicker [animation-delay:-0.4s]')}
+                </>
+            )}
+            {isPoisoned && (
+                 <>
+                    {createPixel(0, 0, '#32CD32', 1, 1, 'animate-flicker')}
+                    {createPixel(1, -1, '#98FB98', 1, 1, 'animate-flicker [animation-delay:-0.3s]')}
+                    {createPixel(0, 2, '#32CD32', 1, 1, 'animate-flicker [animation-delay:-0.6s]')}
+                </>
+            )}
+        </div>
+    )
   }
   
   const renderSpellProjectile = () => {
@@ -173,6 +200,11 @@ export default function PixelCharacter({
     
     return (
         <>
+            {/* Hat */}
+            {createPixel(-3, 3, '#4a2f58', 4, 1)}
+            {createPixel(-2, 2, '#4a2f58', 6, 1)}
+            {createPixel(-1, 4, '#4a2f58', 2, 1)}
+
             {/* Head */}
             {createPixel(0, 3, '#f2d5ab', 4, 1)}
             {createPixel(1, 2, '#f2d5ab', 6, 3)}
@@ -206,8 +238,10 @@ export default function PixelCharacter({
         {renderPose()}
         <div style={shieldStyles} />
         {renderSpellProjectile()}
+        {renderStatusEffects()}
       </div>
     </div>
   );
 }
+
 

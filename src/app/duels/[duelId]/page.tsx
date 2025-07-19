@@ -532,7 +532,6 @@ export default function DuelPage() {
                         turnLog.push(`Уворот не удался. ${target.name} получает полный урон.`);
                     }
                 }
-                target.isDodging = false; // Dodge is consumed after one attempt
             }
 
             if (target.bonuses.includes('Переформа')) {
@@ -1658,6 +1657,7 @@ export default function DuelPage() {
         
         // Clear one-turn bonuses at the end of the turn
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Переформа');
+        activePlayer.isDodging = false;
 
         const isResting = actions.some(a => a.type === 'rest');
         if (isResting) {
@@ -1939,6 +1939,7 @@ export default function DuelPage() {
                       shield={duelData.player1.shield}
                       isActive={duelData.activePlayerId === 'player1'}
                       spellElement={duelData.animationState?.spellElement}
+                      penalties={duelData.player1.penalties}
                     />
                     <div className="absolute bottom-2 text-sm text-muted-foreground">Дистанция: {duelData.distance}м</div>
                     <PixelCharacter
@@ -1948,6 +1949,7 @@ export default function DuelPage() {
                       shield={duelData.player2.shield}
                       isActive={duelData.activePlayerId === 'player2'}
                       spellElement={duelData.animationState?.spellElement}
+                      penalties={duelData.player2.penalties}
                     />
                 </div>
 
@@ -1996,4 +1998,5 @@ export default function DuelPage() {
 }
 
     
+
 
