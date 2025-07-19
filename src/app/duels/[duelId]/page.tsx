@@ -159,8 +159,7 @@ export default function DuelPage() {
         
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) };
         
-        // Reset turn-based flags at the beginning of the turn
-        activePlayer.isDodging = false;
+        // Reset one-turn flags at the beginning of the turn
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Облик желания (-5 урон)');
         activePlayer.statuses = activePlayer.statuses?.filter(s => s !== 'Был атакован в прошлом ходу') || [];
         
@@ -340,6 +339,18 @@ export default function DuelPage() {
                  actions.push({type: 'rest', payload: {name: 'Пропуск хода из-за Удержания'}});
             }
         }
+        
+        // Handle "Frozen" effect by reducing actions
+        const frozenIndex = activePlayer.penalties.findIndex(p => p.startsWith('Заморожен'));
+        if (frozenIndex > -1) {
+             turnLog.push(`${activePlayer.name} находится под эффектом "Заморожен" и теряет одно действие.`);
+             if (actions.length > 1) {
+                 actions = actions.slice(0, 1);
+             }
+             // Consume the effect
+             const removedEffect = activePlayer.penalties.splice(frozenIndex, 1)[0];
+             turnLog.push(`Эффект "${removedEffect}" был использован и снят.`);
+        }
 
         // Handle "lose action" effects
         const loseActionPenaltyIndex = activePlayer.penalties.findIndex(p => p.startsWith('Потеря действия'));
@@ -399,22 +410,6 @@ export default function DuelPage() {
             let damageDealtToTarget = 0;
             const opponentPlayerId = duelData.activePlayerId === 'player1' ? 'player2' : 'player1';
             
-            const autoDodgeIndex = target.bonuses.findIndex(b => b.startsWith('Авто-уклонение'));
-            if (autoDodgeIndex > -1) {
-                const match = target.bonuses[autoDodgeIndex].match(/\((\d+)\)/);
-                if (match) {
-                    let duration = parseInt(match[1], 10) - 1;
-                    target.isDodging = true;
-                    turnLog.push(`Пассивная способность (Хамелеоны): ${target.name} автоматически уклоняется.`);
-                    if (duration > 0) {
-                        target.bonuses[autoDodgeIndex] = `Авто-уклонение (${duration})`;
-                    } else {
-                        target.bonuses.splice(autoDodgeIndex, 1);
-                    }
-                }
-            }
-
-
             if (target.isDodging) {
                 if (isSpell && newDistance < 10) {
                     finalDamage = Math.max(0, finalDamage - RULES.DODGE_VS_STRONG_SPELL_DMG_REDUCTION);
@@ -430,6 +425,22 @@ export default function DuelPage() {
                     }
                 }
             }
+            
+            const autoDodgeIndex = target.bonuses.findIndex(b => b.startsWith('Авто-уклонение'));
+            if (autoDodgeIndex > -1) {
+                const match = target.bonuses[autoDodgeIndex].match(/\((\d+)\)/);
+                if (match) {
+                    let duration = parseInt(match[1], 10) - 1;
+                    target.isDodging = true;
+                    turnLog.push(`Пассивная способность (Хамелеоны): ${target.name} автоматически уклоняется.`);
+                    if (duration > 0) {
+                        target.bonuses[autoDodgeIndex] = `Авто-уклонение (${duration})`;
+                    } else {
+                        target.bonuses.splice(autoDodgeIndex, 1);
+                    }
+                }
+            }
+
 
             if (target.bonuses.includes('Переформа')) {
                 turnLog.push(`Пассивная способность (Слизни): ${target.name} находится в неуязвимой форме и игнорирует весь урон.`);
@@ -872,9 +883,9 @@ export default function DuelPage() {
                 }
                 
                 const oslablenieIndex = opponentPlayer.penalties.findIndex(p => p.startsWith('Ослабление'));
-                if (oslablenieIndex > -1) {
+                if (oslabenieIndex > -1) {
                     damage = Math.max(0, damage - 10);
-                    opponentPlayer.penalties.splice(oslablenieIndex, 1);
+                    opponentPlayer.penalties.splice(oslabenieIndex, 1);
                     turnLog.push(`Эффект "Ослабление" снижает урон ${activePlayer.name} на 10.`);
                 }
 
@@ -1553,7 +1564,7 @@ export default function DuelPage() {
         });
         
         let turnSkipped = false;
-        const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен', 'Транс', 'Усыпление', 'Заморожен'];
+        const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен', 'Транс', 'Усыпление'];
         let petrificationCount = 0;
 
         activePlayer.penalties = activePlayer.penalties.map(p => {
@@ -1621,6 +1632,8 @@ export default function DuelPage() {
               turnLog.push(`${activePlayer.name} частично окаменел и теряет одно действие: "${getActionLabel(lostAction.type, lostAction.payload)}".`);
             }
         }
+        
+        activePlayer.isDodging = false;
 
         if (turnSkipped && actions.length > 0) {
             const newTurn: Turn = {
@@ -2003,3 +2016,4 @@ export default function DuelPage() {
 
 
     
+
