@@ -904,7 +904,12 @@ export default function DuelPage() {
         actions.forEach(action => {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
             const isAttackAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'physical_attack', 'racial_ability'].includes(action.type);
-            if (isAttackAction) {
+            const isCastingAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield', 'heal_self', 'prayer'].includes(action.type);
+
+            if (isCastingAction) {
+                animationState = { ...animationState, [duelData.activePlayerId]: 'casting' };
+            }
+            if (action.type === 'physical_attack') {
                 animationState = { ...animationState, [duelData.activePlayerId]: 'attack' };
             }
             
@@ -1672,7 +1677,7 @@ export default function DuelPage() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) },
         };
         
-        const finalActivePlayer = activePlayer;
+        const { isDodging: _isDodging, ...finalActivePlayer } = activePlayer;
         const finalOpponent = opponentPlayer;
 
         const updatedDuel: Partial<DuelState> = {
@@ -1915,6 +1920,7 @@ export default function DuelPage() {
                       pose={duelData.animationState?.player1 || 'idle'}
                       isAttacking={duelData.animationState?.player1 === 'attack'}
                       isHit={duelData.animationState?.player1 === 'hit'}
+                      shield={duelData.player1.shield}
                     />
                     <div className="absolute bottom-2 text-sm text-muted-foreground">Дистанция: {duelData.distance}м</div>
                     <PixelCharacter
@@ -1922,6 +1928,7 @@ export default function DuelPage() {
                       isAttacking={duelData.animationState?.player2 === 'attack'}
                       isHit={duelData.animationState?.player2 === 'hit'}
                       isFlipped={true}
+                      shield={duelData.player2.shield}
                     />
                 </div>
 
