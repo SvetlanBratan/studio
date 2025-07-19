@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -403,23 +404,8 @@ export default function DuelPage() {
             turnLog.push(`Пассивная способность (Нимфилус): ОМ на нуле, ${activePlayer.name} теряет 10 ОЗ.`);
         }
         
-        const autoDodgeIndex = activePlayer.bonuses.findIndex(b => b.startsWith('Авто-уклонение'));
-        if (autoDodgeIndex > -1) {
-            const match = activePlayer.bonuses[autoDodgeIndex].match(/\((\d+)\)/);
-            if (match) {
-                let duration = parseInt(match[1], 10) - 1;
-                activePlayer.isDodging = true;
-                turnLog.push(`Пассивная способность (Хамелеоны): ${activePlayer.name} автоматически уклоняется.`);
-                if (duration > 0) {
-                    activePlayer.bonuses[autoDodgeIndex] = `Авто-уклонение (${duration})`;
-                } else {
-                    activePlayer.bonuses.splice(autoDodgeIndex, 1);
-                }
-            }
-        }
-        
         if (activePlayer.penalties.some(p => p.startsWith('Удержание'))) {
-            actions = actions.filter(a => a.type === 'remove_effect' || a.type === 'rest');
+            actions = actions.filter(a => ['remove_effect', 'rest'].includes(a.type));
             if (actions.length === 0) {
                  turnLog.push(`${activePlayer.name} находится под эффектом "Удержание" и пропускает ход, так как не было выбрано доступное действие.`);
                  actions.push({type: 'rest', payload: {name: 'Пропуск хода из-за Удержания'}});
@@ -515,6 +501,22 @@ export default function DuelPage() {
             let finalDamage = amount;
             let damageDealtToTarget = 0;
             const opponentPlayerId = duelData.activePlayerId === 'player1' ? 'player2' : 'player1';
+            
+            const autoDodgeIndex = target.bonuses.findIndex(b => b.startsWith('Авто-уклонение'));
+            if (autoDodgeIndex > -1) {
+                const match = target.bonuses[autoDodgeIndex].match(/\((\d+)\)/);
+                if (match) {
+                    let duration = parseInt(match[1], 10) - 1;
+                    target.isDodging = true;
+                    turnLog.push(`Пассивная способность (Хамелеоны): ${target.name} автоматически уклоняется.`);
+                    if (duration > 0) {
+                        target.bonuses[autoDodgeIndex] = `Авто-уклонение (${duration})`;
+                    } else {
+                        target.bonuses.splice(autoDodgeIndex, 1);
+                    }
+                }
+            }
+
 
             if (target.isDodging) {
                 if (isSpell && newDistance < 10) {
