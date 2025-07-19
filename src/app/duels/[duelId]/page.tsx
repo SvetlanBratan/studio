@@ -51,7 +51,7 @@ export default function DuelPage() {
 
   useEffect(() => {
     if (isLocalSolo && !localDuelState && user) {
-        const player1 = initialPlayerStats(user.uid, user.displayName || 'Игрок 1');
+        const player1 = initialPlayerStats(user.uid, 'Игрок 1');
         const player2 = initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
         setLocalDuelState({
             player1,
@@ -70,7 +70,7 @@ export default function DuelPage() {
 
   useEffect(() => {
     if (!isLocalSolo && user && onlineDuel && !onlineDuel.player2 && onlineDuel.player1.id !== user.uid) {
-        joinDuel(duelId, user.uid, user.displayName || "Игрок 2");
+        joinDuel(duelId, user.uid, "Игрок 2");
     }
   }, [user, onlineDuel, duelId, isLocalSolo]);
 
@@ -180,6 +180,13 @@ export default function DuelPage() {
             activePlayer.oz -= 2;
             turnLog.push(`Пассивная способность (Скелеты): ${opponent.name} влияет на ${activePlayer.name}, который теряет 2 ОЗ.`);
         }
+        if(opponent.race === 'Сирены' && opponent.bonuses.includes('Очарование (враг тратит 10 ОД при атаке по сирене)')) {
+            const charmEffect = 'Очарование (Сирена)';
+            if (!activePlayer.penalties.includes(charmEffect)) {
+                activePlayer.penalties.push(charmEffect);
+                turnLog.push(`Пассивная способность (Сирены): ${activePlayer.name} очарован. Его действия будут стоить на 10 ОД больше.`);
+            }
+        }
 
         activePlayer.bonuses.forEach(bonus => {
             // OZ Regen
@@ -279,7 +286,7 @@ export default function DuelPage() {
                 return '';
             }
             return p;
-        }).filter(p => p !== '');
+        }).filter(p => p !== '' && !p.startsWith('Очарование (Сирена)'));
 
         if (petrificationCount >= 2) {
             turnSkipped = true;
@@ -824,31 +831,23 @@ export default function DuelPage() {
         actions.forEach(action => {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
             
-            const getOdCostPenalty = (player: CharacterStats): number => {
-                let penalty = 0;
-                 if (player.race === 'Куклы' && player.bonuses.includes('Абсолютная память — не тратится ОД.')) {
-                    return -Infinity; // Special value to indicate zero cost
-                }
-                for (const wound of RULES.WOUND_PENALTIES) {
-                    if (player.oz < wound.threshold) {
-                        penalty = wound.penalty;
+            const getOdCostPenalty = (player: CharacterStats): { wound: number; armor: number; charm: number } => {
+                let woundPenalty = 0;
+                if (player.race !== 'Куклы' || !player.bonuses.includes('Абсолютная память — не тратится ОД.')) {
+                    for (const wound of RULES.WOUND_PENALTIES) {
+                        if (player.oz < wound.threshold) {
+                            woundPenalty = wound.penalty;
+                        }
                     }
                 }
+            
                 const armorPenalty = ARMORS[player.armor as ArmorType]?.odPenalty ?? 0;
-                penalty += armorPenalty;
-
-                 if (player.bonuses.includes('Животная реакция (-5 ОД на физические действия)') || player.bonuses.includes('Ловкие конечности (-5 ОД на действия)') || player.bonuses.includes('Галоп (-5 ОД на действия)')) {
-                    penalty -= 5;
-                }
-                 if (player.bonuses.includes('Быстрые мышцы (-5 ОД на действия, связанные с перемещением)')) {
-                     // Specific to move actions, handled elsewhere for now.
-                 }
-                 if(opponent.bonuses.includes('Очарование (враг тратит 10 ОД при атаке по сирене)')) {
-                    penalty += 10;
-                    turnLog.push(`Пассивная способность (Сирены): ${player.name} очарован и тратит на 10 ОД больше.`);
-                 }
-                return penalty;
+                
+                const charmPenalty = player.penalties.some(p => p === 'Очарование (Сирена)') ? 10 : 0;
+            
+                return { wound: woundPenalty, armor: armorPenalty, charm: charmPenalty };
             };
+
             
             const isSpellAction = ['strong_spell', 'medium_spell', 'small_spell', 'shield', 'racial_ability'].includes(action.type);
             const isHouseholdSpell = action.type === 'household_spell';
@@ -991,16 +990,45 @@ export default function DuelPage() {
             }
 
             let damageDealt = 0;
-            const odPenalty = getOdCostPenalty(activePlayer);
-            const getFinalOdCost = (baseCost: number) => {
-                if (odPenalty === -Infinity) return 0;
-                return baseCost + odPenalty;
+            const odPenalties = getOdCostPenalty(activePlayer);
+            let odReduction = 0;
+            if (activePlayer.bonuses.includes('Животная реакция (-5 ОД на физические действия)') || activePlayer.bonuses.includes('Ловкие конечности (-5 ОД на действия)') || activePlayer.bonuses.includes('Галоп (-5 ОД на действия)')) {
+                odReduction = 5;
+            }
+
+            const getFinalOdCost = (baseCost: number, isMove: boolean = false) => {
+                if (activePlayer.race === 'Куклы' && activePlayer.bonuses.includes('Абсолютная память — не тратится ОД.')) return 0;
+                
+                let moveReduction = 0;
+                if (isMove && activePlayer.bonuses.includes('Быстрые мышцы (-5 ОД на действия, связанные с перемещением)')) {
+                    moveReduction = 5;
+                }
+                
+                const totalCost = baseCost + odPenalties.wound + odPenalties.armor + odPenalties.charm - odReduction - moveReduction;
+                return Math.max(0, totalCost);
             };
+
+            const logOdCost = (baseCost: number, finalCost: number) => {
+                const penaltyDetails: string[] = [];
+                if (odPenalties.wound > 0) penaltyDetails.push(`ранение: +${odPenalties.wound}`);
+                if (odPenalties.armor > 0) penaltyDetails.push(`броня: +${odPenalties.armor}`);
+                if (odPenalties.charm > 0) penaltyDetails.push(`очарование: +${odPenalties.charm}`);
+                if (odReduction > 0) penaltyDetails.push(`бонус: -${odReduction}`);
+
+                if (penaltyDetails.length > 0) {
+                    turnLog.push(`Затраты ОД: ${finalCost} (база ${baseCost} + ${penaltyDetails.join(', ')})`);
+                } else {
+                    turnLog.push(`Затраты ОД: ${finalCost}`);
+                }
+            };
+
 
             switch(action.type) {
                 case 'physical_attack': {
-                    const cost = getFinalOdCost(RULES.NON_MAGIC_COSTS.physical_attack);
-                    activePlayer.od -= cost;
+                    const baseCost = RULES.NON_MAGIC_COSTS.physical_attack;
+                    const finalCost = getFinalOdCost(baseCost);
+                    activePlayer.od -= finalCost;
+                    logOdCost(baseCost, finalCost);
                     const weapon = WEAPONS[activePlayer.weapon as WeaponType];
                     damageDealt = calculateDamage(weapon.damage, false);
                     applyDamage(activePlayer, opponent, damageDealt, false, undefined, true);
@@ -1037,38 +1065,43 @@ export default function DuelPage() {
                     break;
                 case 'dodge':
                     {
-                        let cost = getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge);
+                        let baseCost = RULES.NON_MAGIC_COSTS.dodge;
+                        let reduction = 0;
                         if (activePlayer.bonuses.includes('Лёгкость (-5 ОД на уклонение)')) {
-                            cost = Math.max(0, cost - 5);
+                            reduction += 5;
                             turnLog.push(`Пассивная способность (Неземные): Лёгкость снижает стоимость уклонения.`);
                         }
                          if (activePlayer.bonuses.includes('Мимикрия (-15 ОД на уклонение)')) {
-                            cost = Math.max(0, cost - 15);
+                            reduction += 15;
                             turnLog.push(`Пассивная способность (Хамелеоны): Мимикрия снижает стоимость уклонения.`);
                         }
-                        activePlayer.od -= cost;
+                        baseCost = Math.max(0, baseCost - reduction);
+                        const finalCost = getFinalOdCost(baseCost);
+                        activePlayer.od -= finalCost;
                         activePlayer.isDodging = true;
-                        turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
+                        logOdCost(baseCost, finalCost);
+                        turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки.`);
                     }
                     break;
                 case 'move':
                     {
                         const distanceToMove = action.payload?.distance || 0;
-                        let cost = getFinalOdCost(Math.abs(distanceToMove) * RULES.NON_MAGIC_COSTS.move_per_meter);
-                         if (activePlayer.bonuses.includes('Быстрые мышцы (-5 ОД на действия, связанные с перемещением)')) {
-                            cost = Math.max(0, cost - 5);
-                         }
-                        activePlayer.od -= cost;
+                        const baseCost = Math.abs(distanceToMove) * RULES.NON_MAGIC_COSTS.move_per_meter;
+                        const finalCost = getFinalOdCost(baseCost, true);
+                        activePlayer.od -= finalCost;
                         newDistance = Math.max(0, newDistance + distanceToMove);
-                        turnLog.push(`${activePlayer.name} изменяет дистанцию на ${distanceToMove > 0 ? '+' : ''}${distanceToMove}м. Новая дистанция: ${newDistance}м. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
+                        turnLog.push(`${activePlayer.name} изменяет дистанцию на ${distanceToMove > 0 ? '+' : ''}${distanceToMove}м. Новая дистанция: ${newDistance}м.`);
+                        logOdCost(baseCost, finalCost);
                     }
                     break;
                 case 'use_item':
                      {
-                        const cost = getFinalOdCost(RULES.NON_MAGIC_COSTS.use_item);
-                        activePlayer.od -= cost;
+                        const baseCost = RULES.NON_MAGIC_COSTS.use_item;
+                        const finalCost = getFinalOdCost(baseCost);
+                        activePlayer.od -= finalCost;
+                        logOdCost(baseCost, finalCost);
                         activePlayer.cooldowns.item = RULES.COOLDOWNS.item;
-                        turnLog.push(`${activePlayer.name} использует предмет. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
+                        turnLog.push(`${activePlayer.name} использует предмет.`);
                         
                         if (activePlayer.inventory.length > 0) {
                             const item = activePlayer.inventory[0];
@@ -1086,15 +1119,17 @@ export default function DuelPage() {
                     break;
                 case 'prayer':
                     {
-                        const cost = getFinalOdCost(RULES.NON_MAGIC_COSTS.prayer);
-                        activePlayer.od -= cost;
+                        const baseCost = RULES.NON_MAGIC_COSTS.prayer;
+                        const finalCost = getFinalOdCost(baseCost);
+                        activePlayer.od -= finalCost;
+                        logOdCost(baseCost, finalCost);
                         activePlayer.cooldowns.prayer = RULES.COOLDOWNS.prayer;
                         
                         const roll = Math.floor(Math.random() * 10) + 1;
                         const requiredRoll = RULES.PRAYER_CHANCE[String(activePlayer.faithLevel)] || 0;
                         const isSuccess = activePlayer.faithLevel === 10 || (activePlayer.faithLevel > -1 && roll <= requiredRoll);
 
-                        turnLog.push(`${activePlayer.name} молится о "${getActionLabel(action.type, action.payload)}". Бросок: ${roll}, нужно <= ${requiredRoll}. Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
+                        turnLog.push(`${activePlayer.name} молится о "${getActionLabel(action.type, action.payload)}". Бросок: ${roll}, нужно <= ${requiredRoll}.`);
 
                         if (isSuccess) {
                             turnLog.push(`Молитва услышана!`);
@@ -1145,9 +1180,10 @@ export default function DuelPage() {
                             turnLog.push(`Затраты ОМ: ${ability.cost.om}.`);
                          }
                          if(ability.cost?.od) {
-                            const cost = getFinalOdCost(ability.cost.od);
-                            activePlayer.od -= cost;
-                            turnLog.push(`Затраты ОД: ${cost}${odPenalty > 0 && odPenalty !== -Infinity ? ` (включая штраф ${odPenalty})` : ''}.`);
+                            const baseCost = ability.cost.od;
+                            const finalCost = getFinalOdCost(baseCost);
+                            activePlayer.od -= finalCost;
+                            logOdCost(baseCost, finalCost);
                          }
                          if(ability.cost?.oz) {
                             activePlayer.oz -= ability.cost.oz;
