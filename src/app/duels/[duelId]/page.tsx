@@ -386,7 +386,7 @@ export default function DuelPage() {
             }
         }
         
-        if (activePlayer.penalties.some(p => p.startsWith('Очарование'))) {
+        if (activePlayer.penalties.some(p => p.startsWith('Очарование') && !p.startsWith('Очарование (Сирена)'))) {
             turnSkipped = true;
             turnLog.push(`${activePlayer.name} находится под эффектом "Очарование" и может только попытаться снять его или отдохнуть.`);
             actions = actions.filter(a => a.type === 'remove_effect' || a.type === 'rest');
@@ -878,8 +878,9 @@ export default function DuelPage() {
             };
 
             
-            const isSpellAction = ['strong_spell', 'medium_spell', 'small_spell', 'shield', 'racial_ability'].includes(action.type);
+            const isSpellAction = ['strong_spell', 'medium_spell', 'small_spell', 'racial_ability'].includes(action.type);
             const isHouseholdSpell = action.type === 'household_spell';
+            const isShieldAction = action.type === 'shield';
 
             if ((isSpellAction || isHouseholdSpell) && activePlayer.race === 'Безликие') {
                 if (!isHouseholdSpell) {
@@ -888,7 +889,7 @@ export default function DuelPage() {
                 }
             }
 
-            if ((isSpellAction || isHouseholdSpell) && activePlayer.elementalKnowledge.length === 0) {
+            if ((isSpellAction || isHouseholdSpell || isShieldAction) && activePlayer.elementalKnowledge.length === 0) {
                  turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: у персонажа нет знаний стихий.`);
                  return;
             }
@@ -1826,3 +1827,4 @@ export default function DuelPage() {
     
 
     
+
