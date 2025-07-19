@@ -26,8 +26,8 @@ export default function SoloSetupForm({ player1, player2, onSave, onCancel }: So
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="max-w-6xl">
-        <DialogHeader>
+      <DialogContent className="max-w-6xl flex flex-col max-h-[90vh]">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <Users />
             Настройка пробной дуэли
@@ -36,19 +36,19 @@ export default function SoloSetupForm({ player1, player2, onSave, onCancel }: So
             Настройте обоих персонажей для начала сольного поединка.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4 max-h-[85vh] overflow-y-auto px-2 pr-4">
-            <div>
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><User/>Игрок 1</h3>
-                <div className="h-full overflow-y-auto pr-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4 overflow-y-auto flex-grow px-1">
+            <div className="h-full flex flex-col">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 shrink-0"><User/>Игрок 1</h3>
+                <div className="overflow-y-auto pr-2 flex-grow">
                     <CharacterSetupForm
                         character={p1Stats}
                         onCharacterChange={setP1Stats}
                     />
                 </div>
             </div>
-             <div className="border-l border-border px-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><User/>Игрок 2</h3>
-                 <div className="h-full overflow-y-auto pr-2">
+             <div className="border-l border-border px-6 h-full flex flex-col">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 shrink-0"><User/>Игрок 2</h3>
+                 <div className="overflow-y-auto pr-2 flex-grow">
                     <CharacterSetupForm
                         character={p2Stats}
                         onCharacterChange={setP2Stats}
@@ -56,7 +56,7 @@ export default function SoloSetupForm({ player1, player2, onSave, onCancel }: So
                 </div>
             </div>
         </div>
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="pt-4 border-t shrink-0">
           <Button variant="outline" onClick={onCancel}>Отмена</Button>
           <Button onClick={handleSave} size="lg">
             <ShieldCheck className="mr-2" />

@@ -37,7 +37,7 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
   
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl flex flex-col max-h-[90vh]">
             <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                     Настройка персонажа: {character.name}
@@ -46,13 +46,13 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
                     Выберите расу, резерв и другие параметры вашего персонажа перед началом дуэли.
                 </DialogDescription>
             </DialogHeader>
-            <div className="py-4 max-h-[70vh] overflow-y-auto pr-4">
+            <div className="py-4 overflow-y-auto pr-4 flex-grow">
                 <CharacterSetupForm
                     character={editableCharacter}
                     onCharacterChange={setEditableCharacter}
                 />
             </div>
-            <DialogFooter className="pt-4 border-t">
+            <DialogFooter className="pt-4 border-t shrink-0">
                  <DialogClose asChild>
                     <Button variant="outline" onClick={onCancel}>Отмена</Button>
                 </DialogClose>
