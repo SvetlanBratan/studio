@@ -38,6 +38,38 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const [selectValue, setSelectValue] = useState('');
   const playerRaceInfo = RACES.find(r => r.name === player.race);
 
+  const calculatePotentialDamage = (baseDamage: number, isSpell: boolean, spellElement?: string): number => {
+    let damage = baseDamage;
+    const wasAttackedLastTurn = player.statuses?.includes('Был атакован в прошлом ходу');
+    let damageTakenLastTurn = 0; // Simplified for UI, real logic is in duel engine
+    
+    // This is a simplified version of the damage calculation logic from the main page
+    // It only includes attacker's bonuses to give a baseline damage estimate
+    if (player.bonuses.includes('Трансформация (+30 урон)')) damage += 30;
+    if (player.bonuses.includes('Единение с духами (+10 к урону от стихийных атак)') && isSpell) damage += 10;
+    if (player.bonuses.includes('Стихийная преданность (+5 урона при атаке своей стихией)') && isSpell && spellElement && player.elementalKnowledge.includes(spellElement)) damage += 5;
+    if (player.bonuses.includes('Взрыв ярости (+10 урона по врагу в случае, если ОЗ ниже 100)') && player.oz < 100) damage += 10;
+    if (player.bonuses.includes('Пылающий дух (+5 к урону, если ОЗ ниже 100)') && player.oz < 100) damage += 5;
+    if (isSpell && player.bonuses.includes('Боевая магия')) {
+        const actionType = actions.length > 0 ? actions[actions.length-1].type : 'small_spell'; // Approximation
+        const bonus = RULES.DAMAGE_BONUS.battle_magic[actionType as keyof typeof RULES.DAMAGE_BONUS.battle_magic] ?? 0;
+        damage += bonus;
+    }
+    if (player.bonuses.includes('Расовая ярость (+10 к урону)')) damage += 10;
+    if (player.bonuses.includes('Меткость— + 10 к урону')) damage += 10;
+    if (player.bonuses.includes('Боль превращения (+10 урон)')) damage += 10;
+    if (player.bonuses.includes('Воинская слава (+10 урона при контратаке)') && wasAttackedLastTurn) damage += 10;
+    if (player.bonuses.includes('Рёв предков (+5 урона по врагу, если персонаж был атакован в прошлом ходу)') && wasAttackedLastTurn) damage += 5;
+    if (player.bonuses.includes('Кровавое могущество (+10 урона, если ОЗ врага меньше 100)') && opponent.oz < 100) damage += 10;
+    if (player.bonuses.includes('Эхолокация (+10 к урону при первом попадании в дуэли)')) damage += 10; // This might be off if not first hit
+    if (player.bonuses.includes('Драконья ярость (+10 урона, если получено более 40 урона за прошлый ход)') && damageTakenLastTurn > 40) damage += 10;
+    if (!isSpell && player.bonuses.includes('Удар крыла (+10 к физическим атакам)')) damage += 10;
+    if (!isSpell && player.bonuses.includes('Уверенность в прыжке (+10 к физическим атакам)')) damage += 10;
+    if (!isSpell && player.bonuses.includes('Сила кузни (+10 урона к физическим атакам по врагу)')) damage += 10;
+
+    return Math.round(damage);
+  };
+
   const addAction = (type: string, payload?: any) => {
     if (actions.length >= RULES.MAX_ACTIONS_PER_TURN || !type) return;
 
@@ -164,15 +196,21 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     });
   }, [actions]);
 
+  const strongSpellDamage = calculatePotentialDamage(RULES.RITUAL_DAMAGE[player.reserve]?.strong ?? 0, true);
+  const mediumSpellDamage = calculatePotentialDamage(RULES.RITUAL_DAMAGE[player.reserve]?.medium ?? 0, true);
+  const smallSpellDamage = calculatePotentialDamage(RULES.RITUAL_DAMAGE[player.reserve]?.small ?? 0, true);
+  const householdSpellDamage = calculatePotentialDamage(RULES.RITUAL_DAMAGE[player.reserve]?.household ?? 0, true);
+  const physicalAttackDamage = calculatePotentialDamage(weaponInfo.damage, false);
+
   const actionOptions: {value: string, label: string, disabled: boolean, tooltip?: string, group: 'magic' | 'physical' | 'other'}[] = [
     // Physical
-    { group: 'physical', value: 'physical_attack', label: `Атака оружием (${weaponInfo.name}) - ${physicalAttackCost} ОД`, disabled: player.od < physicalAttackCost || !isOpponentInRangeForWeapon || player.cooldowns.physical_attack > 0, tooltip: !isOpponentInRangeForWeapon ? `Цель вне зоны досягаемости (${distance}m > ${weaponInfo.range}m)` : undefined },
+    { group: 'physical', value: 'physical_attack', label: `Атака (${weaponInfo.name}) - Урон: ${physicalAttackDamage}, ОД: ${physicalAttackCost}`, disabled: player.od < physicalAttackCost || !isOpponentInRangeForWeapon || player.cooldowns.physical_attack > 0, tooltip: !isOpponentInRangeForWeapon ? `Цель вне зоны досягаемости (${distance}m > ${weaponInfo.range}m)` : undefined },
     
     // Magic
-    { group: 'magic', value: 'strong_spell', label: 'Сильный ритуал', disabled: isFaceless || !hasElementalKnowledge || player.cooldowns.strongSpell > 0 || player.om < RULES.RITUAL_COSTS.strong || hasAddedAction('strong_spell') || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : !hasElementalKnowledge ? 'Нет знаний стихий' : undefined },
-    { group: 'magic', value: 'medium_spell', label: 'Средний ритуал', disabled: isFaceless || !hasElementalKnowledge || player.om < RULES.RITUAL_COSTS.medium || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : !hasElementalKnowledge ? 'Нет знаний стихий' : undefined },
-    { group: 'magic', value: 'small_spell', label: 'Малый ритуал', disabled: isFaceless || !hasElementalKnowledge || player.om < RULES.RITUAL_COSTS.small || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : !hasElementalKnowledge ? 'Нет знаний стихий' : undefined },
-    { group: 'magic', value: 'household_spell', label: 'Бытовое заклинание', disabled: player.om < RULES.RITUAL_COSTS.household || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)`: undefined },
+    { group: 'magic', value: 'strong_spell', label: `Сильный ритуал (Урон: ${strongSpellDamage})`, disabled: isFaceless || !hasElementalKnowledge || player.cooldowns.strongSpell > 0 || player.om < RULES.RITUAL_COSTS.strong || hasAddedAction('strong_spell') || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : !hasElementalKnowledge ? 'Нет знаний стихий' : undefined },
+    { group: 'magic', value: 'medium_spell', label: `Средний ритуал (Урон: ${mediumSpellDamage})`, disabled: isFaceless || !hasElementalKnowledge || player.om < RULES.RITUAL_COSTS.medium || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : !hasElementalKnowledge ? 'Нет знаний стихий' : undefined },
+    { group: 'magic', value: 'small_spell', label: `Малый ритуал (Урон: ${smallSpellDamage})`, disabled: isFaceless || !hasElementalKnowledge || player.om < RULES.RITUAL_COSTS.small || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : !hasElementalKnowledge ? 'Нет знаний стихий' : undefined },
+    { group: 'magic', value: 'household_spell', label: `Бытовое (Урон: ${householdSpellDamage})`, disabled: player.om < RULES.RITUAL_COSTS.household || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)`: undefined },
     { group: 'magic', value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: isFaceless || !hasElementalKnowledge || player.om < RULES.RITUAL_COSTS.medium || hasAddedAction('shield') },
 
     // Other
