@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -158,10 +159,6 @@ export default function DuelPage() {
         
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) };
         
-        let turnSkipped = false;
-        const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен', 'Транс', 'Усыпление', 'Заморожен'];
-        let petrificationCount = 0;
-        
         // Reset turn-based flags at the beginning of the turn
         activePlayer.isDodging = false;
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Облик желания (-5 урон)');
@@ -281,74 +278,6 @@ export default function DuelPage() {
             }
         });
 
-
-        activePlayer.penalties = activePlayer.penalties.map(p => {
-            const match = p.match(/(.+) \((\d+)\)$/);
-            if (match) {
-                const name = match[1].trim();
-                let duration = parseInt(match[2], 10) - 1;
-
-                if (simpleTurnSkipEffects.includes(name) && !activePlayer.bonuses.includes('Иммунитет к контролю')) {
-                    turnSkipped = true;
-                    turnLog.push(`${activePlayer.name} пропускает ход из-за эффекта "${name}"!`);
-                }
-                if (name === 'Окаменение') {
-                    petrificationCount++;
-                }
-                
-                if (name === 'Ослепление') {
-                    activePlayer.od = Math.max(0, activePlayer.od - 10);
-                    turnLog.push(`${activePlayer.name} ослеплен и теряет 10 ОД!`);
-                }
-                
-                if (name === 'Скрытность') {
-                    turnLog.push(`${activePlayer.name} остается в скрытности.`);
-                }
-                
-                if (name === 'Удержание') {
-                    turnLog.push(`${activePlayer.name} находится под эффектом "${name}", магические способности недоступны.`);
-                }
-
-                if (duration > 0) {
-                    return `${name} (${duration})`;
-                }
-                turnLog.push(`Эффект "${name}" закончился для ${activePlayer.name}.`);
-                return '';
-            }
-            return p;
-        }).filter(p => p !== '');
-        
-        // Recalculate wound penalties
-        activePlayer.penalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД (Ранение)'));
-        if (activePlayer.race !== 'Куклы' || !activePlayer.bonuses.includes('Абсолютная память — не тратится ОД.')) {
-            for (const wound of RULES.WOUND_PENALTIES) {
-                if (activePlayer.oz < wound.threshold) {
-                     const penaltyName = `Штраф ОД (Ранение): +${wound.penalty}`;
-                     if (!activePlayer.penalties.includes(penaltyName)) activePlayer.penalties.push(penaltyName);
-                }
-            }
-        }
-        
-        // Add armor penalty if not present
-        const armorPenalty = ARMORS[activePlayer.armor as ArmorType]?.odPenalty ?? 0;
-        const armorPenaltyName = `Штраф ОД (Броня): +${armorPenalty}`;
-        // First remove existing armor penalties to avoid duplicates if armor changes
-        activePlayer.penalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД (Броня)'));
-        if (armorPenalty > 0) {
-            if (!activePlayer.penalties.includes(armorPenaltyName)) activePlayer.penalties.push(armorPenaltyName);
-        }
-
-
-        if (petrificationCount >= 2) {
-            turnSkipped = true;
-            turnLog.push(`${activePlayer.name} полностью окаменел и пропускает ход!`);
-        } else if (petrificationCount === 1 && actions.length > 0) {
-            const lostAction = actions.pop();
-            if(lostAction) {
-              turnLog.push(`${activePlayer.name} частично окаменел и теряет одно действие: "${getActionLabel(lostAction.type, lostAction.payload)}".`);
-            }
-        }
-        
         for (const key in activePlayer.cooldowns) {
             const typedKey = key as keyof typeof activePlayer.cooldowns;
             if (activePlayer.cooldowns[typedKey] > 0) {
@@ -409,7 +338,6 @@ export default function DuelPage() {
             if (actions.length === 0) {
                  turnLog.push(`${activePlayer.name} находится под эффектом "Удержание" и пропускает ход, так как не было выбрано доступное действие.`);
                  actions.push({type: 'rest', payload: {name: 'Пропуск хода из-за Удержания'}});
-                 turnSkipped = true;
             }
         }
 
@@ -419,37 +347,6 @@ export default function DuelPage() {
              turnLog.push(`${activePlayer.name} теряет одно действие из-за штрафа.`);
              // The turn-form will already limit actions to 1, so we just remove the penalty here.
              activePlayer.penalties.splice(loseActionPenaltyIndex, 1);
-        }
-
-        if (turnSkipped) {
-            const newTurn: Turn = {
-                turnNumber: duelData.currentTurn,
-                playerId: activePlayer.id,
-                playerName: activePlayer.name,
-                actions: [{type: 'rest', payload: {name: 'Пропуск хода'}}],
-                log: turnLog,
-                startStats: startStats,
-                endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield },
-            };
-            
-            activePlayer.physicalCondition = getPhysicalCondition(activePlayer.oz, activePlayer.maxOz);
-            opponentPlayer.physicalCondition = getPhysicalCondition(opponentPlayer.oz, opponentPlayer.maxOz);
-            
-            const { isDodging: _activeIsDodging, ...finalActivePlayer } = activePlayer;
-            const finalOpponent = opponentPlayer;
-
-            const updatedDuel: Partial<DuelState> = {
-                player1: duelData.activePlayerId === 'player1' ? finalActivePlayer : finalOpponent,
-                player2: duelData.activePlayerId === 'player2' ? finalActivePlayer : finalOpponent,
-                turnHistory: [...duelData.turnHistory, newTurn],
-                currentTurn: duelData.currentTurn + 1,
-                activePlayerId: duelData.activePlayerId === 'player1' ? 'player2' : 'player1',
-                winner: null,
-                log: turnLog,
-                animationState: { player1: 'idle', player2: 'idle' },
-            };
-            handleUpdateDuelState(updatedDuel);
-            return;
         }
 
         const applyEffect = (target: CharacterStats, effect: string, duration?: number) => {
@@ -1655,9 +1552,110 @@ export default function DuelPage() {
             }
         });
         
+        let turnSkipped = false;
+        const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен', 'Транс', 'Усыпление', 'Заморожен'];
+        let petrificationCount = 0;
+
+        activePlayer.penalties = activePlayer.penalties.map(p => {
+            const match = p.match(/(.+) \((\d+)\)$/);
+            if (match) {
+                const name = match[1].trim();
+                let duration = parseInt(match[2], 10) - 1;
+
+                if (simpleTurnSkipEffects.includes(name) && !activePlayer.bonuses.includes('Иммунитет к контролю')) {
+                    turnSkipped = true;
+                    turnLog.push(`${activePlayer.name} пропускает ход из-за эффекта "${name}"!`);
+                }
+                if (name === 'Окаменение') {
+                    petrificationCount++;
+                }
+                
+                if (name === 'Ослепление') {
+                    activePlayer.od = Math.max(0, activePlayer.od - 10);
+                    turnLog.push(`${activePlayer.name} ослеплен и теряет 10 ОД!`);
+                }
+                
+                if (name === 'Скрытность') {
+                    turnLog.push(`${activePlayer.name} остается в скрытности.`);
+                }
+                
+                if (name === 'Удержание') {
+                    turnLog.push(`${activePlayer.name} находится под эффектом "${name}", магические способности недоступны.`);
+                }
+
+                if (duration > 0) {
+                    return `${name} (${duration})`;
+                }
+                turnLog.push(`Эффект "${name}" закончился для ${activePlayer.name}.`);
+                return '';
+            }
+            return p;
+        }).filter(p => p !== '');
+        
+        // Recalculate wound penalties
+        activePlayer.penalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД (Ранение)'));
+        if (activePlayer.race !== 'Куклы' || !activePlayer.bonuses.includes('Абсолютная память — не тратится ОД.')) {
+            for (const wound of RULES.WOUND_PENALTIES) {
+                if (activePlayer.oz < wound.threshold) {
+                     const penaltyName = `Штраф ОД (Ранение): +${wound.penalty}`;
+                     if (!activePlayer.penalties.includes(penaltyName)) activePlayer.penalties.push(penaltyName);
+                }
+            }
+        }
+        
+        // Add armor penalty if not present
+        const armorPenalty = ARMORS[activePlayer.armor as ArmorType]?.odPenalty ?? 0;
+        const armorPenaltyName = `Штраф ОД (Броня): +${armorPenalty}`;
+        // First remove existing armor penalties to avoid duplicates if armor changes
+        activePlayer.penalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД (Броня)'));
+        if (armorPenalty > 0) {
+            if (!activePlayer.penalties.includes(armorPenaltyName)) activePlayer.penalties.push(armorPenaltyName);
+        }
+
+        if (petrificationCount >= 2) {
+            turnSkipped = true;
+            turnLog.push(`${activePlayer.name} полностью окаменел и пропускает ход!`);
+        } else if (petrificationCount === 1 && actions.length > 0) {
+            const lostAction = actions.pop();
+            if(lostAction) {
+              turnLog.push(`${activePlayer.name} частично окаменел и теряет одно действие: "${getActionLabel(lostAction.type, lostAction.payload)}".`);
+            }
+        }
+
+        if (turnSkipped && actions.length > 0) {
+            const newTurn: Turn = {
+                turnNumber: duelData.currentTurn,
+                playerId: activePlayer.id,
+                playerName: activePlayer.name,
+                actions: [{type: 'rest', payload: {name: 'Пропуск хода'}}],
+                log: turnLog,
+                startStats: startStats,
+                endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: activePlayer.shield },
+            };
+            
+            activePlayer.physicalCondition = getPhysicalCondition(activePlayer.oz, activePlayer.maxOz);
+            opponentPlayer.physicalCondition = getPhysicalCondition(opponentPlayer.oz, opponentPlayer.maxOz);
+            
+            const finalActivePlayer = activePlayer;
+            const finalOpponent = opponentPlayer;
+
+            const updatedDuel: Partial<DuelState> = {
+                player1: duelData.activePlayerId === 'player1' ? finalActivePlayer : finalOpponent,
+                player2: duelData.activePlayerId === 'player2' ? finalActivePlayer : finalOpponent,
+                turnHistory: [...duelData.turnHistory, newTurn],
+                currentTurn: duelData.currentTurn + 1,
+                activePlayerId: duelData.activePlayerId === 'player1' ? 'player2' : 'player1',
+                winner: null,
+                log: turnLog,
+                animationState: { player1: 'idle', player2: 'idle' },
+            };
+            handleUpdateDuelState(updatedDuel);
+            return;
+        }
+
+        
         // Clear one-turn bonuses at the end of the turn
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Переформа');
-        // activePlayer.isDodging = false; // Moved to start of turn
 
         const isResting = actions.some(a => a.type === 'rest');
         if (isResting) {
