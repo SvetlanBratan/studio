@@ -121,7 +121,7 @@ export default function DuelsPage() {
                                 onChange={(e) => setJoinDuelId(e.target.value)}
                             />
                         </div>
-                        <div className='flex gap-2'>
+                        <div className='flex flex-col sm:flex-row gap-2'>
                             <Button type="submit" variant="secondary" className="w-full">
                                <LogIn className="mr-2" />
                                Присоединиться
