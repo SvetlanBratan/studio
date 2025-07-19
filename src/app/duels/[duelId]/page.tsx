@@ -163,7 +163,8 @@ export default function DuelPage() {
         const simpleTurnSkipEffects = ['Под гипнозом', 'Обездвижен', 'Транс', 'Усыпление', 'Заморожен'];
         let petrificationCount = 0;
         
-        // Reset turn-based flags
+        // Reset turn-based flags at the beginning of the turn
+        activePlayer.isDodging = false;
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Облик желания (-5 урон)');
         activePlayer.statuses = activePlayer.statuses?.filter(s => s !== 'Был атакован в прошлом ходу') || [];
         
@@ -975,9 +976,9 @@ export default function DuelPage() {
                 }
                 
                 const oslablenieIndex = opponentPlayer.penalties.findIndex(p => p.startsWith('Ослабление'));
-                if (oslablenieIndex > -1) {
+                if (oslabenieIndex > -1) {
                     damage = Math.max(0, damage - 10);
-                    opponentPlayer.penalties.splice(oslablenieIndex, 1);
+                    opponentPlayer.penalties.splice(oslabenieIndex, 1);
                     turnLog.push(`Эффект "Ослабление" снижает урон ${activePlayer.name} на 10.`);
                 }
 
@@ -1657,7 +1658,7 @@ export default function DuelPage() {
         
         // Clear one-turn bonuses at the end of the turn
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Переформа');
-        activePlayer.isDodging = false;
+        // activePlayer.isDodging = false; // Moved to start of turn
 
         const isResting = actions.some(a => a.type === 'rest');
         if (isResting) {
@@ -1998,6 +1999,7 @@ export default function DuelPage() {
 }
 
     
+
 
 
 
