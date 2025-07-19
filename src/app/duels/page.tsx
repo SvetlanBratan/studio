@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dices, LogIn, LogOut, Swords, User as UserIcon } from 'lucide-react';
+import { Dices, LogIn, LogOut, Swords, User as UserIcon, Eye } from 'lucide-react';
 
 export default function DuelsPage() {
   const { user, loading, signOut } = useAuth();
@@ -37,7 +37,7 @@ export default function DuelsPage() {
     try {
       const duelId = await createDuel(user.uid, "Игрок 1");
       if (duelId) {
-        router.push(`/duels/${duelId}`);
+        router.push(`/duels/${duelId}?join=true`);
       } else {
         // Handle error case, maybe show a toast
         console.error("Не удалось получить ID дуэли.");
@@ -54,10 +54,11 @@ export default function DuelsPage() {
     router.push(`/duels/solo`);
   };
 
-  const handleJoinDuel = (e: React.FormEvent) => {
+  const handleJoinDuel = (e: React.FormEvent, asSpectator = false) => {
     e.preventDefault();
     if (joinDuelId.trim()) {
-      router.push(`/duels/${joinDuelId.trim()}`);
+      const url = asSpectator ? `/duels/${joinDuelId.trim()}` : `/duels/${joinDuelId.trim()}?join=true`;
+      router.push(url);
     }
   };
 
@@ -110,7 +111,7 @@ export default function DuelsPage() {
                         </div>
                     </div>
 
-                    <form onSubmit={handleJoinDuel} className="space-y-2">
+                    <form onSubmit={(e) => handleJoinDuel(e)} className="space-y-2">
                         <div>
                             <Label htmlFor="duelId">ID Дуэли</Label>
                             <Input 
@@ -120,10 +121,16 @@ export default function DuelsPage() {
                                 onChange={(e) => setJoinDuelId(e.target.value)}
                             />
                         </div>
-                        <Button type="submit" variant="secondary" className="w-full">
-                           <LogIn className="mr-2" />
-                           Присоединиться
-                        </Button>
+                        <div className='flex gap-2'>
+                            <Button type="submit" variant="secondary" className="w-full">
+                               <LogIn className="mr-2" />
+                               Присоединиться
+                            </Button>
+                             <Button onClick={(e) => handleJoinDuel(e, true)} variant="outline" className="w-full">
+                               <Eye className="mr-2" />
+                               Как зритель
+                            </Button>
+                        </div>
                     </form>
                 </CardContent>
            </Card>

@@ -14,7 +14,7 @@ import TurnForm from '@/components/turn-form';
 import CharacterSetupModal from '@/components/character-setup-modal';
 import SoloSetupForm from '@/components/solo-setup-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler } from 'lucide-react';
+import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS, WEAPONS, ARMORS, ITEMS } from '@/lib/rules';
@@ -69,11 +69,27 @@ export default function DuelPage() {
     }
   }, [isLocalSolo, localDuelState, user]);
 
+  const userRole: 'player1' | 'player2' | 'spectator' | null = React.useMemo(() => {
+    if (!user || !duelData) return null;
+    if (isLocalSolo) return 'player1'; // In solo, user controls both
+    if (user.uid === duelData.player1.id) return 'player1';
+    if (duelData.player2 && user.uid === duelData.player2.id) return 'player2';
+    return 'spectator';
+  }, [user, duelData, isLocalSolo]);
+
+
   useEffect(() => {
-    if (!isLocalSolo && user && onlineDuel && !onlineDuel.player2 && onlineDuel.player1.id !== user.uid) {
-        joinDuel(duelId, user.uid, "Игрок 2");
+    if (userRole === 'spectator' && !isLocalSolo && user && onlineDuel && !onlineDuel.player2 && onlineDuel.player1.id !== user.uid) {
+        // This logic is now handled on the DuelsPage, but as a fallback,
+        // if a user lands here and could be P2, we can join them.
+        // However, with explicit spectator mode, we might want to prevent auto-joining.
+        // For now, let's keep it but it might be removed.
+        const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
+        if (shouldJoin) {
+            joinDuel(duelId, user.uid, "Игрок 2");
+        }
     }
-  }, [user, onlineDuel, duelId, isLocalSolo]);
+  }, [userRole, isLocalSolo, user, onlineDuel, duelId]);
 
   const handleUpdateDuelState = useCallback((updatedDuel: Partial<DuelState>) => {
     if (isLocalSolo) {
@@ -1656,22 +1672,41 @@ export default function DuelPage() {
   }
 
   // --- STAGE LOGIC ---
-  const isPlayer1 = user?.uid === duelData.player1.id;
-  const isPlayer2 = !!(user && duelData.player2 && user.uid === duelData.player2.id);
-  
+  const isPlayer1 = userRole === 'player1';
+  const isPlayer2 = userRole === 'player2';
+
   // 1. Solo duel setup
   if (isLocalSolo && !duelData.duelStarted) {
     return <SoloSetupForm player1={duelData.player1} player2={duelData.player2!} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
   }
   
   // --- Online Duel Flow ---
-  if (!isLocalSolo) {
-      // 2. Player 1 setup
+  if (!isLocalSolo && !duelData.duelStarted) {
+      // Spectator waiting view
+      if (userRole === 'spectator') {
+          return (
+              <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+                  <Card className="w-full max-w-md">
+                      <CardHeader>
+                          <CardTitle className="flex items-center justify-center gap-2">
+                              <Settings2 className="animate-spin" />
+                              Ожидание начала дуэли...
+                          </CardTitle>
+                          <CardDescription>
+                              Игроки настраивают своих персонажей.
+                          </CardDescription>
+                      </CardHeader>
+                  </Card>
+              </div>
+          );
+      }
+
+      // Player 1 setup
       if (isPlayer1 && !duelData.player1.isSetupComplete) {
         return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
       }
 
-      // 3. Waiting for Player 2 to join
+      // Waiting for Player 2 to join
       if (isPlayer1 && !duelData.player2) {
         return (
           <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
@@ -1697,12 +1732,12 @@ export default function DuelPage() {
         );
       }
       
-      // 4. Player 2 setup
+      // Player 2 setup
       if (isPlayer2 && duelData.player2 && !duelData.player2.isSetupComplete) {
           return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
       }
       
-      // 5. Waiting for opponent to finish setup
+      // Waiting for opponent to finish setup
       if ((isPlayer1 && duelData.player2 && !duelData.player2.isSetupComplete) || (isPlayer2 && !duelData.player1.isSetupComplete)) {
            return (
               <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
@@ -1741,7 +1776,14 @@ export default function DuelPage() {
 
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
   const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
-  const isMyTurn = isLocalSolo || (user && user.uid === activePlayer.id);
+  const isMyTurn = isLocalSolo || userRole === (duelData.activePlayerId === 'player1' ? 'player1' : 'player2');
+
+  const turnStatusText = () => {
+    if (isLocalSolo) return "Ваш ход";
+    if (userRole === 'spectator') return `Ход игрока ${activePlayer.name}`;
+    if (isMyTurn) return "Ваш ход";
+    return `Ход оппонента: ${activePlayer.name}`;
+  }
 
   // --- Main Duel Interface ---
   return (
@@ -1795,13 +1837,13 @@ export default function DuelPage() {
                         Дистанция: {duelData.distance}м
                       </span>
                     </div>
-                    <span className={`text-sm font-medium ${isMyTurn ? 'text-accent' : 'text-muted-foreground'}`}>
-                        {isMyTurn ? "Ваш ход" : `Ход ${currentOpponent.name}`}
+                    <span className={`text-sm font-medium ${(isMyTurn && userRole !== 'spectator') ? 'text-accent' : 'text-muted-foreground'}`}>
+                        {turnStatusText()}
                     </span>
                 </CardTitle>
                 </CardHeader>
                 <CardContent>
-                {isMyTurn ? (
+                {isMyTurn && userRole !== 'spectator' ? (
                     <TurnForm
                         player={activePlayer}
                         opponent={currentOpponent}
@@ -1810,7 +1852,14 @@ export default function DuelPage() {
                     />
                 ) : (
                     <div className="text-center text-muted-foreground p-4 md:p-8">
-                        Ожидание хода оппонента...
+                       {userRole === 'spectator' ? (
+                         <div className="flex items-center justify-center gap-2">
+                           <Eye className="w-5 h-5" />
+                           Вы наблюдаете за этой дуэлью.
+                         </div>
+                       ) : (
+                        'Ожидание хода оппонента...'
+                       )}
                     </div>
                 )}
                 </CardContent>
