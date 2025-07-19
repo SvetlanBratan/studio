@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { cn } from '@/lib/utils';
@@ -7,10 +8,10 @@ import type { Shield, WeaponType, AnimationState } from '@/types/duel';
 interface PixelCharacterProps {
   pose?: AnimationState;
   weapon?: WeaponType;
-  isHit?: boolean;
-  isAttacking?: boolean;
   isFlipped?: boolean;
   shield?: Shield;
+  isActive?: boolean;
+  spellElement?: string;
 }
 
 const ELEMENT_COLORS: Record<string, string> = {
@@ -35,14 +36,13 @@ const ELEMENT_COLORS: Record<string, string> = {
 };
 const PHYSICAL_SHIELD_COLOR = 'rgba(200, 200, 200, 0.5)';
 
-
 export default function PixelCharacter({
   pose = 'idle',
   weapon = 'Кулаки',
-  isHit = false,
-  isAttacking = false,
   isFlipped = false,
   shield,
+  isActive = false,
+  spellElement,
 }: PixelCharacterProps) {
   const pixelSize = '6px'; // Controls the size of each "pixel"
 
@@ -51,6 +51,8 @@ export default function PixelCharacter({
     height: `calc(16 * ${pixelSize})`,
     position: 'relative',
     transform: isFlipped ? 'scaleX(-1)' : 'none',
+    filter: isActive ? 'drop-shadow(0 0 8px hsl(var(--accent)))' : 'none',
+    transition: 'filter 0.3s ease-in-out',
   };
   
   const shieldStyles: React.CSSProperties = {
@@ -59,17 +61,20 @@ export default function PixelCharacter({
     height: `calc(18 * ${pixelSize})`,
     top: `calc(-2 * ${pixelSize})`,
     left: `calc(-2 * ${pixelSize})`,
-    borderRadius: '50% 50% 0 0',
+    borderRadius: '50%',
     backgroundColor: shield?.element ? ELEMENT_COLORS[shield.element] : PHYSICAL_SHIELD_COLOR,
-    opacity: shield && shield.hp > 0 ? 1 : 0,
+    opacity: shield && shield.hp > 0 ? 0.6 : 0,
     transition: 'opacity 0.3s ease-in-out',
     pointerEvents: 'none',
   }
 
+  const isAttacking = pose === 'attack';
+  const isCasting = pose === 'casting';
+
   const lungeStyle: React.CSSProperties = {
     '--lunge-distance': isFlipped ? '-20px' : '20px',
   } as React.CSSProperties;
-
+  
   const createPixel = (top: number, left: number, color: string, width = 1, height = 1) => (
     <div
       style={{
@@ -86,119 +91,83 @@ export default function PixelCharacter({
   
   const renderWeapon = () => {
     switch (weapon) {
-      case 'Меч':
-        return <>
-          {createPixel(3, 10, '#c0c0c0', 1, 5)}
-          {createPixel(8, 9, '#8b4513', 3, 1)}
-        </>;
-      case 'Топор':
-        return <>
-          {createPixel(4, 10, '#c0c0c0', 2, 3)}
-          {createPixel(3, 11, '#c0c0c0', 1, 1)}
-          {createPixel(7, 10, '#8b4513', 1, 3)}
-        </>;
-       case 'Копье':
-        return <>
-          {createPixel(1, 10, '#c0c0c0', 1, 3)}
-          {createPixel(4, 10, '#8b4513', 1, 8)}
-        </>;
+      case 'Меч': return <> {createPixel(3, 11, '#c0c0c0', 1, 6)} {createPixel(2, 11, '#c0c0c0')} {createPixel(9, 10, '#8B4513', 3, 1)} </>;
+      case 'Топор': return <> {createPixel(3, 11, '#c0c0c0', 2, 1)} {createPixel(4, 11, '#c0c0c0', 3, 2)} {createPixel(3, 10, '#8B4513', 1, 6)} </>;
+      case 'Копье': return <> {createPixel(1, 10.5, '#c0c0c0', 1, 2)} {createPixel(3, 10.5, '#8B4513', 1, 8)} </>;
       case 'Кинжал':
-      case 'Сюрикены':
-         return <>
-          {createPixel(5, 10, '#c0c0c0', 1, 2)}
-          {createPixel(7, 9, '#8b4513', 3, 1)}
-        </>;
-      case 'Лук':
-         return <>
-          {createPixel(5, 8, '#8b4513', 1, 7)}
-          {createPixel(6, 9, '#8b4513', 1, 1)}
-          {createPixel(10, 9, '#8b4513', 1, 1)}
-        </>;
-      default:
-        return null;
+      case 'Сюрикены': return <> {createPixel(5, 11, '#c0c0c0', 1, 3)} {createPixel(8, 10, '#8B4513', 3, 1)} </>;
+      case 'Лук': return <> {createPixel(5, 7, '#8B4513', 1, 7)} {createPixel(4, 8, '#8B4513', 1, 1)} {createPixel(12, 8, '#8B4513', 1, 1)} {createPixel(6, 9, '#8B4513', 2, 1)} {createPixel(10, 9, '#8B4513', 2, 1)} </>;
+      default: return null;
     }
   }
 
   const renderFace = () => {
-      // Eyes
       const eyeColor = '#222';
       let leftEye, rightEye;
 
       if (pose === 'hit') {
-          // X X eyes
           leftEye = <>{createPixel(2, 3.5, eyeColor, 0.5, 0.5)}{createPixel(2.5, 3, eyeColor, 0.5, 0.5)}{createPixel(2, 3, eyeColor, 0.5, 0.5)}{createPixel(2.5, 3.5, eyeColor, 0.5, 0.5)}</>;
           rightEye = <>{createPixel(2, 6.5, eyeColor, 0.5, 0.5)}{createPixel(2.5, 6, eyeColor, 0.5, 0.5)}{createPixel(2, 6, eyeColor, 0.5, 0.5)}{createPixel(2.5, 6.5, eyeColor, 0.5, 0.5)}</>;
       } else if (pose === 'rest') {
-          // - - eyes (sleeping)
           leftEye = createPixel(2.5, 3, eyeColor, 1, 0.5);
           rightEye = createPixel(2.5, 6, eyeColor, 1, 0.5);
       } else {
-          // Default o o eyes
           leftEye = createPixel(2, 3, eyeColor, 1, 1);
           rightEye = createPixel(2, 6, eyeColor, 1, 1);
       }
-
-      // Mouth
+      
       let mouth = null;
       if (pose === 'heal') {
-          // Smile ^
           mouth = <>{createPixel(3.5, 4, eyeColor, 2, 0.5)}{createPixel(3, 3.5, eyeColor, 0.5, 0.5)}{createPixel(3, 5.5, eyeColor, 0.5, 0.5)}</>
       } else if (pose !== 'rest' && pose !== 'hit') {
-          // Default straight mouth
           mouth = createPixel(3.5, 4, eyeColor, 2, 0.5);
       }
       
       return <>{leftEye}{rightEye}{mouth}</>
   }
   
+  const renderSpellProjectile = () => {
+    if (pose !== 'casting' || !spellElement) return null;
+    const color = ELEMENT_COLORS[spellElement] || PHYSICAL_SHIELD_COLOR;
+
+    const projectileWrapperStyle: React.CSSProperties = {
+      position: 'absolute',
+      top: `calc(6 * ${pixelSize})`,
+      left: `calc(10 * ${pixelSize})`,
+      width: `calc(20 * ${pixelSize})`,
+      animation: 'fly-right 1s ease-out forwards',
+    }
+
+    return (
+      <div style={projectileWrapperStyle}>
+        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            {/* Orb */}
+            {createPixel(0,0, color, 2, 2)}
+            {createPixel(-1,1, color, 1, 1)}
+            {createPixel(2,1, color, 1, 1)}
+        </div>
+      </div>
+    );
+  }
+
   const renderPose = () => {
     let rightArm, leftArm;
     switch (pose) {
       case 'attack':
-        leftArm = (
-            <>
-                {createPixel(6, 0, '#a07a5f', 1, 3)}
-                {createPixel(5, 1, '#a07a5f', 1, 1)}
-            </>
-        );
-        rightArm = (
-            <>
-                {createPixel(6, 8, '#f2d5ab', 3, 1)}
-                {renderWeapon()}
-            </>
-        );
+        leftArm = <>{createPixel(6, 0, '#a07a5f', 1, 3)}{createPixel(5, 1, '#a07a5f', 1, 1)}</>;
+        rightArm = <>{createPixel(6, 8, '#f2d5ab', 3, 1)}{renderWeapon()}</>;
         break;
       case 'casting':
-        leftArm = (
-          <>
-            {createPixel(6, -1, '#a07a5f', 3, 1)}
-            {createPixel(7, 0, '#f2d5ab', 1, 1)}
-          </>
-        );
-        rightArm = (
-          <>
-            {createPixel(6, 8, '#a07a5f', 3, 1)}
-            {createPixel(7, 9, '#f2d5ab', 1, 1)}
-          </>
-        );
+        leftArm = <>{createPixel(6, -1, '#a07a5f', 3, 1)}{createPixel(7, 0, '#f2d5ab', 1, 1)}</>;
+        rightArm = <>{createPixel(6, 8, '#a07a5f', 3, 1)}{createPixel(7, 9, '#f2d5ab', 1, 1)}</>;
         break;
       case 'heal':
       case 'rest':
       case 'hit':
       case 'idle':
       default:
-        leftArm = (
-          <>
-            {createPixel(5, 1, '#a07a5f')}
-            {createPixel(6, 0, '#a07a5f', 2, 3)}
-          </>
-        );
-        rightArm = (
-          <>
-            {createPixel(5, 8, '#a07a5f')}
-            {createPixel(6, 8, '#a07a5f', 2, 3)}
-          </>
-        );
+        leftArm = <>{createPixel(5, 1, '#a07a5f')}{createPixel(6, 0, '#a07a5f', 2, 3)}</>;
+        rightArm = <>{createPixel(5, 8, '#a07a5f')}{createPixel(6, 8, '#a07a5f', 2, 3)}</>;
         break;
     }
     
@@ -228,7 +197,7 @@ export default function PixelCharacter({
     <div
       className={cn(
         'transition-transform duration-200 relative',
-        isHit && 'animate-shake',
+        pose === 'hit' && 'animate-shake',
         isAttacking && 'animate-attack'
       )}
       style={lungeStyle}
@@ -236,7 +205,9 @@ export default function PixelCharacter({
       <div style={characterStyles}>
         {renderPose()}
         <div style={shieldStyles} />
+        {renderSpellProjectile()}
       </div>
     </div>
   );
 }
+

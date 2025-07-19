@@ -1,4 +1,5 @@
 
+
 import type { ITEMS } from '@/lib/rules';
 
 export type ReserveLevel =
@@ -144,5 +145,6 @@ export interface DuelState {
   animationState: {
     player1: AnimationState;
     player2: AnimationState;
+    spellElement?: string;
   };
 }

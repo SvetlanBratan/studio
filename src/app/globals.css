@@ -103,4 +103,15 @@
   .animate-attack {
     animation: attack-lunge 0.4s ease-out;
   }
+  
+  @keyframes fly-right {
+    from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(300px) scale(0.5);
+    }
+  }
 }

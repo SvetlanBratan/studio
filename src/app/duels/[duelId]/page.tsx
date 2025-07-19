@@ -907,17 +907,22 @@ export default function DuelPage() {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
             const isCastingAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield', 'heal_self', 'prayer'].includes(action.type);
 
+            const activePlayerId = duelData.activePlayerId;
             if (isCastingAction) {
-                animationState = { ...animationState, [duelData.activePlayerId]: 'casting' };
+                animationState = { 
+                  ...animationState, 
+                  [activePlayerId]: 'casting', 
+                  spellElement: action.payload?.element 
+                };
             }
             if (action.type === 'physical_attack') {
-                animationState = { ...animationState, [duelData.activePlayerId]: 'attack' };
+                animationState = { ...animationState, [activePlayerId]: 'attack' };
             }
              if (action.type === 'heal_self') {
-                animationState = { ...animationState, [duelData.activePlayerId]: 'heal' };
+                animationState = { ...animationState, [activePlayerId]: 'heal' };
             }
             if (action.type === 'rest') {
-                animationState = { ...animationState, [duelData.activePlayerId]: 'rest' };
+                animationState = { ...animationState, [activePlayerId]: 'rest' };
             }
             
             const getOdCostPenalty = (p: CharacterStats): { wound: number; armor: number; charm: number } => {
@@ -1703,7 +1708,7 @@ export default function DuelPage() {
         // Reset animations after a delay
         setTimeout(() => {
             handleUpdateDuelState({ animationState: { player1: 'idle', player2: 'idle' } });
-        }, 1000); // 1 second for animations
+        }, 1500); // 1.5 seconds for animations
   };
   
   if (duelLoading) {
@@ -1931,18 +1936,18 @@ export default function DuelPage() {
                     <PixelCharacter
                       pose={duelData.animationState?.player1 || 'idle'}
                       weapon={duelData.player1.weapon}
-                      isHit={duelData.animationState?.player1 === 'hit'}
-                      isAttacking={duelData.animationState?.player1 === 'attack'}
                       shield={duelData.player1.shield}
+                      isActive={duelData.activePlayerId === 'player1'}
+                      spellElement={duelData.animationState?.spellElement}
                     />
                     <div className="absolute bottom-2 text-sm text-muted-foreground">Дистанция: {duelData.distance}м</div>
                     <PixelCharacter
                       pose={duelData.animationState?.player2 || 'idle'}
                       weapon={duelData.player2.weapon}
-                      isHit={duelData.animationState?.player2 === 'hit'}
-                      isAttacking={duelData.animationState?.player2 === 'attack'}
                       isFlipped={true}
                       shield={duelData.player2.shield}
+                      isActive={duelData.activePlayerId === 'player2'}
+                      spellElement={duelData.animationState?.spellElement}
                     />
                 </div>
 
@@ -1991,3 +1996,4 @@ export default function DuelPage() {
 }
 
     
+
