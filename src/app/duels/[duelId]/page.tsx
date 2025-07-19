@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -976,9 +975,9 @@ export default function DuelPage() {
                 }
                 
                 const oslablenieIndex = opponentPlayer.penalties.findIndex(p => p.startsWith('Ослабление'));
-                if (oslabenieIndex > -1) {
+                if (oslablenieIndex > -1) {
                     damage = Math.max(0, damage - 10);
-                    opponentPlayer.penalties.splice(oslabenieIndex, 1);
+                    opponentPlayer.penalties.splice(oslablenieIndex, 1);
                     turnLog.push(`Эффект "Ослабление" снижает урон ${activePlayer.name} на 10.`);
                 }
 
@@ -2004,3 +2003,5 @@ export default function DuelPage() {
 
 
 
+
+    
