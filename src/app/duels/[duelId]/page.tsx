@@ -69,14 +69,14 @@ export default function DuelPage() {
     }
   }, [isLocalSolo, localDuelState, user]);
   
-  useEffect(() => {
-    if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0) {
-        // Randomize starting player only on the client-side to avoid hydration errors
-        const firstPlayer = Math.random() < 0.5 ? 'player1' : 'player2';
-        handleUpdateDuelState({ activePlayerId: firstPlayer });
-    }
+    useEffect(() => {
+        if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0) {
+            // Randomize starting player only on the client-side to avoid hydration errors
+            const firstPlayer = Math.random() < 0.5 ? 'player1' : 'player2';
+            handleUpdateDuelState({ activePlayerId: firstPlayer });
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duelData?.duelStarted]);
+    }, [duelData?.duelStarted]);
 
 
   const userRole: 'player1' | 'player2' | 'spectator' | null = React.useMemo(() => {
@@ -113,7 +113,7 @@ export default function DuelPage() {
     const isPlayer1 = duelData.player1.id === updatedCharacter.id;
     const key = isPlayer1 ? 'player1' : 'player2';
     
-    const newState: Partial<DuelState> = {
+    let newState: Partial<DuelState> = {
         [key]: { ...updatedCharacter, isSetupComplete: true }
     };
 
@@ -148,7 +148,7 @@ export default function DuelPage() {
         let actions = [...turnActions];
         const turnLog: string[] = [];
         let activePlayer = deepClone(duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2);
-        let opponent = deepClone(duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1);
+        let opponentPlayer = deepClone(duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1);
         let newDistance = duelData.distance;
         
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) };
@@ -192,19 +192,19 @@ export default function DuelPage() {
             }
         }
         
-        if (opponent.race === 'Цынаре' && opponent.bonuses.includes('Гипнотический взгляд — враг теряет 10 ОД каждый ход.')) {
+        if (opponentPlayer.race === 'Цынаре' && opponentPlayer.bonuses.includes('Гипнотический взгляд — враг теряет 10 ОД каждый ход.')) {
             activePlayer.od = Math.max(0, activePlayer.od - 10);
-            turnLog.push(`Пассивная способность (Цынаре): ${opponent.name} влияет на ${activePlayer.name}, который теряет 10 ОД.`);
+            turnLog.push(`Пассивная способность (Цынаре): ${opponentPlayer.name} влияет на ${activePlayer.name}, который теряет 10 ОД.`);
         }
-        if (opponent.race === 'Призраки' && opponent.bonuses.includes('Ясновидение — враг теряет 5 ОМ каждый ход.')) {
+        if (opponentPlayer.race === 'Призраки' && opponentPlayer.bonuses.includes('Ясновидение — враг теряет 5 ОМ каждый ход.')) {
             activePlayer.om = Math.max(0, activePlayer.om - 5);
-            turnLog.push(`Пассивная способность (Призраки): ${opponent.name} влияет на ${activePlayer.name}, который теряет 5 ОМ.`);
+            turnLog.push(`Пассивная способность (Призраки): ${opponentPlayer.name} влияет на ${activePlayer.name}, который теряет 5 ОМ.`);
         }
-        if (opponent.race === 'Скелеты' && opponent.bonuses.includes('Холод нежизни — враг теряет 2 ОЗ каждый ход.')) {
+        if (opponentPlayer.race === 'Скелеты' && opponentPlayer.bonuses.includes('Холод нежизни — враг теряет 2 ОЗ каждый ход.')) {
             activePlayer.oz -= 2;
-            turnLog.push(`Пассивная способность (Скелеты): ${opponent.name} влияет на ${activePlayer.name}, который теряет 2 ОЗ.`);
+            turnLog.push(`Пассивная способность (Скелеты): ${opponentPlayer.name} влияет на ${activePlayer.name}, который теряет 2 ОЗ.`);
         }
-        if(opponent.race === 'Сирены' && opponent.bonuses.includes('Очарование (враг тратит 10 ОД при атаке по сирене)')) {
+        if(opponentPlayer.race === 'Сирены' && opponentPlayer.bonuses.includes('Очарование (враг тратит 10 ОД при атаке по сирене)')) {
             const charmEffect = 'Очарование (Сирена)';
             if (!activePlayer.penalties.includes(charmEffect)) {
                 activePlayer.penalties.push(charmEffect);
@@ -217,7 +217,7 @@ export default function DuelPage() {
             if (bonus === 'Глубинная стойкость (+5 ОЗ/ход)' || bonus === 'Живучесть (+5 ОЗ/ход)' || bonus === 'Аура благословения (+5 ОЗ/ход)' || bonus === 'Мелодия исцеления (+5 ОЗ/ход)' || bonus === 'Предчувствие (+3 ОЗ/ход)' || bonus === 'Живая защита (+5 ОЗ/ход)') {
                 const healAmount = bonus === 'Предчувствие (+3 ОЗ/ход)' ? 3 : 5;
                 if (bonus === 'Живая защита (+5 ОЗ/ход)') {
-                    const opponentLastTurn = duelData.turnHistory.find(t => t.turnNumber === duelData.currentTurn - 1 && t.playerId === opponent.id);
+                    const opponentLastTurn = duelData.turnHistory.find(t => t.turnNumber === duelData.currentTurn - 1 && t.playerId === opponentPlayer.id);
                     const opponentUsedElemental = opponentLastTurn?.actions.some(a => a.payload?.element && a.payload.element !== 'physical');
                     if (!opponentUsedElemental) return;
                     turnLog.push(`Пассивная способность (Кунари): Враг использовал стихийную атаку, ${activePlayer.name} восстанавливает ${healAmount} ОЗ.`);
@@ -421,6 +421,13 @@ export default function DuelPage() {
             }
         }
 
+        // Handle "lose action" effects
+        const loseActionPenaltyIndex = activePlayer.penalties.findIndex(p => p.startsWith('Потеря действия'));
+        if (loseActionPenaltyIndex > -1) {
+             turnLog.push(`${activePlayer.name} теряет одно действие из-за штрафа.`);
+             // The turn-form will already limit actions to 1, so we just remove the penalty here.
+             activePlayer.penalties.splice(loseActionPenaltyIndex, 1);
+        }
 
         if (turnSkipped) {
             const newTurn: Turn = {
@@ -434,10 +441,10 @@ export default function DuelPage() {
             };
             
             activePlayer.physicalCondition = getPhysicalCondition(activePlayer.oz, activePlayer.maxOz);
-            opponent.physicalCondition = getPhysicalCondition(opponent.oz, opponent.maxOz);
+            opponentPlayer.physicalCondition = getPhysicalCondition(opponentPlayer.oz, opponentPlayer.maxOz);
             
             const { isDodging: _activeIsDodging, ...finalActivePlayer } = activePlayer;
-            const { isDodging: _opponentIsDodging, ...finalOpponent } = opponent;
+            const finalOpponent = opponentPlayer;
 
             const updatedDuel: Partial<DuelState> = {
                 player1: duelData.activePlayerId === 'player1' ? finalActivePlayer : finalOpponent,
@@ -930,16 +937,16 @@ export default function DuelPage() {
             const calculateDamage = (baseDamage: number, isSpell: boolean = false, spellElement?: string): number => {
                 let damage = baseDamage;
                 
-                if (opponent.penalties.includes('Уязвимость')) {
+                if (opponentPlayer.penalties.includes('Уязвимость')) {
                     const bonus = isSpell ? RULES.DAMAGE_BONUS.vulnerability.medium : 5; // Placeholder for physical
                     damage += bonus;
                     turnLog.push(`Эффект "Уязвимость" увеличивает урон на ${bonus}.`);
                 }
                 
-                const oslablenieIndex = opponent.penalties.findIndex(p => p.startsWith('Ослабление'));
+                const oslablenieIndex = opponentPlayer.penalties.findIndex(p => p.startsWith('Ослабление'));
                 if (oslablenieIndex > -1) {
                     damage = Math.max(0, damage - 10);
-                    opponent.penalties.splice(oslablenieIndex, 1);
+                    opponentPlayer.penalties.splice(oslablenieIndex, 1);
                     turnLog.push(`Эффект "Ослабление" снижает урон ${activePlayer.name} на 10.`);
                 }
 
@@ -996,7 +1003,7 @@ export default function DuelPage() {
                     damage += 5;
                     turnLog.push(`Пассивная способность (Вулгары): "Рёв предков" увеличивает урон на 5.`);
                 }
-                if (activePlayer.bonuses.includes('Кровавое могущество (+10 урона, если ОЗ врага меньше 100)') && opponent.oz < 100) {
+                if (activePlayer.bonuses.includes('Кровавое могущество (+10 урона, если ОЗ врага меньше 100)') && opponentPlayer.oz < 100) {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Вампиры): "Кровавое могущество" увеличивает урон на 10.`);
                 }
@@ -1020,7 +1027,7 @@ export default function DuelPage() {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Карлики): "Сила кузни" увеличивает физический урон на 10.`);
                 }
-                 if (opponent.bonuses.includes('Картина боли (враг получает +5 урона, если атакует дважды подряд)')) {
+                 if (opponentPlayer.bonuses.includes('Картина боли (враг получает +5 урона, если атакует дважды подряд)')) {
                     const playerLastTurn = duelData.turnHistory.find(t => t.turnNumber === duelData.currentTurn - 2);
                     if (playerLastTurn && playerLastTurn.actions.some(a => ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'physical_attack'].includes(a.type))) {
                         damage += 5;
@@ -1031,16 +1038,16 @@ export default function DuelPage() {
                 return Math.round(damage);
             };
             
-            if(isSpellAction && opponent.bonuses.includes('Беззвучие (противник теряет 5 ОМ)')) {
+            if(isSpellAction && opponentPlayer.bonuses.includes('Беззвучие (противник теряет 5 ОМ)')) {
                 activePlayer.om = Math.max(0, activePlayer.om - 5);
-                turnLog.push(`Пассивная способность (Алахоры): ${opponent.name} искажает восприятие, ${activePlayer.name} теряет 5 ОМ.`);
+                turnLog.push(`Пассивная способность (Алахоры): ${opponentPlayer.name} искажает восприятие, ${activePlayer.name} теряет 5 ОМ.`);
             }
-             if (opponent.bonuses.includes('Иллюзии (противник теряет 10 ОМ при первом применении любой способности)')) {
-                const illusionIndex = opponent.bonuses.indexOf('Иллюзии (противник теряет 10 ОМ при первом применении любой способности)');
+             if (opponentPlayer.bonuses.includes('Иллюзии (противник теряет 10 ОМ при первом применении любой способности)')) {
+                const illusionIndex = opponentPlayer.bonuses.indexOf('Иллюзии (противник теряет 10 ОМ при первом применении любой способности)');
                 if (illusionIndex > -1) {
                     activePlayer.om = Math.max(0, activePlayer.om - 10);
-                    opponent.bonuses.splice(illusionIndex, 1);
-                    turnLog.push(`Пассивная способность (Лепреконы): ${opponent.name} создает иллюзию, ${activePlayer.name} теряет 10 ОМ.`);
+                    opponentPlayer.bonuses.splice(illusionIndex, 1);
+                    turnLog.push(`Пассивная способность (Лепреконы): ${opponentPlayer.name} создает иллюзию, ${activePlayer.name} теряет 10 ОМ.`);
                 }
             }
 
@@ -1086,30 +1093,30 @@ export default function DuelPage() {
                     logOdCost(baseCost, finalCost);
                     const weapon = WEAPONS[activePlayer.weapon as WeaponType];
                     damageDealt = calculateDamage(weapon.damage, false);
-                    applyDamage(activePlayer, opponent, damageDealt, false, undefined, true);
+                    applyDamage(activePlayer, opponentPlayer, damageDealt, false, undefined, true);
                     activePlayer.cooldowns.physical_attack = RULES.COOLDOWNS.physical_attack;
                     break;
                 }
                 case 'strong_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.strong;
                     damageDealt = calculateDamage(RULES.RITUAL_DAMAGE[activePlayer.reserve]?.strong ?? 0, true, action.payload?.element);
-                    applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
+                    applyDamage(activePlayer, opponentPlayer, damageDealt, true, action.payload?.element);
                     activePlayer.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
                     break;
                 case 'medium_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;
                     damageDealt = calculateDamage(RULES.RITUAL_DAMAGE[activePlayer.reserve]?.medium ?? 0, true, action.payload?.element);
-                    applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
+                    applyDamage(activePlayer, opponentPlayer, damageDealt, true, action.payload?.element);
                     break;
                 case 'small_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.small;
                     damageDealt = calculateDamage(RULES.RITUAL_DAMAGE[activePlayer.reserve]?.small ?? 0, true, action.payload?.element);
-                    applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
+                    applyDamage(activePlayer, opponentPlayer, damageDealt, true, action.payload?.element);
                     break;
                 case 'household_spell':
                     activePlayer.om -= RULES.RITUAL_COSTS.household;
                     damageDealt = calculateDamage(RULES.RITUAL_DAMAGE[activePlayer.reserve]?.household ?? 0, true, action.payload?.element);
-                    applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
+                    applyDamage(activePlayer, opponentPlayer, damageDealt, true, action.payload?.element);
                     break;
                 case 'heal_self': {
                     const healAmount = action.payload?.amount || 0;
@@ -1187,7 +1194,7 @@ export default function DuelPage() {
                                         turnLog.push(`Восстановлено ${itemData.amount} ОМ.`);
                                     }
                                     if (itemData.type === 'damage') {
-                                        applyDamage(activePlayer, opponent, itemData.amount, false);
+                                        applyDamage(activePlayer, opponentPlayer, itemData.amount, false);
                                         turnLog.push(`Нанесено ${itemData.amount} урона.`);
                                     }
                                 }
@@ -1282,11 +1289,11 @@ export default function DuelPage() {
                                  break;
                             // Alarieny
                              case 'Дождь из осколков':
-                                 applyDamage(activePlayer, opponent, 40, true, undefined, false);
+                                 applyDamage(activePlayer, opponentPlayer, 40, true, undefined, false);
                                  break;
                             // Amphibii
                              case 'Водяной захват':
-                                 applyEffect(opponent, 'Потеря действия', 1);
+                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
                                  break;
                             // Antaresy
                              case 'Самоисцеление':
@@ -1295,80 +1302,80 @@ export default function DuelPage() {
                                  break;
                             // Antropomorphs
                              case 'Ипостась зверя':
-                                 applyDamage(activePlayer, opponent, 40, false);
+                                 applyDamage(activePlayer, opponentPlayer, 40, false);
                                  break;
                             // Arahnii
                              case 'Паутина':
-                                 applyEffect(opponent, 'Потеря действия', 1);
-                                 applyDamage(activePlayer, opponent, 20, false);
+                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
+                                 applyDamage(activePlayer, opponentPlayer, 20, false);
                                  break;
                             // Arahnidy
                              case 'Жало-хищника':
-                                 applyDamage(activePlayer, opponent, 50, false);
+                                 applyDamage(activePlayer, opponentPlayer, 50, false);
                                  break;
                             // Aspidy & Vasiliski
                              case 'Окаменяющий взгляд':
-                                 applyEffect(opponent, 'Потеря действия', 1);
+                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
                                  break;
                             // Astroloidy
                              case 'Метеорит':
-                                 applyDamage(activePlayer, opponent, 60, true, 'Огонь');
+                                 applyDamage(activePlayer, opponentPlayer, 60, true, 'Огонь');
                                  break;
                             // Babochki
                              case 'Трепет крыльев':
-                                 applyEffect(opponent, 'Потеря действия', 1);
-                                 applyDamage(activePlayer, opponent, 10, false);
+                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
+                                 applyDamage(activePlayer, opponentPlayer, 10, false);
                                  break;
                             // Beloyary
                              case 'Удар предков':
-                                 applyDamage(activePlayer, opponent, 60, false);
+                                 applyDamage(activePlayer, opponentPlayer, 60, false);
                                  break;
                             // Brakovannye peresmeshniki
                              case 'Зеркальная любовь':
-                                 applyEffect(opponent, 'Потеря действия', 1);
-                                 applyDamage(activePlayer, opponent, 20, false);
+                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
+                                 applyDamage(activePlayer, opponentPlayer, 20, false);
                                  break;
                             // Vampiry
                              case 'Укус':
-                                 applyDamage(activePlayer, opponent, 40, false);
+                                 applyDamage(activePlayer, opponentPlayer, 40, false);
                                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 20);
                                  turnLog.push(`${activePlayer.name} восстанавливает 20 ОЗ.`);
                                  break;
                             // Vansaelians
                             case 'Приказ крови':
-                                applyDamage(activePlayer, opponent, 30, true);
+                                applyDamage(activePlayer, opponentPlayer, 30, true);
                                 break;
                             // Vespy
                             case 'Теневой прорыв':
-                                applyDamage(activePlayer, opponent, 45, false);
+                                applyDamage(activePlayer, opponentPlayer, 45, false);
                                 break;
                             // Vulgary
                             case 'Удар глыбы':
-                                applyDamage(activePlayer, opponent, 60, true, undefined, false);
+                                applyDamage(activePlayer, opponentPlayer, 60, true, undefined, false);
                                 break;
                             // Gurity
                             case 'Щупальца глубин':
-                                applyEffect(opponent, 'Потеря действия', 1);
-                                applyDamage(activePlayer, opponent, 30, false);
+                                applyEffect(opponentPlayer, 'Потеря действия', 1);
+                                applyDamage(activePlayer, opponentPlayer, 30, false);
                                 break;
                             // Golos roda
                             case 'Голос рода':
-                                applyEffect(opponent, 'Потеря действия', 1);
-                                applyDamage(activePlayer, opponent, 30, false);
+                                applyEffect(opponentPlayer, 'Потеря действия', 1);
+                                applyDamage(activePlayer, opponentPlayer, 30, false);
                                 break;
                              // Darnatiare
                             case 'Разлом ауры':
-                                applyDamage(activePlayer, opponent, 50, true);
+                                applyDamage(activePlayer, opponentPlayer, 50, true);
                                 break;
                             // Jakali
                             case 'Глас богов':
-                                applyDamage(activePlayer, opponent, 35, true, 'Звук');
+                                applyDamage(activePlayer, opponentPlayer, 35, true, 'Звук');
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
                                 turnLog.push(`${activePlayer.name} восстанавливает 15 ОЗ.`);
                                 break;
                             // Dzhinny
                             case 'Исполнение желания':
-                                applyDamage(activePlayer, opponent, 50, true);
+                                applyDamage(activePlayer, opponentPlayer, 50, true);
                                 break;
                             // Domovye
                             case 'Очистка':
@@ -1378,52 +1385,52 @@ export default function DuelPage() {
                                 break;
                             // Drakony
                             case 'Дыхание стихии':
-                                applyDamage(activePlayer, opponent, 100, true, action.payload?.element);
+                                applyDamage(activePlayer, opponentPlayer, 100, true, action.payload?.element);
                                 break;
                              // Driady
                             case 'Удушающее плетение':
-                                applyDamage(activePlayer, opponent, 40, true, 'Растения');
-                                applyEffect(opponent, 'Потеря действия', 1);
+                                applyDamage(activePlayer, opponentPlayer, 40, true, 'Растения');
+                                applyEffect(opponentPlayer, 'Потеря действия', 1);
                                 break;
                             // Dridy
                             case 'Рывок мотылька':
-                                applyDamage(activePlayer, opponent, 45, false);
+                                applyDamage(activePlayer, opponentPlayer, 45, false);
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
                                 turnLog.push(`${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
                              // Drou
                             case 'Лунный кнут':
-                                 applyDamage(activePlayer, opponent, 55, true, 'Тьма');
+                                 applyDamage(activePlayer, opponentPlayer, 55, true, 'Тьма');
                                  break;
                              // Жнецы
                              case 'Коса Смерти':
-                                 opponent.oz = 0;
-                                 turnLog.push(`${activePlayer.name} использует Косу Смерти... ${opponent.name} повержен.`);
+                                 opponentPlayer.oz = 0;
+                                 turnLog.push(`${activePlayer.name} использует Косу Смерти... ${opponentPlayer.name} повержен.`);
                                  break;
                             // Insektoidy
                             case 'Кислотное жало':
-                                applyDamage(activePlayer, opponent, 50, false);
+                                applyDamage(activePlayer, opponentPlayer, 50, false);
                                 break;
                             // Karliki
                             case 'Кузнечный молот':
-                                applyDamage(activePlayer, opponent, 50, false);
+                                applyDamage(activePlayer, opponentPlayer, 50, false);
                                 break;
                             // Kentaury
                             case 'Копыта бури':
-                                applyDamage(activePlayer, opponent, 55, false);
+                                applyDamage(activePlayer, opponentPlayer, 55, false);
                                 break;
                             // Kitsune
                             case 'Танец девяти хвостов':
-                                applyEffect(opponent, 'Потеря действия', 1);
-                                applyDamage(activePlayer, opponent, 35, false);
+                                applyEffect(opponentPlayer, 'Потеря действия', 1);
+                                applyDamage(activePlayer, opponentPlayer, 35, false);
                                 break;
                             // Korality
                             case 'Коралловый плевок':
-                                applyDamage(activePlayer, opponent, 45, false);
+                                applyDamage(activePlayer, opponentPlayer, 45, false);
                                 break;
                             // Kordei
                             case 'Кровавая печать':
-                                applyDamage(activePlayer, opponent, 55, true, 'Кровь');
+                                applyDamage(activePlayer, opponentPlayer, 55, true, 'Кровь');
                                 break;
                              // Kunari
                             case 'Природное возрождение':
@@ -1432,8 +1439,8 @@ export default function DuelPage() {
                                 break;
                             // Lartisty
                             case 'Затягивание в полотно':
-                                applyEffect(opponent, 'Удержание', 1);
-                                turnLog.push(`${opponent.name} не может использовать магические способности.`);
+                                applyEffect(opponentPlayer, 'Удержание', 1);
+                                turnLog.push(`${opponentPlayer.name} не может использовать магические способности.`);
                                 break;
                             // Leprekony
                             case 'Подменный клад':
@@ -1443,13 +1450,13 @@ export default function DuelPage() {
                                 break;
                              // Mikanidy
                             case 'Споровый взрыв':
-                                applyDamage(activePlayer, opponent, 40, false);
-                                applyEffect(opponent, 'Ослабление (1)');
+                                applyDamage(activePlayer, opponentPlayer, 40, false);
+                                applyEffect(opponentPlayer, 'Ослабление (1)');
                                 break;
                             // Druidy
                             case 'Песня стихий':
                                 if (action.payload.subAction === 'damage') {
-                                    applyDamage(activePlayer, opponent, 45, true, 'Земля');
+                                    applyDamage(activePlayer, opponentPlayer, 45, true, 'Земля');
                                 } else if (action.payload.subAction === 'heal') {
                                     activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 45);
                                     turnLog.push(`${activePlayer.name} восстанавливает 45 ОЗ.`);
@@ -1457,12 +1464,12 @@ export default function DuelPage() {
                                 break;
                             // Myriads
                             case 'Смертельный рывок':
-                                applyDamage(activePlayer, opponent, 60, false);
+                                applyDamage(activePlayer, opponentPlayer, 60, false);
                                 break;
                             // Narrators
                             case 'Конец главы':
-                                applyDamage(activePlayer, opponent, 50, true);
-                                applyEffect(opponent, 'Удержание', 1);
+                                applyDamage(activePlayer, opponentPlayer, 50, true);
+                                applyEffect(opponentPlayer, 'Удержание', 1);
                                 break;
                             // Ethereals
                             case 'Прыжок веры':
@@ -1472,8 +1479,8 @@ export default function DuelPage() {
                                 break;
                             // Neonids
                             case 'Световой взрыв':
-                                applyDamage(activePlayer, opponent, 40, true, 'Свет');
-                                applyEffect(opponent, 'Ослепление', 1);
+                                applyDamage(activePlayer, opponentPlayer, 40, true, 'Свет');
+                                applyEffect(opponentPlayer, 'Ослепление', 1);
                                 break;
                             // Incorruptible
                             case 'Откат':
@@ -1485,134 +1492,124 @@ export default function DuelPage() {
                                 turnLog.push(`${activePlayer.name} полностью восстанавливает ОЗ.`);
                                 break;
                              case 'Полный Зверь':
-                                 applyDamage(activePlayer, opponent, 50, false);
+                                 applyDamage(activePlayer, opponentPlayer, 50, false);
                                  break;
                              case 'Крылья пламени':
-                                 applyDamage(activePlayer, opponent, 60, true, 'Огонь');
+                                 applyDamage(activePlayer, opponentPlayer, 60, true, 'Огонь');
                                  break;
                              case 'Электрический разряд':
-                                 applyDamage(activePlayer, opponent, 50, true, 'Молния');
+                                 applyDamage(activePlayer, opponentPlayer, 50, true, 'Молния');
                                  activePlayer.oz -= 50;
                                  turnLog.push(`${activePlayer.name} также получает 50 урона от разряда.`);
                                  break;
                              case 'Кража лица':
-                                 applyEffect(opponent, 'Потеря действия', 1);
+                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
                                  break;
                              case 'Когти судьбы':
-                                 applyDamage(activePlayer, opponent, 40, false);
+                                 applyDamage(activePlayer, opponentPlayer, 40, false);
                                  break;
                              case 'Вихрь эфира':
-                                 applyEffect(opponent, 'Удержание', 1);
+                                 applyEffect(opponentPlayer, 'Удержание', 1);
                                  break;
                              case 'Вторая фаза':
-                                 applyDamage(activePlayer, opponent, 60, true);
-                                 applyEffect(opponent, 'Тление', 1);
+                                 applyDamage(activePlayer, opponentPlayer, 60, true);
+                                 applyEffect(opponentPlayer, 'Тление', 1);
                                  break;
                              case 'Транс-шаман':
                                  activePlayer.bonuses.push('Транс-шаман (2)');
                                  turnLog.push(`${activePlayer.name} входит в транс и будет восстанавливать ОЗ и ОМ в течение 2 ходов.`);
                                  break;
                               case 'Распахнуть маску':
-                                 applyDamage(activePlayer, opponent, 50, false);
-                                 applyEffect(opponent, 'Ослепление', 1);
+                                 applyDamage(activePlayer, opponentPlayer, 50, false);
+                                 applyEffect(opponentPlayer, 'Ослепление', 1);
                                  break;
                              case 'Вспышка':
-                                 applyDamage(activePlayer, opponent, 40, true, 'Огонь');
+                                 applyDamage(activePlayer, opponentPlayer, 40, true, 'Огонь');
                                  break;
                              case 'Луч очищения':
                                  if (Math.random() < 0.5) {
                                      activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 40);
                                      turnLog.push(`Луч очищения восстанавливает ${activePlayer.name} 40 ОЗ.`);
                                  } else {
-                                     applyDamage(activePlayer, opponent, 40, true, 'Свет');
+                                     applyDamage(activePlayer, opponentPlayer, 40, true, 'Свет');
                                  }
                                  break;
                              case 'Песня безмолвия':
-                                 applyEffect(opponent, 'Удержание', 1);
+                                 applyEffect(opponentPlayer, 'Удержание', 1);
                                  break;
                              case 'Переформа':
                                  activePlayer.bonuses.push('Переформа');
                                  turnLog.push(`${activePlayer.name} принимает неуязвимую форму на 1 ход.`);
                                  break;
                              case 'Цветок льда':
-                                 applyDamage(activePlayer, opponent, 60, true, 'Лёд');
+                                 applyDamage(activePlayer, opponentPlayer, 60, true, 'Лёд');
                                  break;
                              case 'Луч истины':
-                                 applyDamage(activePlayer, opponent, 20, true, 'Свет');
+                                 applyDamage(activePlayer, opponentPlayer, 20, true, 'Свет');
                                  if (activePlayer.penalties.length > 0) {
                                      const removedEffect = activePlayer.penalties.shift();
                                      turnLog.push(`Луч истины снимает с ${activePlayer.name} эффект: "${removedEffect}".`);
                                  }
                                  break;
                              case 'Когти закона':
-                                 applyDamage(activePlayer, opponent, 55, false);
+                                 applyDamage(activePlayer, opponentPlayer, 55, false);
                                  break;
                             case 'Танец лезвий':
-                                 applyDamage(activePlayer, opponent, 45, false);
+                                 applyDamage(activePlayer, opponentPlayer, 45, false);
                                  break;
                             case 'Угасание':
-                                 applyDamage(activePlayer, opponent, 50, false);
-                                 applyEffect(opponent, 'Потеря действия', 1);
+                                 applyDamage(activePlayer, opponentPlayer, 50, false);
+                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
                                  break;
                              case 'Всплеск':
-                                 applyDamage(activePlayer, opponent, 50, true, 'Вода');
+                                 applyDamage(activePlayer, opponentPlayer, 50, true, 'Вода');
                                  activePlayer.oz -= 40;
                                  turnLog.push(`${activePlayer.name} также получает 40 урона от всплеска.`);
-                                 opponent.od = Math.max(0, opponent.od - 30);
-                                 turnLog.push(`${opponent.name} теряет 30 ОД.`);
+                                 opponentPlayer.od = Math.max(0, opponentPlayer.od - 30);
+                                 turnLog.push(`${opponentPlayer.name} теряет 30 ОД.`);
                                  break;
                              case 'Цветовой обман':
                                  activePlayer.bonuses.push('Авто-уклонение (3)');
                                  turnLog.push(`${activePlayer.name} будет автоматически уклоняться 3 хода.`);
                                  break;
                             case 'Переворот':
-                                applyDamage(activePlayer, opponent, 40, false);
-                                applyEffect(opponent, 'Потеря действия', 1);
+                                applyDamage(activePlayer, opponentPlayer, 40, false);
+                                applyEffect(opponentPlayer, 'Потеря действия', 1);
                                 break;
                             case 'Порыв харизмы':
-                                applyEffect(opponent, 'Удержание', 1);
+                                applyEffect(opponentPlayer, 'Удержание', 1);
                                 break;
                             case 'Энергозахват':
-                                applyDamage(activePlayer, opponent, 30, false);
+                                applyDamage(activePlayer, opponentPlayer, 30, false);
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 20);
                                 turnLog.push(`${activePlayer.name} восстанавливает 20 ОЗ.`);
                                 break;
                             case 'Поток стихий':
-                                applyDamage(activePlayer, opponent, 60, true, 'Эфир');
+                                applyDamage(activePlayer, opponentPlayer, 60, true, 'Эфир');
                                 break;
                             case 'Заряд артефакта':
                                 if (Math.random() < 0.5) {
                                     activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 40);
                                     turnLog.push(`Заряд артефакта восстанавливает ${activePlayer.name} 40 ОЗ.`);
                                 } else {
-                                    applyDamage(activePlayer, opponent, 40, false);
+                                    applyDamage(activePlayer, opponentPlayer, 40, false);
                                 }
                                 break;
                             case 'Страх из-за занавеси':
-                                applyEffect(opponent, 'Потеря действия', 1);
-                                applyDamage(activePlayer, opponent, 20, false);
+                                applyEffect(opponentPlayer, 'Потеря действия', 1);
+                                applyDamage(activePlayer, opponentPlayer, 20, false);
                                 break;
                             case 'Эхо мира духов':
-                                applyDamage(activePlayer, opponent, 50, true, 'Эфир');
+                                applyDamage(activePlayer, opponentPlayer, 50, true, 'Эфир');
                                 break;
                             case 'Некросотрясение':
-                                applyDamage(activePlayer, opponent, 60, false);
+                                applyDamage(activePlayer, opponentPlayer, 60, false);
                                 break;
                          }
                     }
                     break;
             }
         });
-        
-        // Handle "lose action" effects
-        const loseActionCount = activePlayer.penalties.filter(p => p.startsWith('Потеря действия')).length;
-        if (loseActionCount > 0 && actions.length > 0) {
-            const lostActions = actions.splice(-loseActionCount);
-            lostActions.forEach(lostAction => {
-                turnLog.push(`${activePlayer.name} теряет действие "${getActionLabel(lostAction.type, lostAction.payload)}" из-за штрафа.`);
-            });
-            activePlayer.penalties = activePlayer.penalties.filter(p => !p.startsWith('Потеря действия'));
-        }
         
         // Clear one-turn bonuses at the end of the turn
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Переформа');
@@ -1625,16 +1622,16 @@ export default function DuelPage() {
         }
 
         activePlayer.oz = Math.max(0, activePlayer.oz);
-        opponent.oz = Math.max(0, opponent.oz);
+        opponentPlayer.oz = Math.max(0, opponentPlayer.oz);
         activePlayer.om = Math.max(0, activePlayer.om);
         activePlayer.od = Math.max(0, activePlayer.od);
         
         activePlayer.physicalCondition = getPhysicalCondition(activePlayer.oz, activePlayer.maxOz);
-        opponent.physicalCondition = getPhysicalCondition(opponent.oz, opponent.maxOz);
+        opponentPlayer.physicalCondition = getPhysicalCondition(opponentPlayer.oz, opponentPlayer.maxOz);
 
         let winner = null;
-        if (activePlayer.oz <= 0) winner = opponent.name;
-        if (opponent.oz <= 0) winner = activePlayer.name;
+        if (activePlayer.oz <= 0) winner = opponentPlayer.name;
+        if (opponentPlayer.oz <= 0) winner = activePlayer.name;
 
         const newTurn: Turn = {
             turnNumber: duelData.currentTurn,
@@ -1647,7 +1644,7 @@ export default function DuelPage() {
         };
         
         const finalActivePlayer = { ...activePlayer, isDodging: false };
-        const finalOpponent = opponent;
+        const finalOpponent = opponentPlayer;
 
         const updatedDuel: Partial<DuelState> = {
             player1: duelData.activePlayerId === 'player1' ? finalActivePlayer : finalOpponent,

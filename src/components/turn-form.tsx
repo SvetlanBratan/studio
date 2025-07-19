@@ -41,6 +41,8 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const [selectValue, setSelectValue] = useState('');
   const playerRaceInfo = RACES.find(r => r.name === player.race);
 
+  const maxActionsPerTurn = player.penalties.some(p => p.startsWith('Потеря действия')) ? 1 : RULES.MAX_ACTIONS_PER_TURN;
+
   const calculatePotentialDamage = (baseDamage: number, isSpell: boolean, spellElement?: string): number => {
     let damage = baseDamage;
     const wasAttackedLastTurn = player.statuses?.includes('Был атакован в прошлом ходу');
@@ -74,7 +76,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   };
 
   const addAction = (type: string, payload?: any) => {
-    if (actions.length >= RULES.MAX_ACTIONS_PER_TURN || !type) return;
+    if (actions.length >= maxActionsPerTurn || !type) return;
 
     if (type === 'prayer') {
       setIsPrayerDialogOpen(true);
@@ -124,7 +126,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   };
 
   const handlePrayerSelect = (effect: PrayerEffectType) => {
-    if (actions.length < RULES.MAX_ACTIONS_PER_TURN) {
+    if (actions.length < maxActionsPerTurn) {
       setActions([...actions, { type: 'prayer', payload: { effect } }]);
     }
     setIsPrayerDialogOpen(false);
@@ -132,7 +134,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   };
 
   const handleDruidAbilitySelect = (subAction: 'damage' | 'heal') => {
-      if (actions.length < RULES.MAX_ACTIONS_PER_TURN) {
+      if (actions.length < maxActionsPerTurn) {
           setActions([...actions, { type: 'racial_ability', payload: { name: 'Песня стихий', subAction } }]);
       }
       setIsDruidAbilityOpen(false);
@@ -140,7 +142,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   };
 
   const handleMoveSelect = () => {
-    if (actions.length < RULES.MAX_ACTIONS_PER_TURN) {
+    if (actions.length < maxActionsPerTurn) {
       const finalDistance = moveDirection === 'closer' ? -moveAmount : moveAmount;
       if (distance + finalDistance < 0) {
         console.error("Cannot move closer than 0 meters");
@@ -154,7 +156,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   };
 
   const handleHealSelect = () => {
-    if(actions.length < RULES.MAX_ACTIONS_PER_TURN) {
+    if(actions.length < maxActionsPerTurn) {
       setActions([...actions, { type: 'heal_self', payload: { amount: healAmount } }]);
     }
     setIsHealDialogOpen(false);
@@ -345,14 +347,14 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
               <div className="space-y-2">
                   <Button 
                       onClick={() => addAction('remove_effect')} 
-                      disabled={hasAddedAction('remove_effect') || actions.length >= RULES.MAX_ACTIONS_PER_TURN}
+                      disabled={hasAddedAction('remove_effect') || actions.length >= maxActionsPerTurn}
                       className="w-full"
                   >
                       Снять с себя эффект
                   </Button>
                   <Button 
                       onClick={() => addAction('rest')} 
-                      disabled={hasAddedAction('rest') || actions.length >= RULES.MAX_ACTIONS_PER_TURN}
+                      disabled={hasAddedAction('rest') || actions.length >= maxActionsPerTurn}
                       className="w-full"
                       variant="secondary"
                   >
@@ -386,7 +388,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
       <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Выбранные действия:</label>
-          {actions.length === 0 && <p className="text-sm text-muted-foreground">Выберите до {RULES.MAX_ACTIONS_PER_TURN} действий.</p>}
+          {actions.length === 0 && <p className="text-sm text-muted-foreground">Выберите до {maxActionsPerTurn} действий.</p>}
           <div className="space-y-2">
               {actions.map((action, index) => (
                   <div key={index} className="flex flex-col sm:flex-row items-center justify-between gap-2 p-2 border rounded-lg bg-background/50">
@@ -416,27 +418,27 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
           </div>
         </div>
         
-        {actions.length < RULES.MAX_ACTIONS_PER_TURN && (
+        {actions.length < maxActionsPerTurn && (
           <div className="flex flex-col sm:flex-row gap-2">
             <Select onValueChange={(value) => addAction(value)} value={selectValue}>
               <SelectTrigger>
                   <SelectValue placeholder="Добавить действие..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectGroup key="physical">
+                <SelectGroup>
                     <SelectLabel>Физические действия</SelectLabel>
                     {actionOptions.filter(o => o.group === 'physical').map(opt => <div key={opt.value}>{renderSelectOption(opt.value, opt.label, opt.group)}</div>)}
                 </SelectGroup>
-                <SelectGroup key="magic">
+                <SelectGroup>
                     <SelectLabel>Магические действия</SelectLabel>
                     {actionOptions.filter(o => o.group === 'magic').map(opt => <div key={opt.value}>{renderSelectOption(opt.value, opt.label, opt.group)}</div>)}
                 </SelectGroup>
-                <SelectGroup key="other">
+                <SelectGroup>
                   <SelectLabel>Прочие действия</SelectLabel>
                   {actionOptions.filter(o => o.group === 'other').map(opt => <div key={opt.value}>{renderSelectOption(opt.value, opt.label, opt.group)}</div>)}
                 </SelectGroup>
                 {racialAbilities.length > 0 && (
-                   <SelectGroup key="racial">
+                   <SelectGroup>
                       <SelectLabel>Расовые способности</SelectLabel>
                       {racialAbilities.map(opt => <div key={opt.value}>{renderSelectOption(opt.value, opt.label, opt.group, opt.racialAbilityName)}</div>)}
                    </SelectGroup>
@@ -594,4 +596,3 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     </TooltipProvider>
   );
 }
-
