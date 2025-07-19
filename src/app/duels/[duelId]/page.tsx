@@ -607,9 +607,9 @@ export default function DuelPage() {
                     finalDamage = Math.max(0, finalDamage - 5);
                     turnLog.push(`Пассивная способность (Солнечные эльфы): ${target.name} получает на 5 меньше урона от тьмы.`);
                 }
-                if (target.bonuses.includes('Холод утраты (-5 урона от атак света)') && spellElement === 'Свет') {
-                    finalDamage = Math.max(0, finalDamage - 5);
-                    turnLog.push(`Пассивная способность (Проклятые): ${target.name} получает на 5 меньше урона от света.`);
+                if (target.bonuses.includes('Холод утраты (+5 урона от атак света)') && spellElement === 'Свет') {
+                    finalDamage += 5;
+                    turnLog.push(`Пассивная способность (Проклятые): ${target.name} получает на 5 больше урона от света.`);
                 }
                  if (target.bonuses.includes('Слияние с сумраком (-10 урона от атак света)') && spellElement === 'Свет') {
                     finalDamage = Math.max(0, finalDamage - 10);
