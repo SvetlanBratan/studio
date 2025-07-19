@@ -278,7 +278,7 @@ export default function DuelPage() {
                     turnLog.push(`${activePlayer.name} остается в скрытности.`);
                 }
                 
-                if (name === 'Удержание' || (name === 'Очарование' && !p.includes('(Сирена)'))) {
+                if (name === 'Удержание') {
                     turnLog.push(`${activePlayer.name} находится под эффектом "${name}", магические способности недоступны.`);
                 }
 
@@ -386,12 +386,12 @@ export default function DuelPage() {
             }
         }
         
-        if (activePlayer.penalties.some(p => p.startsWith('Очарование') && !p.includes('(Сирена)'))) {
+        if (activePlayer.penalties.some(p => p.startsWith('Удержание'))) {
             turnSkipped = true;
-            turnLog.push(`${activePlayer.name} находится под эффектом "Очарование" и может только попытаться снять его или отдохнуть.`);
+            turnLog.push(`${activePlayer.name} находится под эффектом "Удержание" и может только попытаться снять его или отдохнуть.`);
             actions = actions.filter(a => a.type === 'remove_effect' || a.type === 'rest');
             if (actions.length === 0) {
-                 actions.push({type: 'rest', payload: {name: 'Пропуск хода из-за Очарования'}});
+                 actions.push({type: 'rest', payload: {name: 'Пропуск хода из-за Удержания'}});
             }
         }
 
@@ -893,8 +893,9 @@ export default function DuelPage() {
                  turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: у персонажа нет знаний стихий.`);
                  return;
             }
-
-            if ((isSpellAction || isHouseholdSpell) && action.type !== 'shield' && isOpponentInRangeForSpells(activePlayer.reserve, newDistance) === false) {
+            
+            const isSpellAttackAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell'].includes(action.type);
+            if (isSpellAttackAction && !isOpponentInRangeForSpells(activePlayer.reserve, newDistance)) {
                  const spellRange = RULES.SPELL_RANGES[activePlayer.reserve];
                  turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: цель слишком далеко (${newDistance}м > ${spellRange}м).`);
                  return; // Skip this action
@@ -1478,7 +1479,7 @@ export default function DuelPage() {
                                  }
                                  break;
                              case 'Песня безмолвия':
-                                 applyEffect(opponent, 'Очарование', 2);
+                                 applyEffect(opponent, 'Удержание', 2);
                                  break;
                              case 'Переформа':
                                  activePlayer.bonuses.push('Переформа');
@@ -1646,8 +1647,8 @@ export default function DuelPage() {
   }
 
   // --- STAGE LOGIC ---
-  const isPlayer1 = user.uid === duelData.player1.id;
-  const isPlayer2 = !!(duelData.player2 && user.uid === duelData.player2.id);
+  const isPlayer1 = user?.uid === duelData.player1.id;
+  const isPlayer2 = !!(user && duelData.player2 && user.uid === duelData.player2.id);
   
   // 1. Solo duel setup
   if (isLocalSolo && !duelData.duelStarted) {
