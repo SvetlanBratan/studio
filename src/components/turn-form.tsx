@@ -155,22 +155,23 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     setActions([]);
   };
   
-  const getOdCostPenalty = (p: CharacterStats): number => {
+  const getOdCostPenalty = (p: CharacterStats): { wound: number; armor: number; charm: number } => {
     if (p.race === 'Куклы' && p.bonuses.includes('Абсолютная память — не тратится ОД.')) {
-        return -Infinity; // Special value for zero cost
+        return { wound: -Infinity, armor: 0, charm: 0 }; // Special value for zero cost
     }
-    let penalty = 0;
+    let woundPenalty = 0;
     for (const wound of RULES.WOUND_PENALTIES) {
         if (p.oz < wound.threshold) {
-            penalty = wound.penalty;
+            woundPenalty = wound.penalty;
         }
     }
     const armorPenalty = ARMORS[p.armor]?.odPenalty ?? 0;
     const charmPenalty = p.penalties.some(p => p.startsWith('Очарование (Сирена)')) ? 10 : 0;
-    return penalty + armorPenalty + charmPenalty;
+    
+    return { wound: woundPenalty, armor: armorPenalty, charm: charmPenalty };
   };
 
-  const odPenalty = getOdCostPenalty(player);
+  const odPenalties = getOdCostPenalty(player);
 
   const hasPrayerAction = actions.some(a => a.type === 'prayer');
   const hasAddedAction = (actionType: ActionType) => actions.some(a => a.type === actionType);
@@ -184,8 +185,10 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const weaponInfo = WEAPONS[player.weapon];
   const isOpponentInRangeForWeapon = distance <= weaponInfo.range;
   const getFinalOdCost = (baseCost: number) => {
-    if (odPenalty === -Infinity) return 0;
-    let cost = baseCost + odPenalty;
+    if (odPenalties.wound === -Infinity) return 0; // Check for the special value
+    
+    let cost = baseCost + odPenalties.wound + odPenalties.armor + odPenalties.charm;
+    
     let reduction = 0;
     if (player.bonuses.includes('Лёгкость (-5 ОД на уклонение)')) reduction += 5;
     if (player.bonuses.includes('Мимикрия (-15 ОД на уклонение)')) reduction += 15;
@@ -224,7 +227,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
       if(isSpell) {
         if(isFaceless && type !== 'household_spell') return 'Безликие не могут использовать магию';
         if(!hasElementalKnowledge) return 'Нет знаний стихий для использования магии';
-        if(!isOpponentInRangeForSpells) return `Цель вне зоны досягаемости (Текущая: ${distance}м > Требуемая: ${spellRange}м)`;
+        if(type !== 'shield' && !isOpponentInRangeForSpells) return `Цель вне зоны досягаемости (Текущая: ${distance}м > Требуемая: ${spellRange}м)`;
       }
 
       if (type === 'physical_attack' && !isOpponentInRangeForWeapon) {
@@ -245,7 +248,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
 
     if(isDisabled) {
         return (
-            <Tooltip>
+            <Tooltip key={value}>
                 <TooltipTrigger asChild><div className="relative flex w-full items-center">{item}</div></TooltipTrigger>
                 <TooltipContent><p>{disabledReason}</p></TooltipContent>
             </Tooltip>
@@ -259,11 +262,11 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     { group: 'physical', value: 'physical_attack', label: `Атака (${weaponInfo.name}) - Урон: ${physicalAttackDamage}, Дальность: ${weaponInfo.range}м, ОД: ${physicalAttackCost}` },
     
     // Magic
-    { group: 'magic', value: 'strong_spell', label: `Сильный ритуал (Урон: ${strongSpellDamage}, Дальность: ${spellRange}м)` },
-    { group: 'magic', value: 'medium_spell', label: `Средний ритуал (Урон: ${mediumSpellDamage}, Дальность: ${spellRange}м)` },
-    { group: 'magic', value: 'small_spell', label: `Малый ритуал (Урон: ${smallSpellDamage}, Дальность: ${spellRange}м)` },
-    { group: 'magic', value: 'household_spell', label: `Бытовое (Урон: ${householdSpellDamage}, Дальность: ${spellRange}м)` },
-    { group: 'magic', value: 'shield', label: 'Создать щит (Средний ритуал)' },
+    { group: 'magic', value: 'strong_spell', label: `Сильный ритуал - Урон: ${strongSpellDamage}, Дальность: ${spellRange}м` },
+    { group: 'magic', value: 'medium_spell', label: `Средний ритуал - Урон: ${mediumSpellDamage}, Дальность: ${spellRange}м` },
+    { group: 'magic', value: 'small_spell', label: `Малый ритуал - Урон: ${smallSpellDamage}, Дальность: ${spellRange}м` },
+    { group: 'magic', value: 'household_spell', label: `Бытовое - Урон: ${householdSpellDamage}, Дальность: ${spellRange}м` },
+    { group: 'magic', value: 'shield', label: 'Создать щит' },
 
     // Other
     { group: 'other', value: 'dodge', label: `Уворот (${getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge)} ОД)` },
@@ -328,20 +331,20 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
                   <SelectValue placeholder="Добавить действие..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectGroup>
+                <SelectGroup key="physical">
                     <SelectLabel>Физические действия</SelectLabel>
                     {actionOptions.filter(o => o.group === 'physical').map(opt => renderSelectOption(opt.value, opt.label, opt.group))}
                 </SelectGroup>
-                <SelectGroup>
+                <SelectGroup key="magic">
                     <SelectLabel>Магические действия</SelectLabel>
                     {actionOptions.filter(o => o.group === 'magic').map(opt => renderSelectOption(opt.value, opt.label, opt.group))}
                 </SelectGroup>
-                <SelectGroup>
+                <SelectGroup key="other">
                   <SelectLabel>Прочие действия</SelectLabel>
                   {actionOptions.filter(o => o.group === 'other').map(opt => renderSelectOption(opt.value, opt.label, opt.group))}
                 </SelectGroup>
                 {racialAbilities.length > 0 && (
-                   <SelectGroup>
+                   <SelectGroup key="racial">
                       <SelectLabel>Расовые способности</SelectLabel>
                       {racialAbilities.map(opt => renderSelectOption(opt.value, opt.label, opt.group, opt.racialAbilityName))}
                    </SelectGroup>
