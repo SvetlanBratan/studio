@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import type { CharacterStats, ReserveLevel, FaithLevel, WeaponType, ArmorType, ItemName } from '@/types/duel';
@@ -214,8 +213,11 @@ export default function CharacterSetupForm({ character, onCharacterChange }: Cha
                             </Button>
                         </div>
                     ))}
+                    {character.inventory.length === 0 && <div className="text-xs text-muted-foreground p-2">Инвентарь пуст.</div>}
                 </div>
             </div>
         </div>
     );
 }
+
+    
