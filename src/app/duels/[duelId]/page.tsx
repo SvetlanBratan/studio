@@ -162,6 +162,7 @@ export default function DuelPage() {
         // Reset one-turn flags at the beginning of the turn
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Облик желания (-5 урон)');
         activePlayer.statuses = activePlayer.statuses?.filter(s => s !== 'Был атакован в прошлом ходу') || [];
+        activePlayer.isDodging = false;
         
         // Mark if the player was attacked in the previous turn
         const lastTurn = duelData.turnHistory[duelData.turnHistory.length - 1];
@@ -883,9 +884,9 @@ export default function DuelPage() {
                 }
                 
                 const oslablenieIndex = opponentPlayer.penalties.findIndex(p => p.startsWith('Ослабление'));
-                if (oslabenieIndex > -1) {
+                if (oslablenieIndex > -1) {
                     damage = Math.max(0, damage - 10);
-                    opponentPlayer.penalties.splice(oslabenieIndex, 1);
+                    opponentPlayer.penalties.splice(oslablenieIndex, 1);
                     turnLog.push(`Эффект "Ослабление" снижает урон ${activePlayer.name} на 10.`);
                 }
 
@@ -1633,8 +1634,6 @@ export default function DuelPage() {
             }
         }
         
-        activePlayer.isDodging = false;
-
         if (turnSkipped && actions.length > 0) {
             const newTurn: Turn = {
                 turnNumber: duelData.currentTurn,
@@ -1931,14 +1930,13 @@ export default function DuelPage() {
                         {turnStatusText()}
                     </span>
                 </CardTitle>
+                <CardDescription className="flex items-center justify-center gap-2 text-base text-muted-foreground font-medium pt-2">
+                    <Ruler className="w-4 h-4"/>
+                    <span>Дистанция: {duelData.distance}м</span>
+                </CardDescription>
                 </CardHeader>
                 <CardContent>
                 
-                <div className="flex items-center justify-center gap-2 text-base text-muted-foreground font-medium mb-4">
-                    <Ruler className="w-4 h-4"/>
-                    <span>Дистанция: {duelData.distance}м</span>
-                </div>
-
                 <div 
                   className="mb-4 p-4 bg-muted/50 rounded-lg flex justify-center items-end h-48 relative overflow-hidden"
                   style={{
@@ -2016,4 +2014,5 @@ export default function DuelPage() {
 
 
     
+
 
