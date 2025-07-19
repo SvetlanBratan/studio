@@ -940,7 +940,7 @@ export default function DuelPage() {
                     damage += 5;
                     turnLog.push(`Пассивная способность (Саламандры): "Пылающий дух" увеличивает урон на 5.`);
                 }
-                if (isSpell && player.bonuses.includes('Боевая магия')) {
+                if (isSpell && activePlayer.bonuses.includes('Боевая магия')) {
                     const bonus = RULES.DAMAGE_BONUS.battle_magic[action.type as keyof typeof RULES.DAMAGE_BONUS.battle_magic] ?? 0;
                     damage += bonus;
                     turnLog.push(`Пассивный бонус "Боевая магия" увеличивает урон на ${bonus}.`);
