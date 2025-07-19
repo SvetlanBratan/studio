@@ -1488,7 +1488,7 @@ export default function DuelPage() {
                                  }
                                  break;
                              case 'Песня безмолвия':
-                                 applyEffect(opponent, 'Удержание', 2);
+                                 applyEffect(opponent, 'Удержание', 1);
                                  break;
                              case 'Переформа':
                                  activePlayer.bonuses.push('Переформа');
