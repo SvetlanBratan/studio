@@ -184,6 +184,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
 
   const weaponInfo = WEAPONS[player.weapon];
   const isOpponentInRangeForWeapon = distance <= weaponInfo.range;
+  
   const getFinalOdCost = (baseCost: number, isMove: boolean = false) => {
     if (odPenalties.wound === -Infinity) return 0; // Check for the special value
     
@@ -263,6 +264,11 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     }
     return item;
   }
+  
+  const moveCostPerMeter = getFinalOdCost(RULES.NON_MAGIC_COSTS.move_per_meter, true);
+  const maxMoveDistance = moveCostPerMeter > 0 ? Math.floor(player.od / moveCostPerMeter) : Infinity;
+  const currentMoveCost = moveCostPerMeter * moveAmount;
+  const canConfirmMove = currentMoveCost <= player.od;
 
   const actionOptions = [
     // Physical
@@ -496,18 +502,21 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
                         id="move-amount"
                         type="number"
                         value={moveAmount}
-                        onChange={e => setMoveAmount(Math.max(1, Number(e.target.value)))}
+                        onChange={e => {
+                            const val = Number(e.target.value);
+                            setMoveAmount(Math.max(1, Math.min(val, maxMoveDistance)));
+                        }}
                         min={1}
-                        max={Math.floor(player.od / getFinalOdCost(RULES.NON_MAGIC_COSTS.move_per_meter, true))}
+                        max={maxMoveDistance}
                     />
                  </div>
                  <p className="text-sm text-muted-foreground">
-                    Стоимость: {getFinalOdCost(moveAmount * RULES.NON_MAGIC_COSTS.move_per_meter, true)} ОД. Текущая дистанция: {distance}м.
+                    Стоимость: {currentMoveCost} ОД. Текущие ОД: {player.od}. Текущая дистанция: {distance}м.
                  </p>
             </div>
             <AlertDialogFooter>
                 <AlertDialogCancel>Отмена</AlertDialogCancel>
-                <AlertDialogAction onClick={handleMoveSelect}>Подтвердить</AlertDialogAction>
+                <AlertDialogAction onClick={handleMoveSelect} disabled={!canConfirmMove}>Подтвердить</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
