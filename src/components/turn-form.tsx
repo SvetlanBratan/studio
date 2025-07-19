@@ -382,20 +382,20 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
               <SelectContent>
                 <SelectGroup key="physical">
                     <SelectLabel>Физические действия</SelectLabel>
-                    {actionOptions.filter(o => o.group === 'physical').map(opt => renderSelectOption(opt.value, opt.label, opt.group))}
+                    {actionOptions.filter(o => o.group === 'physical').map(opt => <div key={opt.value}>{renderSelectOption(opt.value, opt.label, opt.group)}</div>)}
                 </SelectGroup>
                 <SelectGroup key="magic">
                     <SelectLabel>Магические действия</SelectLabel>
-                    {actionOptions.filter(o => o.group === 'magic').map(opt => renderSelectOption(opt.value, opt.label, opt.group))}
+                    {actionOptions.filter(o => o.group === 'magic').map(opt => <div key={opt.value}>{renderSelectOption(opt.value, opt.label, opt.group)}</div>)}
                 </SelectGroup>
                 <SelectGroup key="other">
                   <SelectLabel>Прочие действия</SelectLabel>
-                  {actionOptions.filter(o => o.group === 'other').map(opt => renderSelectOption(opt.value, opt.label, opt.group))}
+                  {actionOptions.filter(o => o.group === 'other').map(opt => <div key={opt.value}>{renderSelectOption(opt.value, opt.label, opt.group)}</div>)}
                 </SelectGroup>
                 {racialAbilities.length > 0 && (
                    <SelectGroup key="racial">
                       <SelectLabel>Расовые способности</SelectLabel>
-                      {racialAbilities.map(opt => renderSelectOption(opt.value, opt.label, opt.group, opt.racialAbilityName))}
+                      {racialAbilities.map(opt => <div key={opt.value}>{renderSelectOption(opt.value, opt.label, opt.group, opt.racialAbilityName)}</div>)}
                    </SelectGroup>
                 )}
               </SelectContent>
