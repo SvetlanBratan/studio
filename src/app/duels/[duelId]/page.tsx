@@ -474,21 +474,6 @@ export default function DuelPage() {
         const applyDamage = (attacker: CharacterStats, target: CharacterStats, amount: number, isSpell: boolean, spellElement?: string, isPhysical: boolean = !isSpell) => {
             let finalDamage = amount;
 
-            if (target.bonuses.includes('Переформа')) {
-                turnLog.push(`Пассивная способность (Слизни): ${target.name} находится в неуязвимой форме и игнорирует весь урон.`);
-                return;
-            }
-
-            if ((isPhysical && (target.bonuses.includes('Временной отпечаток (иммунитет к физическому урону)') || target.race === 'Призраки' || target.bonuses.includes('Эфирная форма — иммунитет к физическим атакам.') || target.race === 'Жнецы'))) {
-                turnLog.push(`Пассивная способность (${target.race}): ${target.name} имеет иммунитет к физическому урону.`);
-                return;
-            }
-
-            if (target.penalties.some(p => p.startsWith('Скрытность'))) {
-                turnLog.push(`${target.name} находится в скрытности и избегает урона.`);
-                return;
-            }
-            
             if (target.isDodging) {
                 if (isSpell && newDistance < 10) {
                     finalDamage = Math.max(0, finalDamage - RULES.DODGE_VS_STRONG_SPELL_DMG_REDUCTION);
@@ -504,6 +489,21 @@ export default function DuelPage() {
                     }
                 }
                 target.isDodging = false; // Dodge is consumed after one attempt
+            }
+
+            if (target.bonuses.includes('Переформа')) {
+                turnLog.push(`Пассивная способность (Слизни): ${target.name} находится в неуязвимой форме и игнорирует весь урон.`);
+                return;
+            }
+
+            if ((isPhysical && (target.bonuses.includes('Временной отпечаток (иммунитет к физическому урону)') || target.race === 'Призраки' || target.bonuses.includes('Эфирная форма — иммунитет к физическим атакам.') || target.race === 'Жнецы'))) {
+                turnLog.push(`Пассивная способность (${target.race}): ${target.name} имеет иммунитет к физическому урону.`);
+                return;
+            }
+
+            if (target.penalties.some(p => p.startsWith('Скрытность'))) {
+                turnLog.push(`${target.name} находится в скрытности и избегает урона.`);
+                return;
             }
 
             if (isSpell && spellElement) {
@@ -894,12 +894,10 @@ export default function DuelPage() {
                  return;
             }
 
-            if (isSpellAction || isHouseholdSpell) {
-                const spellRange = RULES.SPELL_RANGES[activePlayer.reserve];
-                if (newDistance > spellRange) {
-                    turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: цель слишком далеко (${newDistance}м > ${spellRange}м).`);
-                    return; // Skip this action
-                }
+            if ((isSpellAction || isHouseholdSpell) && isOpponentInRangeForSpells(activePlayer.reserve, newDistance) === false) {
+                 const spellRange = RULES.SPELL_RANGES[activePlayer.reserve];
+                 turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: цель слишком далеко (${newDistance}м > ${spellRange}м).`);
+                 return; // Skip this action
             }
 
             const calculateDamage = (baseDamage: number, isSpell: boolean = false, spellElement?: string): number => {
@@ -1598,8 +1596,8 @@ export default function DuelPage() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) },
         };
         
-        const { isDodging: _activeIsDodging, ...finalActivePlayer } = activePlayer;
-        const { isDodging: _opponentIsDodging, ...finalOpponent } = opponent;
+        const finalActivePlayer = activePlayer;
+        const finalOpponent = opponent;
 
         const updatedDuel: Partial<DuelState> = {
             player1: duelData.activePlayerId === 'player1' ? finalActivePlayer : finalOpponent,
@@ -1725,6 +1723,11 @@ export default function DuelPage() {
     // Should not happen if logic is correct, but a safeguard
     return <div>Ошибка: Данные второго игрока отсутствуют.</div>
   }
+  
+    const isOpponentInRangeForSpells = (reserve: CharacterStats['reserve'], distance: number) => {
+        const spellRange = RULES.SPELL_RANGES[reserve];
+        return distance <= spellRange;
+    };
 
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
   const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
@@ -1794,6 +1797,7 @@ export default function DuelPage() {
                         opponent={currentOpponent}
                         onSubmit={executeTurn}
                         distance={duelData.distance}
+                        isOpponentInRangeForSpells={isOpponentInRangeForSpells(activePlayer.reserve, duelData.distance)}
                     />
                 ) : (
                     <div className="text-center text-muted-foreground p-4 md:p-8">
@@ -1827,4 +1831,5 @@ export default function DuelPage() {
     
 
     
+
 
