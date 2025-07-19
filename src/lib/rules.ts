@@ -110,7 +110,7 @@ export const RACES: Race[] = [
     { name: 'Рариты', passiveBonuses: ['Перья теней (-10 урона от магии воздуха)', 'Хищный флирт (при получении урона противник теряет 1 ОМ из-за ментального сбоя)'], activeAbilities: [{ name: 'Распахнуть маску', description: 'наносит 50 урона и ослепляет врага на 1 ход.', cost: { om: 30 } }] },
     { name: 'Саламандры', passiveBonuses: ['Огненная суть — иммунитет к огню', 'Пылающий дух (+5 к урону, если ОЗ ниже 100)'], activeAbilities: [{ name: 'Вспышка', description: 'наносит 40 урона.', cost: { om: 20 } }] },
     { name: 'Светоликие', passiveBonuses: ['Светлая броня (-10 урона от тьмы)', 'Озарение (+10 ОМ каждый ход)'], activeAbilities: [{ name: 'Луч очищения', description: 'восстанавливает 40 ОЗ себе или наносит 40 урона врагу. (рандом)', cost: { om: 30 } }] },
-    { name: 'Сирены', passiveBonuses: ['Очарование (враг тратит 10 ОД при атаке по сирене)', 'Водная грация (-5 урона, если враг атакует водой)'], activeAbilities: [{ name: 'Песня безмолвия', description: 'накладывает эффект очарования (блокирует все способности, кроме снятия эффекта).', cost: { om: 30 } }] },
+    { name: 'Сирены', passiveBonuses: ['Очарование (враг тратит 10 ОД при атаке по сирене)', 'Водная грация (-5 урона, если враг атакует водой)'], activeAbilities: [{ name: 'Песня безмолвия', description: 'накладывает эффект удержания (блокирует все способности, кроме снятия эффекта).', cost: { om: 30 } }] },
     { name: 'Скелеты', passiveBonuses: ['Бессмертие костей — иммунитет к ядам и горению', 'Холод нежизни — враг теряет 2 ОЗ каждый ход.'], activeAbilities: [{ name: 'Некросотрясение', description: 'наносит 60 урона.', cost: { om: 40 } }] },
     { name: 'Слизни', passiveBonuses: ['Скользкость (-10 урона от физических атак)', 'Магопоглощение (+10 ОМ каждый ход при попадании под заклинание)'], activeAbilities: [{ name: 'Переформа', description: 'принимает неуязвимую форму и игнорирует весь урон в течение одного хода.', cost: { om: 50 } }] },
     { name: 'Снежные эльфы', passiveBonuses: ['Лёд в венах (-30 урона от атак стихии льда)'], activeAbilities: [{ name: 'Цветок льда', description: 'наносит 60 урона стихией льда.', cost: { om: 40 } }] },
@@ -182,6 +182,9 @@ export const getActionLabel = (type: ActionType, payload?: any): string => {
     return `${labels.prayer}: ${prayerEffectLabels[payload.effect]}`;
   }
   if (type === 'racial_ability' && payload?.name) {
+    if (payload.name === 'Песня безмолвия') {
+      return `${labels.racial_ability}: Песня безмолвия`;
+    }
     return `${labels.racial_ability}: ${payload.name}`;
   }
   return label;
@@ -213,7 +216,7 @@ export const RULES = {
   STARTING_OD: 150,
   MAX_ACTIONS_PER_TURN: 2,
   MAX_INVENTORY_ITEMS: 2,
-  INITIAL_DISTANCE: 15,
+  INITIAL_DISTANCE: 10,
 
   RITUAL_COSTS: {
     strong: 90,
