@@ -14,7 +14,7 @@ import TurnForm from '@/components/turn-form';
 import CharacterSetupModal from '@/components/character-setup-modal';
 import SoloSetupForm from '@/components/solo-setup-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler, Eye } from 'lucide-react';
+import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler, Eye, ScrollText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS, WEAPONS, ARMORS, ITEMS } from '@/lib/rules';
@@ -23,6 +23,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { updateDuel, joinDuel } from '@/lib/firestore';
 import { deepClone } from '@/lib/utils';
 import DuelLog from '@/components/duel-log';
+import { Separator } from '@/components/ui/separator';
 
 
 const getPhysicalCondition = (oz: number, maxOz: number): string => {
@@ -1827,9 +1828,20 @@ export default function DuelPage() {
         {duelData.winner ? (
         <Card className="text-center p-4 md:p-8 mt-4">
             <CardTitle className="text-2xl md:text-3xl font-bold text-accent mb-4">Дуэль Окончена!</CardTitle>
-            <CardContent>
-            <p className="text-lg md:text-xl">Победитель: {duelData.winner}</p>
-            <Button onClick={() => router.push('/duels')} className="mt-6">Начать новую</Button>
+            <CardContent className="space-y-4">
+                <p className="text-lg md:text-xl">Победитель: {duelData.winner}</p>
+                
+                {duelData.log && duelData.log.length > 0 && (
+                    <div className="text-left bg-muted p-4 rounded-lg">
+                        <h4 className="font-semibold mb-2 flex items-center gap-2"><ScrollText className='w-5 h-5' />События последнего хода:</h4>
+                        <Separator className="my-2" />
+                        <ul className="list-disc pl-5 text-sm space-y-1">
+                            {duelData.log.map((entry, i) => <li key={i}>{entry}</li>)}
+                        </ul>
+                    </div>
+                )}
+                
+                <Button onClick={() => router.push('/duels')} className="mt-6">Начать новую</Button>
             </CardContent>
         </Card>
         ) : (
@@ -1906,3 +1918,4 @@ export default function DuelPage() {
     </div>
   );
 }
+
