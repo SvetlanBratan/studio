@@ -87,11 +87,13 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     }
 
     if (type === 'move') {
+      setMoveAmount(1); // Reset on open
       setIsMoveDialogOpen(true);
       return;
     }
 
     if (type === 'heal_self') {
+      setHealAmount(1); // Reset on open
       setIsHealDialogOpen(true);
       return;
     }
@@ -141,7 +143,6 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     if (actions.length < RULES.MAX_ACTIONS_PER_TURN) {
       const finalDistance = moveDirection === 'closer' ? -moveAmount : moveAmount;
       if (distance + finalDistance < 0) {
-        // Potentially show a toast or error message
         console.error("Cannot move closer than 0 meters");
         setIsMoveDialogOpen(false);
         return;
@@ -150,7 +151,6 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     }
     setIsMoveDialogOpen(false);
     setSelectValue('');
-    setMoveAmount(1);
   };
 
   const handleHealSelect = () => {
@@ -159,7 +159,6 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     }
     setIsHealDialogOpen(false);
     setSelectValue('');
-    setHealAmount(1);
   };
 
 
@@ -182,7 +181,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
             woundPenalty = wound.penalty;
         }
     }
-    const armorPenalty = ARMORS[p.armor]?.odPenalty ?? 0;
+    const armorPenalty = ARMORS[p.armor as ArmorType]?.odPenalty ?? 0;
     const charmPenalty = p.penalties.some(p => p.startsWith('Очарование (Сирена)')) ? 10 : 0;
     
     return { wound: woundPenalty, armor: armorPenalty, charm: charmPenalty };
@@ -199,7 +198,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const spellRange = RULES.SPELL_RANGES[player.reserve];
   const isOpponentInRangeForSpells = distance <= spellRange;
 
-  const weaponInfo = WEAPONS[player.weapon];
+  const weaponInfo = WEAPONS[player.weapon as WeaponType];
   const isOpponentInRangeForWeapon = distance <= weaponInfo.range;
   
   const getFinalOdCost = (baseCost: number, isMove: boolean = false) => {
@@ -271,7 +270,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     const disabledReason = getActionDisabledReason(value, racialAbilityName);
     const isDisabled = !!disabledReason;
 
-    const item = <SelectItem key={value} value={value} disabled={isDisabled}>{label}</SelectItem>
+    const item = <SelectItem value={value} disabled={isDisabled}>{label}</SelectItem>
 
     if(isDisabled) {
         return (
@@ -290,11 +289,15 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const canConfirmMove = currentMoveCost <= player.od;
 
   const healCostPerOz = 2;
-  const missingHealth = player.maxOz - player.oz;
-  const maxHealFromOm = Math.floor(player.om / healCostPerOz);
-  const maxHealAmount = Math.min(missingHealth, maxHealFromOm);
+  const maxHealAmount = useMemo(() => {
+    if (!player) return 0;
+    const missingHealth = player.maxOz - player.oz;
+    const maxHealFromOm = Math.floor(player.om / healCostPerOz);
+    return Math.min(missingHealth, maxHealFromOm);
+  }, [player, healCostPerOz]);
+
   const currentHealCost = healAmount * healCostPerOz;
-  const canConfirmHeal = currentHealCost <= player.om && healAmount <= missingHealth;
+  const canConfirmHeal = currentHealCost <= player.om && healAmount <= (player.maxOz - player.oz);
 
   const actionOptions = [
     // Physical
@@ -506,7 +509,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
             <AlertDialogHeader>
                 <AlertDialogTitle>Передвижение</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Выберите, на какое расстояние и в каком направлении вы хотите переместиться. Стоимость: 1 ОД за 1 метр.
+                    Выберите, на какое расстояние и в каком направлении вы хотите переместиться. Стоимость: {moveCostPerMeter} ОД за 1 метр.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="space-y-4 py-4">
@@ -530,10 +533,11 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
                         value={moveAmount}
                         onChange={e => {
                             const val = Number(e.target.value);
-                            setMoveAmount(Math.max(1, Math.min(val, maxMoveDistance)));
+                            if (isNaN(val)) return;
+                            setMoveAmount(Math.max(1, Math.min(val, isFinite(maxMoveDistance) ? maxMoveDistance : 999)));
                         }}
                         min={1}
-                        max={maxMoveDistance}
+                        max={isFinite(maxMoveDistance) ? maxMoveDistance : 999}
                     />
                  </div>
                  <p className="text-sm text-muted-foreground">
@@ -564,18 +568,21 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
                       value={healAmount}
                       onChange={e => {
                           const val = Number(e.target.value);
+                           if (isNaN(val) || !isFinite(maxHealAmount)) return;
                           setHealAmount(Math.max(1, Math.min(val, maxHealAmount)));
                       }}
                       min={1}
-                      max={maxHealAmount}
+                      max={isFinite(maxHealAmount) ? maxHealAmount : 1}
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Стоимость: {currentHealCost} ОМ. Текущие ОМ: {player.om}.
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Максимум можно восстановить: {maxHealAmount} ОЗ.
-                </p>
+                 {isFinite(maxHealAmount) &&
+                    <p className="text-sm text-muted-foreground">
+                        Максимум можно восстановить: {maxHealAmount} ОЗ.
+                    </p>
+                 }
           </div>
           <AlertDialogFooter>
               <AlertDialogCancel>Отмена</AlertDialogCancel>
@@ -587,3 +594,4 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     </TooltipProvider>
   );
 }
+
