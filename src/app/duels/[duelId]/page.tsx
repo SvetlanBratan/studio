@@ -278,7 +278,7 @@ export default function DuelPage() {
                     turnLog.push(`${activePlayer.name} остается в скрытности.`);
                 }
                 
-                if (name === 'Удержание' || name === 'Очарование') {
+                if (name === 'Удержание' || (name === 'Очарование' && !p.includes('(Сирена)'))) {
                     turnLog.push(`${activePlayer.name} находится под эффектом "${name}", магические способности недоступны.`);
                 }
 
@@ -386,7 +386,7 @@ export default function DuelPage() {
             }
         }
         
-        if (activePlayer.penalties.some(p => p.startsWith('Очарование'))) {
+        if (activePlayer.penalties.some(p => p.startsWith('Очарование') && !p.includes('(Сирена)'))) {
             turnSkipped = true;
             turnLog.push(`${activePlayer.name} находится под эффектом "Очарование" и может только попытаться снять его или отдохнуть.`);
             actions = actions.filter(a => a.type === 'remove_effect' || a.type === 'rest');
@@ -894,7 +894,7 @@ export default function DuelPage() {
                  return;
             }
 
-            if ((isSpellAction || isHouseholdSpell) && isOpponentInRangeForSpells(activePlayer.reserve, newDistance) === false) {
+            if ((isSpellAction || isHouseholdSpell) && action.type !== 'shield' && isOpponentInRangeForSpells(activePlayer.reserve, newDistance) === false) {
                  const spellRange = RULES.SPELL_RANGES[activePlayer.reserve];
                  turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: цель слишком далеко (${newDistance}м > ${spellRange}м).`);
                  return; // Skip this action
@@ -940,7 +940,7 @@ export default function DuelPage() {
                     damage += 5;
                     turnLog.push(`Пассивная способность (Саламандры): "Пылающий дух" увеличивает урон на 5.`);
                 }
-                if (isSpell && activePlayer.bonuses.includes('Боевая магия')) {
+                if (isSpell && player.bonuses.includes('Боевая магия')) {
                     const bonus = RULES.DAMAGE_BONUS.battle_magic[action.type as keyof typeof RULES.DAMAGE_BONUS.battle_magic] ?? 0;
                     damage += bonus;
                     turnLog.push(`Пассивный бонус "Боевая магия" увеличивает урон на ${bonus}.`);
