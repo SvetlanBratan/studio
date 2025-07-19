@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -1656,7 +1655,7 @@ export default function DuelPage() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) },
         };
         
-        const finalActivePlayer = { ...activePlayer, isDodging: false };
+        const finalActivePlayer = activePlayer;
         const finalOpponent = opponentPlayer;
 
         const updatedDuel: Partial<DuelState> = {
@@ -1930,3 +1929,5 @@ export default function DuelPage() {
     </div>
   );
 }
+
+    
