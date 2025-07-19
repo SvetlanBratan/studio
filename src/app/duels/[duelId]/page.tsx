@@ -386,7 +386,7 @@ export default function DuelPage() {
             }
         }
         
-        if (activePlayer.penalties.some(p => p.startsWith('Очарование') && !p.startsWith('Очарование (Сирена)'))) {
+        if (activePlayer.penalties.some(p => p.startsWith('Очарование'))) {
             turnSkipped = true;
             turnLog.push(`${activePlayer.name} находится под эффектом "Очарование" и может только попытаться снять его или отдохнуть.`);
             actions = actions.filter(a => a.type === 'remove_effect' || a.type === 'rest');
@@ -1596,7 +1596,7 @@ export default function DuelPage() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) },
         };
         
-        const finalActivePlayer = activePlayer;
+        const { isDodging: _d, ...finalActivePlayer } = activePlayer;
         const finalOpponent = opponent;
 
         const updatedDuel: Partial<DuelState> = {
@@ -1797,7 +1797,6 @@ export default function DuelPage() {
                         opponent={currentOpponent}
                         onSubmit={executeTurn}
                         distance={duelData.distance}
-                        isOpponentInRangeForSpells={isOpponentInRangeForSpells(activePlayer.reserve, duelData.distance)}
                     />
                 ) : (
                     <div className="text-center text-muted-foreground p-4 md:p-8">
@@ -1827,9 +1826,3 @@ export default function DuelPage() {
     </div>
   );
 }
-
-    
-
-    
-
-

@@ -133,7 +133,8 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
         }
     }
     const armorPenalty = ARMORS[player.armor]?.odPenalty ?? 0;
-    return penalty + armorPenalty;
+    const charmPenalty = player.penalties.some(p => p.startsWith('Очарование (Сирена)')) ? 10 : 0;
+    return penalty + armorPenalty + charmPenalty;
   };
 
   const odPenalty = getOdCostPenalty(player);
