@@ -42,10 +42,10 @@ export const WEAPONS: Record<WeaponType, Weapon> = {
 
 export const ARMORS: Record<ArmorType, Armor> = {
     'Тканевая': { name: 'Тканевая', shieldBonus: 0, odPenalty: 0 },
-    'Кожаная': { name: 'Кожаная', shieldBonus: 20, odPenalty: 20 },
-    'Кольчуга': { name: 'Кольчуга', shieldBonus: 30, odPenalty: 30 },
-    'Латная': { name: 'Латная', shieldBonus: 50, odPenalty: 40 },
-    'Зачарованная': { name: 'Зачарованная', shieldBonus: 100, odPenalty: 40 },
+    'Кожаная': { name: 'Кожаная', shieldBonus: 20, odPenalty: 5 },
+    'Кольчуга': { name: 'Кольчуга', shieldBonus: 30, odPenalty: 10 },
+    'Латная': { name: 'Латная', shieldBonus: 50, odPenalty: 15 },
+    'Зачарованная': { name: 'Зачарованная', shieldBonus: 100, odPenalty: 20 },
 };
 
 export const ITEMS = {
