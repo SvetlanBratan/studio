@@ -218,7 +218,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   
   const getActionDisabledReason = (type: string, racialAbilityName?: string): string | null => {
       const racialAbility = racialAbilityName ? playerRaceInfo?.activeAbilities.find(a => a.name === racialAbilityName) : null;
-      const omCost = racialAbility?.cost?.om ?? RULES.RITUAL_COSTS[type.replace('_spell', '') as keyof typeof RULES.RITUAL_COSTS] ?? 0;
+      const omCost = racialAbility?.cost?.om ?? RULES.RITUAL_COSTS[type.replace('_spell', '') as keyof typeof RULES.RITUAL_COSTS] ?? RULES.NON_MAGIC_COSTS[type as keyof typeof RULES.NON_MAGIC_COSTS] ?? 0;
       const odCost = getFinalOdCost(racialAbility?.cost?.od ?? RULES.NON_MAGIC_COSTS[type as keyof typeof RULES.NON_MAGIC_COSTS] ?? 0);
       const cooldown = racialAbilityName ? (player.cooldowns[racialAbilityName] ?? 0) : (player.cooldowns[type as keyof typeof player.cooldowns] ?? 0);
       
@@ -235,6 +235,10 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
 
       if (type === 'physical_attack' && !isOpponentInRangeForWeapon) {
           return `Цель вне зоны досягаемости (Текущая: ${distance}м > Требуемая: ${weaponInfo.range}м)`;
+      }
+      
+      if (type === 'heal_self' && !player.elementalKnowledge.includes('Исцеление')) {
+        return 'Требуется знание стихии "Исцеление"';
       }
 
       if(hasAddedAction(type as ActionType)) return 'Это действие уже добавлено';
@@ -270,6 +274,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     { group: 'magic', value: 'small_spell', label: `Малый ритуал - Урон: ${smallSpellDamage}, Дальность: ${spellRange}м` },
     { group: 'magic', value: 'household_spell', label: `Бытовое - Урон: ${householdSpellDamage}, Дальность: ${spellRange}м` },
     { group: 'magic', value: 'shield', label: 'Создать щит' },
+    { group: 'magic', value: 'heal_self', label: 'Исцелить себя (+50 ОЗ)' },
 
     // Other
     { group: 'other', value: 'dodge', label: `Уворот (${getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge)} ОД)` },
@@ -361,7 +366,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
                               <SelectValue placeholder="Стихия..." />
                             </SelectTrigger>
                             <SelectContent>
-                              {player.elementalKnowledge.map(el => (
+                              {player.elementalKnowledge.filter(e => e !== 'Исцеление').map(el => (
                                 <SelectItem key={el} value={el}>{el}</SelectItem>
                               ))}
                             </SelectContent>
@@ -493,7 +498,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
                         value={moveAmount}
                         onChange={e => setMoveAmount(Math.max(1, Number(e.target.value)))}
                         min={1}
-                        max={Math.floor(player.od / RULES.NON_MAGIC_COSTS.move_per_meter)}
+                        max={Math.floor(player.od / getFinalOdCost(RULES.NON_MAGIC_COSTS.move_per_meter, true))}
                     />
                  </div>
                  <p className="text-sm text-muted-foreground">

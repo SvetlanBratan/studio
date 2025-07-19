@@ -1,6 +1,6 @@
 
 
-import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element, CharacterStats, WeaponType, ArmorType, Weapon, Armor, ItemName } from "@/types/duel";
+import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element, CharacterStats, WeaponType, ArmorType, Weapon, Armor, ItemName } from '@/types/duel';
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
 
@@ -174,7 +174,8 @@ export const getActionLabel = (type: ActionType, payload?: any): string => {
       rest: "Отдых",
       racial_ability: "Расовая способность",
       move: "Передвижение",
-      physical_attack: "Атака оружием"
+      physical_attack: "Атака оружием",
+      heal_self: "Исцелить себя"
   };
 
   let label = labels[type] || type;
@@ -220,6 +221,7 @@ export const ELEMENTS: Record<string, Element> = {
     'Кровь': { name: 'Кровь', weakTo: ['Свет', 'Жизнь'], strongAgainst: ['Живые цели'] },
     'Эфир': { name: 'Эфир', weakTo: [], strongAgainst: [] }, // Нейтральная
     'Иллюзии': { name: 'Иллюзии', weakTo: [], strongAgainst: [] }, // Нейтральная
+    'Исцеление': { name: 'Исцеление', weakTo: [], strongAgainst: [] }, // Нейтральная
     'Божественная': { name: 'Божественная', weakTo: [], strongAgainst: [] }, // Вне круга
 };
 
@@ -245,6 +247,7 @@ export const RULES = {
     order_familiar: 30,
     move_per_meter: 1,
     physical_attack: 25,
+    heal_self: 30,
   },
 
   COOLDOWNS: {
@@ -252,6 +255,7 @@ export const RULES = {
     item: 3,
     prayer: 4,
     physical_attack: 1,
+    heal_self: 3,
   },
 
   SPELL_RANGES: {
@@ -355,7 +359,7 @@ export const initialPlayerStats = (id: string, name: string): CharacterStats => 
         maxOd: RULES.STARTING_OD,
         shield: { hp: 0, element: null },
         isDodging: false,
-        cooldowns: { strongSpell: 0, item: 0, prayer: 0, physical_attack: 0 },
+        cooldowns: { strongSpell: 0, item: 0, prayer: 0, physical_attack: 0, heal_self: 0 },
         isSetupComplete: false,
     };
 };

@@ -312,12 +312,8 @@ export default function DuelPage() {
             return p;
         }).filter(p => p !== '');
         
-        // Add OD penalties
-        const armorPenalty = ARMORS[activePlayer.armor as ArmorType]?.odPenalty ?? 0;
-        if (armorPenalty > 0) {
-            const penaltyName = `Штраф ОД (Броня): +${armorPenalty}`;
-            if (!activePlayer.penalties.includes(penaltyName)) activePlayer.penalties.push(penaltyName);
-        }
+        // Recalculate wound penalties
+        activePlayer.penalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД (Ранение)'));
         if (activePlayer.race !== 'Куклы' || !activePlayer.bonuses.includes('Абсолютная память — не тратится ОД.')) {
             for (const wound of RULES.WOUND_PENALTIES) {
                 if (activePlayer.oz < wound.threshold) {
@@ -325,6 +321,15 @@ export default function DuelPage() {
                      if (!activePlayer.penalties.includes(penaltyName)) activePlayer.penalties.push(penaltyName);
                 }
             }
+        }
+        
+        // Add armor penalty if not present
+        const armorPenalty = ARMORS[activePlayer.armor as ArmorType]?.odPenalty ?? 0;
+        const armorPenaltyName = `Штраф ОД (Броня): +${armorPenalty}`;
+        // First remove existing armor penalties to avoid duplicates if armor changes
+        activePlayer.penalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД (Броня)'));
+        if (armorPenalty > 0) {
+            if (!activePlayer.penalties.includes(armorPenaltyName)) activePlayer.penalties.push(armorPenaltyName);
         }
 
 
@@ -910,7 +915,7 @@ export default function DuelPage() {
                 }
             }
 
-            if ((isSpellAction || isHouseholdSpell || isShieldAction) && activePlayer.elementalKnowledge.length === 0) {
+            if ((isSpellAction || isHouseholdSpell || isShieldAction) && !action.type.startsWith('racial') && activePlayer.elementalKnowledge.length === 0) {
                  turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: у персонажа нет знаний стихий.`);
                  return;
             }
@@ -1105,6 +1110,12 @@ export default function DuelPage() {
                     activePlayer.om -= RULES.RITUAL_COSTS.household;
                     damageDealt = calculateDamage(RULES.RITUAL_DAMAGE[activePlayer.reserve]?.household ?? 0, true, action.payload?.element);
                     applyDamage(activePlayer, opponent, damageDealt, true, action.payload?.element);
+                    break;
+                case 'heal_self':
+                    activePlayer.om -= RULES.NON_MAGIC_COSTS.heal_self;
+                    activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 50);
+                    turnLog.push(`${activePlayer.name} восстанавливает 50 ОЗ.`);
+                    activePlayer.cooldowns.heal_self = RULES.COOLDOWNS.heal_self;
                     break;
                 case 'shield':
                     activePlayer.om -= RULES.RITUAL_COSTS.medium;

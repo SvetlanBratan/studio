@@ -104,6 +104,7 @@ export interface CharacterStats {
     item: number; // turns remaining
     prayer: number; // turns remaining
     physical_attack: number;
+    heal_self: number;
     [key: string]: number; // For racial abilities
   };
   isSetupComplete: boolean;
@@ -111,7 +112,7 @@ export interface CharacterStats {
 
 export type PrayerEffectType = 'eternal_shield' | 'full_heal_oz' | 'full_heal_om';
 
-export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'household_spell' | 'dodge' | 'use_item' | 'shield' | 'prayer' | 'remove_effect' | 'rest' | 'racial_ability' | 'move' | 'physical_attack';
+export type ActionType = 'strong_spell' | 'medium_spell' | 'small_spell' | 'household_spell' | 'dodge' | 'use_item' | 'shield' | 'prayer' | 'remove_effect' | 'rest' | 'racial_ability' | 'move' | 'physical_attack' | 'heal_self';
 
 export interface Action {
   type: ActionType;
