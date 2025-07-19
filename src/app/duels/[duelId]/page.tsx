@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { doc } from 'firebase/firestore';
@@ -382,6 +382,16 @@ export default function DuelPage() {
                 }
             }
         }
+        
+        if (activePlayer.penalties.some(p => p.startsWith('Очарование'))) {
+            turnSkipped = true;
+            turnLog.push(`${activePlayer.name} находится под эффектом "Очарование" и может только попытаться снять его или отдохнуть.`);
+            actions = actions.filter(a => a.type === 'remove_effect' || a.type === 'rest');
+            if (actions.length === 0) {
+                 actions.push({type: 'rest', payload: {name: 'Пропуск хода из-за Очарования'}});
+            }
+        }
+
 
         if (turnSkipped) {
             const newTurn: Turn = {
@@ -599,7 +609,7 @@ export default function DuelPage() {
                 finalDamage = Math.max(0, finalDamage - 5);
                 turnLog.push(`Пассивная способность (${target.race}): урон снижен на 5.`);
             }
-             if (target.bonuses.includes('Магическое тело — -5 урона от всех атак, если текущий ОМ выше 50.') && target.om > 50) {
+             if (target.bonuses.includes('Магический тело — -5 урона от всех атак, если текущий ОМ выше 50.') && target.om > 50) {
                  finalDamage = Math.max(0, finalDamage - 5);
                  turnLog.push(`Пассивная способность (Ятанаги): урон снижен на 5.`);
             }
@@ -1331,8 +1341,8 @@ export default function DuelPage() {
                                 break;
                              // Drou
                             case 'Лунный кнут':
-                                applyDamage(activePlayer, opponent, 55, true, 'Тьма');
-                                break;
+                                 applyDamage(activePlayer, opponent, 55, true, 'Тьма');
+                                 break;
                              // Жнецы
                              case 'Коса Смерти':
                                  opponent.oz = 0;
