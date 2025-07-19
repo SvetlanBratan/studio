@@ -158,7 +158,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     if (actions.length < maxActionsPerTurn) {
       const finalDistance = moveDirection === 'closer' ? -moveAmount : moveAmount;
       if (distance + finalDistance < 0) {
-        console.error("Cannot move closer than 0 meters");
+        // This case should be prevented by disabled button, but as a safeguard
         setIsMoveDialogOpen(false);
         return;
       }
@@ -305,7 +305,14 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const moveCostPerMeter = getFinalOdCost(RULES.NON_MAGIC_COSTS.move_per_meter, true);
   const maxMoveDistance = moveCostPerMeter > 0 ? Math.floor(player.od / moveCostPerMeter) : Infinity;
   const currentMoveCost = moveCostPerMeter * moveAmount;
-  const canConfirmMove = currentMoveCost <= player.od;
+  
+  const canConfirmMove = useMemo(() => {
+    const cost = moveCostPerMeter * moveAmount;
+    if (cost > player.od) return false;
+    if (moveDirection === 'closer' && moveAmount > distance) return false;
+    return true;
+  }, [moveCostPerMeter, moveAmount, player.od, moveDirection, distance]);
+
 
   const healCostPerOz = 2;
   const maxHealAmount = useMemo(() => {

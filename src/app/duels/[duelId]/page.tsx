@@ -1922,7 +1922,12 @@ export default function DuelPage() {
                 </CardHeader>
                 <CardContent>
                 
-                <div className="mb-4 p-4 bg-muted/50 rounded-lg flex justify-around items-end h-48 relative overflow-hidden">
+                <div 
+                  className="mb-4 p-4 bg-muted/50 rounded-lg flex justify-center items-end h-48 relative overflow-hidden"
+                  style={{
+                    gap: `${Math.max(0, duelData.distance) * 5}px` // Adjust multiplier for visual effect
+                  }}
+                >
                     <PixelCharacter
                       pose={duelData.animationState?.player1 || 'idle'}
                       weapon={duelData.player1.weapon}
