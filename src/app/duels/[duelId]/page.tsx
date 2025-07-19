@@ -1915,10 +1915,6 @@ export default function DuelPage() {
                 <CardTitle className="flex items-center justify-between text-lg md:text-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1">
                       <span>Ход {duelData.currentTurn}: {activePlayer.name}</span>
-                      <span className="flex items-center gap-2 text-base text-muted-foreground font-medium">
-                        <Ruler className="w-4 h-4"/>
-                        Дистанция: {duelData.distance}м
-                      </span>
                     </div>
                     <span className={`text-sm font-medium ${(isMyTurn && userRole !== 'spectator') ? 'text-accent' : 'text-muted-foreground'}`}>
                         {turnStatusText()}
@@ -1927,6 +1923,11 @@ export default function DuelPage() {
                 </CardHeader>
                 <CardContent>
                 
+                <div className="flex items-center justify-center gap-2 text-base text-muted-foreground font-medium mb-4">
+                    <Ruler className="w-4 h-4"/>
+                    <span>Дистанция: {duelData.distance}м</span>
+                </div>
+
                 <div 
                   className="mb-4 p-4 bg-muted/50 rounded-lg flex justify-center items-end h-48 relative overflow-hidden"
                   style={{
@@ -1941,7 +1942,6 @@ export default function DuelPage() {
                       spellElement={duelData.animationState?.spellElement}
                       penalties={duelData.player1.penalties}
                     />
-                    <div className="absolute bottom-2 text-sm text-muted-foreground">Дистанция: {duelData.distance}м</div>
                     <PixelCharacter
                       pose={duelData.animationState?.player2 || 'idle'}
                       weapon={duelData.player2.weapon}
@@ -1998,5 +1998,6 @@ export default function DuelPage() {
 }
 
     
+
 
 
