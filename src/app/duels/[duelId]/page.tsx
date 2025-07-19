@@ -860,19 +860,19 @@ export default function DuelPage() {
         actions.forEach(action => {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
             
-            const getOdCostPenalty = (player: CharacterStats): { wound: number; armor: number; charm: number } => {
+            const getOdCostPenalty = (p: CharacterStats): { wound: number; armor: number; charm: number } => {
                 let woundPenalty = 0;
-                if (player.race !== 'Куклы' || !player.bonuses.includes('Абсолютная память — не тратится ОД.')) {
+                if (p.race !== 'Куклы' || !p.bonuses.includes('Абсолютная память — не тратится ОД.')) {
                     for (const wound of RULES.WOUND_PENALTIES) {
-                        if (player.oz < wound.threshold) {
+                        if (p.oz < wound.threshold) {
                             woundPenalty = wound.penalty;
                         }
                     }
                 }
             
-                const armorPenalty = ARMORS[player.armor as ArmorType]?.odPenalty ?? 0;
+                const armorPenalty = ARMORS[p.armor as ArmorType]?.odPenalty ?? 0;
                 
-                const charmPenalty = player.penalties.some(p => p === 'Очарование (Сирена)') ? 10 : 0;
+                const charmPenalty = p.penalties.some(p => p === 'Очарование (Сирена)') ? 10 : 0;
             
                 return { wound: woundPenalty, armor: armorPenalty, charm: charmPenalty };
             };
@@ -1606,7 +1606,7 @@ export default function DuelPage() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) },
         };
         
-        const { isDodging: _d, ...finalActivePlayer } = activePlayer;
+        const finalActivePlayer = activePlayer;
         const finalOpponent = opponent;
 
         const updatedDuel: Partial<DuelState> = {
