@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import type { Action, CharacterStats, ActionType, PrayerEffectType, WeaponType } from '@/types/duel';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
-import { Trash2, Send, ShieldCheck, HeartPulse, SparklesIcon, Heart, Zap, MoveHorizontal, Crosshair, Info } from 'lucide-react';
+import { Trash2, Send, ShieldCheck, HeartPulse, SparklesIcon, Heart, Zap, MoveHorizontal, Crosshair, Info, Ban } from 'lucide-react';
 import { RULES, getActionLabel, RACES, WEAPONS, ARMORS } from '@/lib/rules';
 import {
   AlertDialog,
@@ -49,7 +49,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     if (player.bonuses.includes('Трансформация (+30 урон)')) damage += 30;
     if (player.bonuses.includes('Единение с духами (+10 к урону от стихийных атак)') && isSpell) damage += 10;
     if (player.bonuses.includes('Стихийная преданность (+5 урона при атаке своей стихией)') && isSpell && spellElement && player.elementalKnowledge.includes(spellElement)) damage += 5;
-    if (player.bonuses.includes('Взрыв ярости (+10 урона по врагу в случае, если ОЗ ниже 100)') && player.oz < 100) damage += 10;
+    if (player.bonuses.includes('Взрыв ярости (+10 урона по врагу в случае, если ОЗ ниже 100)') && player.oz < 100) damage += 5;
     if (player.bonuses.includes('Пылающий дух (+5 к урону, если ОЗ ниже 100)') && player.oz < 100) damage += 5;
     if (isSpell && player.bonuses.includes('Боевая магия')) {
         const actionType = actions.length > 0 ? actions[actions.length-1].type : 'small_spell'; // Approximation
@@ -248,7 +248,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
 
     if(isDisabled) {
         return (
-            <Tooltip key={value}>
+            <Tooltip>
                 <TooltipTrigger asChild><div className="relative flex w-full items-center">{item}</div></TooltipTrigger>
                 <TooltipContent><p>{disabledReason}</p></TooltipContent>
             </Tooltip>
@@ -288,6 +288,55 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   }) || [];
 
   const spellActionsWithElement = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield'];
+
+  const isUnderHold = player.penalties.some(p => p.startsWith('Удержание'));
+
+  if (isUnderHold) {
+      return (
+          <div className="space-y-4">
+              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-destructive/10 text-destructive-foreground">
+                  <Ban className="w-8 h-8 mb-2 text-destructive" />
+                  <h3 className="font-semibold">Способности заблокированы</h3>
+                  <p className="text-sm text-center">Вы находитесь под эффектом "Удержание". Вы можете только попытаться снять его или отдохнуть.</p>
+              </div>
+              <div className="space-y-2">
+                  <Button 
+                      onClick={() => addAction('remove_effect')} 
+                      disabled={hasAddedAction('remove_effect') || actions.length >= RULES.MAX_ACTIONS_PER_TURN}
+                      className="w-full"
+                  >
+                      Снять с себя эффект
+                  </Button>
+                  <Button 
+                      onClick={() => addAction('rest')} 
+                      disabled={hasAddedAction('rest') || actions.length >= RULES.MAX_ACTIONS_PER_TURN}
+                      className="w-full"
+                      variant="secondary"
+                  >
+                      Отдых (пропустить ход)
+                  </Button>
+              </div>
+              <div className="space-y-2 mt-4">
+                <label className="text-sm font-medium">Выбранные действия:</label>
+                {actions.length === 0 && <p className="text-sm text-muted-foreground">Выберите действие.</p>}
+                <div className="space-y-2">
+                    {actions.map((action, index) => (
+                        <div key={index} className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-background/50">
+                            <span className="flex-grow">{index + 1}. {getActionLabel(action.type, action.payload)}</span>
+                            <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 shrink-0 h-8 w-8" onClick={() => removeAction(index)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+              </div>
+              <Button onClick={handleFormSubmit} disabled={actions.length === 0} className="w-full">
+                <Send className="mr-2 h-4 w-4" />
+                Завершить ход
+              </Button>
+          </div>
+      )
+  }
 
   return (
     <TooltipProvider>
