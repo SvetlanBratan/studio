@@ -122,7 +122,7 @@ export default function CharacterPanel({ character, isActive }: CharacterPanelPr
                 <div className="flex flex-wrap gap-1">
                   {character.inventory.length > 0 ? character.inventory.map((item, i) => {
                      const itemData = ITEMS[item.name];
-                     const typeLabel = itemData.type === 'heal_oz' ? 'Лечение ОЗ' : itemData.type === 'heal_om' ? 'Лечение ОМ' : 'Урон';
+                     const typeLabel = itemData.type === 'heal_oz' ? 'Лечение ОЗ' : itemData.type === 'heal_om' ? 'Восстановление ОМ' : 'Урон';
                     return <Badge key={i} variant="outline" className="gap-1"><Package className="w-3 h-3" />{item.name} ({typeLabel}: {itemData.amount})</Badge>
                   }) : <span className="text-xs text-muted-foreground">Пусто</span>}
                 </div>
