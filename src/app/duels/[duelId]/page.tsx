@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -288,17 +289,19 @@ export default function DuelPage() {
                 return '';
             }
             return p;
-        }).filter(p => p !== '' && !p.startsWith('Очарование (Сирена)') && !p.startsWith('Штраф ОД'));
+        }).filter(p => p !== '');
         
         // Add OD penalties
         const armorPenalty = ARMORS[activePlayer.armor as ArmorType]?.odPenalty ?? 0;
         if (armorPenalty > 0) {
-            activePlayer.penalties.push(`Штраф ОД (Броня): +${armorPenalty}`);
+            const penaltyName = `Штраф ОД (Броня): +${armorPenalty}`;
+            if (!activePlayer.penalties.includes(penaltyName)) activePlayer.penalties.push(penaltyName);
         }
         if (activePlayer.race !== 'Куклы' || !activePlayer.bonuses.includes('Абсолютная память — не тратится ОД.')) {
             for (const wound of RULES.WOUND_PENALTIES) {
                 if (activePlayer.oz < wound.threshold) {
-                    activePlayer.penalties.push(`Штраф ОД (Ранение): +${wound.penalty}`);
+                     const penaltyName = `Штраф ОД (Ранение): +${wound.penalty}`;
+                     if (!activePlayer.penalties.includes(penaltyName)) activePlayer.penalties.push(penaltyName);
                 }
             }
         }

@@ -39,17 +39,21 @@ export default function SoloSetupForm({ player1, player2, onSave, onCancel }: So
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4 max-h-[85vh] overflow-y-auto px-2 pr-4">
             <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><User/>Игрок 1</h3>
-                <CharacterSetupForm
-                    character={p1Stats}
-                    onCharacterChange={setP1Stats}
-                />
+                <div className="h-full overflow-y-auto pr-2">
+                    <CharacterSetupForm
+                        character={p1Stats}
+                        onCharacterChange={setP1Stats}
+                    />
+                </div>
             </div>
              <div className="border-l border-border px-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><User/>Игрок 2</h3>
-                <CharacterSetupForm
-                    character={p2Stats}
-                    onCharacterChange={setP2Stats}
-                />
+                 <div className="h-full overflow-y-auto pr-2">
+                    <CharacterSetupForm
+                        character={p2Stats}
+                        onCharacterChange={setP2Stats}
+                    />
+                </div>
             </div>
         </div>
         <DialogFooter className="pt-4 border-t">
