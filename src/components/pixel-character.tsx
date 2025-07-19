@@ -109,21 +109,21 @@ export default function PixelCharacter({
       let leftEye, rightEye;
 
       if (pose === 'hit') {
-          leftEye = <>{createPixel(2, 3.5, eyeColor, 0.5, 0.5)}{createPixel(2.5, 3, eyeColor, 0.5, 0.5)}{createPixel(2, 3, eyeColor, 0.5, 0.5)}{createPixel(2.5, 3.5, eyeColor, 0.5, 0.5)}</>;
-          rightEye = <>{createPixel(2, 6.5, eyeColor, 0.5, 0.5)}{createPixel(2.5, 6, eyeColor, 0.5, 0.5)}{createPixel(2, 6, eyeColor, 0.5, 0.5)}{createPixel(2.5, 6.5, eyeColor, 0.5, 0.5)}</>;
+          leftEye = <>{createPixel(3, 3.5, eyeColor, 0.5, 0.5)}{createPixel(3.5, 3, eyeColor, 0.5, 0.5)}{createPixel(3, 3, eyeColor, 0.5, 0.5)}{createPixel(3.5, 3.5, eyeColor, 0.5, 0.5)}</>;
+          rightEye = <>{createPixel(3, 6.5, eyeColor, 0.5, 0.5)}{createPixel(3.5, 6, eyeColor, 0.5, 0.5)}{createPixel(3, 6, eyeColor, 0.5, 0.5)}{createPixel(3.5, 6.5, eyeColor, 0.5, 0.5)}</>;
       } else if (pose === 'rest') {
-          leftEye = createPixel(2.5, 3, eyeColor, 1, 0.5);
-          rightEye = createPixel(2.5, 6, eyeColor, 1, 0.5);
+          leftEye = createPixel(3.5, 3, eyeColor, 1, 0.5);
+          rightEye = createPixel(3.5, 6, eyeColor, 1, 0.5);
       } else {
-          leftEye = createPixel(2, 3, eyeColor, 1, 1);
-          rightEye = createPixel(2, 6, eyeColor, 1, 1);
+          leftEye = createPixel(3, 3, eyeColor, 1, 1);
+          rightEye = createPixel(3, 6, eyeColor, 1, 1);
       }
       
       let mouth = null;
       if (pose === 'heal') {
-          mouth = <>{createPixel(3.5, 4, eyeColor, 2, 0.5)}{createPixel(3, 3.5, eyeColor, 0.5, 0.5)}{createPixel(3, 5.5, eyeColor, 0.5, 0.5)}</>
+          mouth = <>{createPixel(4.5, 4, eyeColor, 2, 0.5)}{createPixel(4, 3.5, eyeColor, 0.5, 0.5)}{createPixel(4, 5.5, eyeColor, 0.5, 0.5)}</>
       } else if (pose !== 'rest' && pose !== 'hit') {
-          mouth = createPixel(3.5, 4, eyeColor, 2, 0.5);
+          mouth = createPixel(4.5, 4, eyeColor, 2, 0.5);
       }
       
       return <>{leftEye}{rightEye}{mouth}</>
@@ -132,22 +132,42 @@ export default function PixelCharacter({
   const renderStatusEffects = () => {
     const isBurning = penalties.some(p => p.startsWith('Горение'));
     const isPoisoned = penalties.some(p => p.startsWith('Отравление'));
+    const isWet = penalties.some(p => p.startsWith('Мокрый'));
+    const isFrozen = penalties.some(p => p.startsWith('Заморожен'));
 
     return (
-        <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '4px' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
             {isBurning && (
                 <>
-                    {createPixel(0, 0, '#FF4500', 1, 1, 'animate-flicker')}
-                    {createPixel(1, -1, '#FFA500', 1, 1, 'animate-flicker [animation-delay:-0.2s]')}
-                    {createPixel(0, 2, '#FF4500', 1, 1, 'animate-flicker [animation-delay:-0.4s]')}
+                    {createPixel(-1, 4, '#FF4500', 1, 1, 'animate-flicker')}
+                    {createPixel(0, 3, '#FFA500', 1, 1, 'animate-flicker [animation-delay:-0.2s]')}
+                    {createPixel(-1, 6, '#FF4500', 1, 1, 'animate-flicker [animation-delay:-0.4s]')}
                 </>
             )}
             {isPoisoned && (
                  <>
-                    {createPixel(0, 0, '#32CD32', 1, 1, 'animate-flicker')}
-                    {createPixel(1, -1, '#98FB98', 1, 1, 'animate-flicker [animation-delay:-0.3s]')}
-                    {createPixel(0, 2, '#32CD32', 1, 1, 'animate-flicker [animation-delay:-0.6s]')}
+                    {createPixel(-1, 4, '#32CD32', 1, 1, 'animate-flicker')}
+                    {createPixel(0, 3, '#98FB98', 1, 1, 'animate-flicker [animation-delay:-0.3s]')}
+                    {createPixel(-1, 6, '#32CD32', 1, 1, 'animate-flicker [animation-delay:-0.6s]')}
                 </>
+            )}
+            {isWet && (
+                <>
+                    {createPixel(2, 2, '#4169E1', 1, 1, 'animate-pulse [animation-delay:-0.1s]')}
+                    {createPixel(5, 1, '#4169E1', 1, 1, 'animate-pulse [animation-delay:-0.3s]')}
+                    {createPixel(5, 8, '#4169E1', 1, 1, 'animate-pulse [animation-delay:-0.5s]')}
+                </>
+            )}
+            {isFrozen && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(173, 216, 230, 0.4)', // Light blue overlay
+                    boxShadow: 'inset 0 0 5px rgba(255, 255, 255, 0.8)',
+                }} />
             )}
         </div>
     )
@@ -202,28 +222,28 @@ export default function PixelCharacter({
     return (
         <>
             {/* Hat */}
-            {createPixel(1, 0, hatColor, 10, 1)} 
-            {createPixel(0, 1, hatColor, 8, 1)}
-            {createPixel(-1, 2, hatColor, 6, 1)}
-            {createPixel(-2, 3, hatColor, 4, 1)}
-            {createPixel(-3, 4, hatColor, 2, 1)}
+            {createPixel(2, 0, hatColor, 10, 1)} 
+            {createPixel(1, 1, hatColor, 8, 1)}
+            {createPixel(0, 2, hatColor, 6, 1)}
+            {createPixel(-1, 3, hatColor, 4, 1)}
+            {createPixel(-2, 4, hatColor, 2, 1)}
 
 
             {/* Head */}
-            {createPixel(2, 2, '#f2d5ab', 6, 2)}
+            {createPixel(3, 2, '#f2d5ab', 6, 2)}
             {renderFace()}
-            {createPixel(4, 3, '#f2d5ab', 4, 1)}
+            {createPixel(5, 3, '#f2d5ab', 4, 1)}
 
             {/* Body */}
-            {createPixel(5, 2, '#6b4f3b', 6, 5)}
-            {createPixel(10, 3, '#6b4f3b', 4, 1)}
+            {createPixel(6, 2, '#6b4f3b', 6, 5)}
+            {createPixel(11, 3, '#6b4f3b', 4, 1)}
 
             {leftArm}
             {rightArm}
 
             {/* Legs */}
-            {createPixel(11, 2, '#4a382b', 2, 5)}
-            {createPixel(11, 6, '#4a382b', 2, 5)}
+            {createPixel(12, 2, '#4a382b', 2, 5)}
+            {createPixel(12, 6, '#4a382b', 2, 5)}
         </>
     )
   }
@@ -246,6 +266,7 @@ export default function PixelCharacter({
     </div>
   );
 }
+
 
 
 
