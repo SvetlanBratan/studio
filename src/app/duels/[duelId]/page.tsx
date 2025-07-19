@@ -12,6 +12,7 @@ import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import CharacterSetupModal from '@/components/character-setup-modal';
 import SoloSetupForm from '@/components/solo-setup-form';
+import PixelCharacter from '@/components/pixel-character';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler, Eye, ScrollText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,7 @@ export default function DuelPage() {
             createdAt: new Date(),
             duelStarted: false,
             distance: RULES.INITIAL_DISTANCE,
+            animationState: { player1: 'idle', player2: 'idle' },
         });
     }
   }, [isLocalSolo, localDuelState, user]);
@@ -152,6 +154,7 @@ export default function DuelPage() {
         let activePlayer = deepClone(duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2);
         let opponentPlayer = deepClone(duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1);
         let newDistance = duelData.distance;
+        let animationState: DuelState['animationState'] = { player1: 'idle', player2: 'idle' };
         
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) };
         
@@ -391,6 +394,7 @@ export default function DuelPage() {
                 }
                 activePlayer.oz -= damage;
                 turnLog.push(`${activePlayer.name} получает ${damage} урона от эффекта "${p}".`);
+                animationState = { ...animationState, [duelData.activePlayerId]: 'hit' };
             }
         });
 
@@ -456,6 +460,7 @@ export default function DuelPage() {
                 activePlayerId: duelData.activePlayerId === 'player1' ? 'player2' : 'player1',
                 winner: null,
                 log: turnLog,
+                animationState: { player1: 'idle', player2: 'idle' },
             };
             handleUpdateDuelState(updatedDuel);
             return;
@@ -508,6 +513,8 @@ export default function DuelPage() {
 
         const applyDamage = (attacker: CharacterStats, target: CharacterStats, amount: number, isSpell: boolean, spellElement?: string, isPhysical: boolean = !isSpell) => {
             let finalDamage = amount;
+            let damageDealtToTarget = 0;
+            const opponentPlayerId = duelData.activePlayerId === 'player1' ? 'player2' : 'player1';
 
             if (target.isDodging) {
                 if (isSpell && newDistance < 10) {
@@ -777,8 +784,6 @@ export default function DuelPage() {
 
             finalDamage = Math.round(finalDamage);
 
-            let damageDealtToTarget = 0;
-
             if (target.shield.hp > 0) {
                  if (target.shield.element === 'Эфир' && isSpell) {
                     turnLog.push(`Эфирный щит ${target.name} полностью поглощает магический урон.`);
@@ -812,6 +817,10 @@ export default function DuelPage() {
                 target.oz -= finalDamage;
                 damageDealtToTarget = finalDamage;
                 turnLog.push(`${target.name} получает ${finalDamage} урона.`);
+            }
+
+            if (damageDealtToTarget > 0) {
+                animationState = { ...animationState, [opponentPlayerId]: 'hit' };
             }
             
             if (target.race === 'Безликие' && damageDealtToTarget > 0) {
@@ -894,6 +903,10 @@ export default function DuelPage() {
 
         actions.forEach(action => {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
+            const isAttackAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'physical_attack', 'racial_ability'].includes(action.type);
+            if (isAttackAction) {
+                animationState = { ...animationState, [duelData.activePlayerId]: 'attack' };
+            }
             
             const getOdCostPenalty = (p: CharacterStats): { wound: number; armor: number; charm: number } => {
                 let woundPenalty = 0;
@@ -1159,6 +1172,10 @@ export default function DuelPage() {
                         }
                         baseCost = Math.max(0, baseCost - reduction);
                         const finalCost = getFinalOdCost(baseCost);
+                        if (activePlayer.od < finalCost) {
+                            turnLog.push(`Действие "Уворот" не удалось: недостаточно ОД (требуется ${finalCost}, есть ${activePlayer.od}).`);
+                            return;
+                        }
                         activePlayer.od -= finalCost;
                         activePlayer.isDodging = true;
                         logOdCost(baseCost, finalCost);
@@ -1668,8 +1685,13 @@ export default function DuelPage() {
             log: turnLog,
             distance: newDistance,
         };
+        
+        handleUpdateDuelState({ ...updatedDuel, animationState });
 
-        handleUpdateDuelState(updatedDuel);
+        // Reset animations after a delay
+        setTimeout(() => {
+            handleUpdateDuelState({ animationState: { player1: 'idle', player2: 'idle' } });
+        }, 1000); // 1 second for animations
   };
   
   if (duelLoading) {
@@ -1887,6 +1909,23 @@ export default function DuelPage() {
                 </CardTitle>
                 </CardHeader>
                 <CardContent>
+                
+                <div className="mb-4 p-4 bg-muted/50 rounded-lg flex justify-around items-end h-48 relative overflow-hidden">
+                    <PixelCharacter
+                      pose={duelData.animationState?.player1 || 'idle'}
+                      isAttacking={duelData.animationState?.player1 === 'attack'}
+                      isHit={duelData.animationState?.player1 === 'hit'}
+                    />
+                    <div className="absolute bottom-2 text-sm text-muted-foreground">Дистанция: {duelData.distance}м</div>
+                    <PixelCharacter
+                      pose={duelData.animationState?.player2 || 'idle'}
+                      isAttacking={duelData.animationState?.player2 === 'attack'}
+                      isHit={duelData.animationState?.player2 === 'hit'}
+                      isFlipped={true}
+                    />
+                </div>
+
+
                 {isMyTurn && userRole !== 'spectator' ? (
                     <TurnForm
                         player={activePlayer}

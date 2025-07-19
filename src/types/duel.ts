@@ -1,5 +1,4 @@
 
-
 import type { ITEMS } from '@/lib/rules';
 
 export type ReserveLevel =
@@ -129,6 +128,8 @@ export interface Turn {
   endStats: Pick<CharacterStats, 'oz' | 'om' | 'od' | 'shield'>;
 }
 
+export type AnimationState = 'idle' | 'attack' | 'hit';
+
 export interface DuelState {
   player1: CharacterStats;
   player2: CharacterStats | null;
@@ -140,4 +141,8 @@ export interface DuelState {
   createdAt: any; // Using 'any' for Firebase Timestamp compatibility
   duelStarted: boolean;
   distance: number;
+  animationState: {
+    player1: AnimationState;
+    player2: AnimationState;
+  };
 }

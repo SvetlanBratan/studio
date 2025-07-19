@@ -22,6 +22,7 @@ export async function createDuel(player1Id: string, player1Name: string): Promis
         createdAt: new Date(),
         duelStarted: false,
         distance: RULES.INITIAL_DISTANCE,
+        animationState: { player1: 'idle', player2: 'idle' },
     };
 
     const duelRef = await addDoc(collection(firestore, 'duels'), initialState);
