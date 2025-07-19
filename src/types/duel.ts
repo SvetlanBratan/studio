@@ -128,7 +128,7 @@ export interface Turn {
   endStats: Pick<CharacterStats, 'oz' | 'om' | 'od' | 'shield'>;
 }
 
-export type AnimationState = 'idle' | 'attack' | 'hit';
+export type AnimationState = 'idle' | 'attack' | 'hit' | 'casting' | 'heal' | 'rest';
 
 export interface DuelState {
   player1: CharacterStats;

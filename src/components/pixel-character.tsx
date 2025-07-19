@@ -2,10 +2,11 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import type { Shield } from '@/types/duel';
+import type { Shield, WeaponType, AnimationState } from '@/types/duel';
 
 interface PixelCharacterProps {
-  pose?: 'idle' | 'casting' | 'attack';
+  pose?: AnimationState;
+  weapon?: WeaponType;
   isHit?: boolean;
   isAttacking?: boolean;
   isFlipped?: boolean;
@@ -37,6 +38,7 @@ const PHYSICAL_SHIELD_COLOR = 'rgba(200, 200, 200, 0.5)';
 
 export default function PixelCharacter({
   pose = 'idle',
+  weapon = 'Кулаки',
   isHit = false,
   isAttacking = false,
   isFlipped = false,
@@ -82,6 +84,73 @@ export default function PixelCharacter({
     />
   );
   
+  const renderWeapon = () => {
+    switch (weapon) {
+      case 'Меч':
+        return <>
+          {createPixel(3, 10, '#c0c0c0', 1, 5)}
+          {createPixel(8, 9, '#8b4513', 3, 1)}
+        </>;
+      case 'Топор':
+        return <>
+          {createPixel(4, 10, '#c0c0c0', 2, 3)}
+          {createPixel(3, 11, '#c0c0c0', 1, 1)}
+          {createPixel(7, 10, '#8b4513', 1, 3)}
+        </>;
+       case 'Копье':
+        return <>
+          {createPixel(1, 10, '#c0c0c0', 1, 3)}
+          {createPixel(4, 10, '#8b4513', 1, 8)}
+        </>;
+      case 'Кинжал':
+      case 'Сюрикены':
+         return <>
+          {createPixel(5, 10, '#c0c0c0', 1, 2)}
+          {createPixel(7, 9, '#8b4513', 3, 1)}
+        </>;
+      case 'Лук':
+         return <>
+          {createPixel(5, 8, '#8b4513', 1, 7)}
+          {createPixel(6, 9, '#8b4513', 1, 1)}
+          {createPixel(10, 9, '#8b4513', 1, 1)}
+        </>;
+      default:
+        return null;
+    }
+  }
+
+  const renderFace = () => {
+      // Eyes
+      const eyeColor = '#222';
+      let leftEye, rightEye;
+
+      if (pose === 'hit') {
+          // X X eyes
+          leftEye = <>{createPixel(2, 3.5, eyeColor, 0.5, 0.5)}{createPixel(2.5, 3, eyeColor, 0.5, 0.5)}{createPixel(2, 3, eyeColor, 0.5, 0.5)}{createPixel(2.5, 3.5, eyeColor, 0.5, 0.5)}</>;
+          rightEye = <>{createPixel(2, 6.5, eyeColor, 0.5, 0.5)}{createPixel(2.5, 6, eyeColor, 0.5, 0.5)}{createPixel(2, 6, eyeColor, 0.5, 0.5)}{createPixel(2.5, 6.5, eyeColor, 0.5, 0.5)}</>;
+      } else if (pose === 'rest') {
+          // - - eyes (sleeping)
+          leftEye = createPixel(2.5, 3, eyeColor, 1, 0.5);
+          rightEye = createPixel(2.5, 6, eyeColor, 1, 0.5);
+      } else {
+          // Default o o eyes
+          leftEye = createPixel(2, 3, eyeColor, 1, 1);
+          rightEye = createPixel(2, 6, eyeColor, 1, 1);
+      }
+
+      // Mouth
+      let mouth = null;
+      if (pose === 'heal') {
+          // Smile ^
+          mouth = <>{createPixel(3.5, 4, eyeColor, 2, 0.5)}{createPixel(3, 3.5, eyeColor, 0.5, 0.5)}{createPixel(3, 5.5, eyeColor, 0.5, 0.5)}</>
+      } else if (pose !== 'rest' && pose !== 'hit') {
+          // Default straight mouth
+          mouth = createPixel(3.5, 4, eyeColor, 2, 0.5);
+      }
+      
+      return <>{leftEye}{rightEye}{mouth}</>
+  }
+  
   const renderPose = () => {
     let rightArm, leftArm;
     switch (pose) {
@@ -95,6 +164,7 @@ export default function PixelCharacter({
         rightArm = (
             <>
                 {createPixel(6, 8, '#f2d5ab', 3, 1)}
+                {renderWeapon()}
             </>
         );
         break;
@@ -112,6 +182,9 @@ export default function PixelCharacter({
           </>
         );
         break;
+      case 'heal':
+      case 'rest':
+      case 'hit':
       case 'idle':
       default:
         leftArm = (
@@ -134,8 +207,7 @@ export default function PixelCharacter({
             {/* Head */}
             {createPixel(0, 3, '#f2d5ab', 4, 1)}
             {createPixel(1, 2, '#f2d5ab', 6, 3)}
-            {createPixel(2, 4, '#222', 1, 1)} 
-            {createPixel(2, 6, '#222', 1, 1)} 
+            {renderFace()}
             {createPixel(4, 3, '#f2d5ab', 4, 1)}
 
             {/* Body */}
@@ -168,5 +240,3 @@ export default function PixelCharacter({
     </div>
   );
 }
-
-    

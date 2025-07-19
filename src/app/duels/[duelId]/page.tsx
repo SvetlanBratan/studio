@@ -905,7 +905,6 @@ export default function DuelPage() {
 
         actions.forEach(action => {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
-            const isAttackAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'physical_attack', 'racial_ability'].includes(action.type);
             const isCastingAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield', 'heal_self', 'prayer'].includes(action.type);
 
             if (isCastingAction) {
@@ -913,6 +912,12 @@ export default function DuelPage() {
             }
             if (action.type === 'physical_attack') {
                 animationState = { ...animationState, [duelData.activePlayerId]: 'attack' };
+            }
+             if (action.type === 'heal_self') {
+                animationState = { ...animationState, [duelData.activePlayerId]: 'heal' };
+            }
+            if (action.type === 'rest') {
+                animationState = { ...animationState, [duelData.activePlayerId]: 'rest' };
             }
             
             const getOdCostPenalty = (p: CharacterStats): { wound: number; armor: number; charm: number } => {
@@ -944,7 +949,7 @@ export default function DuelPage() {
                 }
             }
 
-            if ((isSpellAction || isHouseholdSpell || isShieldAction) && !action.type.startsWith('racial') && activePlayer.elementalKnowledge.length === 0) {
+            if ((isSpellAction || isHouseholdSpell || isShieldAction) && !action.type.startsWith('racial') && action.type !== 'heal_self' && activePlayer.elementalKnowledge.length === 0) {
                  turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: у персонажа нет знаний стихий.`);
                  return;
             }
@@ -1679,7 +1684,7 @@ export default function DuelPage() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) },
         };
         
-        const { isDodging: _isDodging, ...finalActivePlayer } = activePlayer;
+        const finalActivePlayer = activePlayer;
         const finalOpponent = opponentPlayer;
 
         const updatedDuel: Partial<DuelState> = {
@@ -1920,15 +1925,17 @@ export default function DuelPage() {
                 <div className="mb-4 p-4 bg-muted/50 rounded-lg flex justify-around items-end h-48 relative overflow-hidden">
                     <PixelCharacter
                       pose={duelData.animationState?.player1 || 'idle'}
-                      isAttacking={duelData.animationState?.player1 === 'attack'}
+                      weapon={duelData.player1.weapon}
                       isHit={duelData.animationState?.player1 === 'hit'}
+                      isAttacking={duelData.animationState?.player1 === 'attack'}
                       shield={duelData.player1.shield}
                     />
                     <div className="absolute bottom-2 text-sm text-muted-foreground">Дистанция: {duelData.distance}м</div>
                     <PixelCharacter
                       pose={duelData.animationState?.player2 || 'idle'}
-                      isAttacking={duelData.animationState?.player2 === 'attack'}
+                      weapon={duelData.player2.weapon}
                       isHit={duelData.animationState?.player2 === 'hit'}
+                      isAttacking={duelData.animationState?.player2 === 'attack'}
                       isFlipped={true}
                       shield={duelData.player2.shield}
                     />
