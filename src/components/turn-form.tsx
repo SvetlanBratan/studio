@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import type { Action, CharacterStats, ActionType, PrayerEffectType, WeaponType } from '@/types/duel';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
-import { Trash2, Send, ShieldCheck, HeartPulse, SparklesIcon, Heart, Zap, MoveHorizontal, Crosshair } from 'lucide-react';
+import { Trash2, Send, ShieldCheck, HeartPulse, SparklesIcon, Heart, Zap, MoveHorizontal, Crosshair, Info } from 'lucide-react';
 import { RULES, getActionLabel, RACES, WEAPONS, ARMORS } from '@/lib/rules';
 import {
   AlertDialog,
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 interface TurnFormProps {
   player: CharacterStats;
@@ -154,18 +155,18 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     setActions([]);
   };
   
-  const getOdCostPenalty = (player: CharacterStats): number => {
-    if (player.race === 'Куклы' && player.bonuses.includes('Абсолютная память — не тратится ОД.')) {
+  const getOdCostPenalty = (p: CharacterStats): number => {
+    if (p.race === 'Куклы' && p.bonuses.includes('Абсолютная память — не тратится ОД.')) {
         return -Infinity; // Special value for zero cost
     }
     let penalty = 0;
     for (const wound of RULES.WOUND_PENALTIES) {
-        if (player.oz < wound.threshold) {
+        if (p.oz < wound.threshold) {
             penalty = wound.penalty;
         }
     }
-    const armorPenalty = ARMORS[player.armor]?.odPenalty ?? 0;
-    const charmPenalty = player.penalties.some(p => p.startsWith('Очарование (Сирена)')) ? 10 : 0;
+    const armorPenalty = ARMORS[p.armor]?.odPenalty ?? 0;
+    const charmPenalty = p.penalties.some(p => p.startsWith('Очарование (Сирена)')) ? 10 : 0;
     return penalty + armorPenalty + charmPenalty;
   };
 
@@ -184,7 +185,14 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const isOpponentInRangeForWeapon = distance <= weaponInfo.range;
   const getFinalOdCost = (baseCost: number) => {
     if (odPenalty === -Infinity) return 0;
-    return baseCost + odPenalty;
+    let cost = baseCost + odPenalty;
+    let reduction = 0;
+    if (player.bonuses.includes('Лёгкость (-5 ОД на уклонение)')) reduction += 5;
+    if (player.bonuses.includes('Мимикрия (-15 ОД на уклонение)')) reduction += 15;
+    if (player.bonuses.includes('Животная реакция (-5 ОД на физические действия)') || player.bonuses.includes('Ловкие конечности (-5 ОД на действия)') || player.bonuses.includes('Галоп (-5 ОД на действия)')) {
+        reduction += 5;
+    }
+    return Math.max(0, cost - reduction);
   };
   const physicalAttackCost = getFinalOdCost(RULES.NON_MAGIC_COSTS.physical_attack);
 
@@ -201,42 +209,85 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const smallSpellDamage = calculatePotentialDamage(RULES.RITUAL_DAMAGE[player.reserve]?.small ?? 0, true);
   const householdSpellDamage = calculatePotentialDamage(RULES.RITUAL_DAMAGE[player.reserve]?.household ?? 0, true);
   const physicalAttackDamage = calculatePotentialDamage(weaponInfo.damage, false);
+  
+  const getActionDisabledReason = (type: string, racialAbilityName?: string): string | null => {
+      const racialAbility = racialAbilityName ? playerRaceInfo?.activeAbilities.find(a => a.name === racialAbilityName) : null;
+      const omCost = racialAbility?.cost?.om ?? RULES.RITUAL_COSTS[type.replace('_spell', '') as keyof typeof RULES.RITUAL_COSTS] ?? 0;
+      const odCost = getFinalOdCost(racialAbility?.cost?.od ?? RULES.NON_MAGIC_COSTS[type as keyof typeof RULES.NON_MAGIC_COSTS] ?? 0);
+      const cooldown = racialAbilityName ? (player.cooldowns[racialAbilityName] ?? 0) : (player.cooldowns[type as keyof typeof player.cooldowns] ?? 0);
+      
+      if (cooldown > 0) return `На перезарядке (Осталось: ${cooldown} хода)`;
+      if (player.om < omCost) return `Недостаточно ОМ (Требуется: ${omCost} > Есть: ${player.om})`;
+      if (player.od < odCost) return `Недостаточно ОД (Требуется: ${odCost} > Есть: ${player.od})`;
+      
+      const isSpell = type.includes('spell') || type === 'shield';
+      if(isSpell) {
+        if(isFaceless && type !== 'household_spell') return 'Безликие не могут использовать магию';
+        if(!hasElementalKnowledge) return 'Нет знаний стихий для использования магии';
+        if(!isOpponentInRangeForSpells) return `Цель вне зоны досягаемости (Текущая: ${distance}м > Требуемая: ${spellRange}м)`;
+      }
 
-  const actionOptions: {value: string, label: string, disabled: boolean, tooltip?: string, group: 'magic' | 'physical' | 'other'}[] = [
+      if (type === 'physical_attack' && !isOpponentInRangeForWeapon) {
+          return `Цель вне зоны досягаемости (Текущая: ${distance}м > Требуемая: ${weaponInfo.range}м)`;
+      }
+
+      if(hasAddedAction(type as ActionType)) return 'Это действие уже добавлено';
+      if(type === 'use_item' && player.inventory.length === 0) return 'Инвентарь пуст';
+
+      return null;
+  };
+
+  const renderSelectOption = (value: string, label: string, group: string, racialAbilityName?: string) => {
+    const disabledReason = getActionDisabledReason(value, racialAbilityName);
+    const isDisabled = !!disabledReason;
+
+    const item = <SelectItem key={value} value={value} disabled={isDisabled}>{label}</SelectItem>
+
+    if(isDisabled) {
+        return (
+            <Tooltip>
+                <TooltipTrigger asChild><div className="relative flex w-full items-center">{item}</div></TooltipTrigger>
+                <TooltipContent><p>{disabledReason}</p></TooltipContent>
+            </Tooltip>
+        );
+    }
+    return item;
+  }
+
+  const actionOptions = [
     // Physical
-    { group: 'physical', value: 'physical_attack', label: `Атака (${weaponInfo.name}) - Урон: ${physicalAttackDamage}, ОД: ${physicalAttackCost}`, disabled: player.od < physicalAttackCost || !isOpponentInRangeForWeapon || player.cooldowns.physical_attack > 0, tooltip: !isOpponentInRangeForWeapon ? `Цель вне зоны досягаемости (${distance}m > ${weaponInfo.range}m)` : undefined },
+    { group: 'physical', value: 'physical_attack', label: `Атака (${weaponInfo.name}) - Урон: ${physicalAttackDamage}, Дальность: ${weaponInfo.range}м, ОД: ${physicalAttackCost}` },
     
     // Magic
-    { group: 'magic', value: 'strong_spell', label: `Сильный ритуал (Урон: ${strongSpellDamage})`, disabled: isFaceless || !hasElementalKnowledge || player.cooldowns.strongSpell > 0 || player.om < RULES.RITUAL_COSTS.strong || hasAddedAction('strong_spell') || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : !hasElementalKnowledge ? 'Нет знаний стихий' : undefined },
-    { group: 'magic', value: 'medium_spell', label: `Средний ритуал (Урон: ${mediumSpellDamage})`, disabled: isFaceless || !hasElementalKnowledge || player.om < RULES.RITUAL_COSTS.medium || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : !hasElementalKnowledge ? 'Нет знаний стихий' : undefined },
-    { group: 'magic', value: 'small_spell', label: `Малый ритуал (Урон: ${smallSpellDamage})`, disabled: isFaceless || !hasElementalKnowledge || player.om < RULES.RITUAL_COSTS.small || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)` : !hasElementalKnowledge ? 'Нет знаний стихий' : undefined },
-    { group: 'magic', value: 'household_spell', label: `Бытовое (Урон: ${householdSpellDamage})`, disabled: player.om < RULES.RITUAL_COSTS.household || !isOpponentInRangeForSpells, tooltip: !isOpponentInRangeForSpells ? `Цель вне зоны досягаемости (${distance}m > ${spellRange}m)`: undefined },
-    { group: 'magic', value: 'shield', label: 'Создать щит (Средний ритуал)', disabled: isFaceless || !hasElementalKnowledge || player.om < RULES.RITUAL_COSTS.medium || hasAddedAction('shield') },
+    { group: 'magic', value: 'strong_spell', label: `Сильный ритуал (Урон: ${strongSpellDamage}, Дальность: ${spellRange}м)` },
+    { group: 'magic', value: 'medium_spell', label: `Средний ритуал (Урон: ${mediumSpellDamage}, Дальность: ${spellRange}м)` },
+    { group: 'magic', value: 'small_spell', label: `Малый ритуал (Урон: ${smallSpellDamage}, Дальность: ${spellRange}м)` },
+    { group: 'magic', value: 'household_spell', label: `Бытовое (Урон: ${householdSpellDamage}, Дальность: ${spellRange}м)` },
+    { group: 'magic', value: 'shield', label: 'Создать щит (Средний ритуал)' },
 
     // Other
-    { group: 'other', value: 'dodge', label: `Уворот (${getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge)} ОД)`, disabled: player.od < getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge) || hasAddedAction('dodge') },
-    { group: 'other', value: 'move', label: 'Передвижение', disabled: false },
-    { group: 'other', value: 'use_item', label: 'Использовать предмет', disabled: player.cooldowns.item > 0 || player.od < getFinalOdCost(RULES.NON_MAGIC_COSTS.use_item) || player.inventory.length === 0 || hasAddedAction('use_item') },
-    { group: 'other', value: 'prayer', label: 'Молитва', disabled: player.cooldowns.prayer > 0 || player.od < getFinalOdCost(RULES.NON_MAGIC_COSTS.prayer) || hasPrayerAction },
-    { group: 'other', value: 'remove_effect', label: 'Снять с себя эффект', disabled: player.penalties.length === 0 || hasAddedAction('remove_effect')},
-    { group: 'other', value: 'rest', label: 'Отдых', disabled: hasAddedAction('rest') },
+    { group: 'other', value: 'dodge', label: `Уворот (${getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge)} ОД)` },
+    { group: 'other', value: 'move', label: 'Передвижение' },
+    { group: 'other', value: 'use_item', label: 'Использовать предмет' },
+    { group: 'other', value: 'prayer', label: 'Молитва' },
+    { group: 'other', value: 'remove_effect', label: 'Снять с себя эффект' },
+    { group: 'other', value: 'rest', label: 'Отдых' },
   ];
 
   const racialAbilities = playerRaceInfo?.activeAbilities.map(ability => {
-    const odCost = getFinalOdCost(ability.cost?.od ?? 0);
-    const value = ability.name === 'Песня стихий' ? `racial_${ability.name}` : `racial_${ability.name}`;
-    
+    const value = `racial_${ability.name}`;
     return {
+      group: 'racial',
       value: value,
       label: `${ability.name}`,
-      disabled: (player.cooldowns[ability.name] ?? 0) > 0 || (ability.cost?.om ?? 0) > player.om || odCost > player.od || actions.some(a => a.type === 'racial_ability' && a.payload.name === ability.name),
+      racialAbilityName: ability.name,
     }
   }) || [];
 
   const spellActionsWithElement = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield'];
 
   return (
-    <>
+    <TooltipProvider>
       <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm font-medium">Выбранные действия:</label>
@@ -279,24 +330,20 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
               <SelectContent>
                 <SelectGroup>
                     <SelectLabel>Физические действия</SelectLabel>
-                    {actionOptions.filter(o => o.group === 'physical').map(opt => <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>{opt.label}</SelectItem>)}
+                    {actionOptions.filter(o => o.group === 'physical').map(opt => renderSelectOption(opt.value, opt.label, opt.group))}
                 </SelectGroup>
                 <SelectGroup>
                     <SelectLabel>Магические действия</SelectLabel>
-                    {actionOptions.filter(o => o.group === 'magic').map(opt => <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>{opt.label}</SelectItem>)}
+                    {actionOptions.filter(o => o.group === 'magic').map(opt => renderSelectOption(opt.value, opt.label, opt.group))}
                 </SelectGroup>
                 <SelectGroup>
                   <SelectLabel>Прочие действия</SelectLabel>
-                  {actionOptions.filter(o => o.group === 'other').map(opt => <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>{opt.label}</SelectItem>)}
+                  {actionOptions.filter(o => o.group === 'other').map(opt => renderSelectOption(opt.value, opt.label, opt.group))}
                 </SelectGroup>
                 {racialAbilities.length > 0 && (
                    <SelectGroup>
                       <SelectLabel>Расовые способности</SelectLabel>
-                      {racialAbilities.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
-                              {opt.label} {opt.disabled && player.cooldowns[opt.value.substring(7)] > 0 ? `(КД: ${player.cooldowns[opt.value.substring(7)]})` : ''}
-                          </SelectItem>
-                      ))}
+                      {racialAbilities.map(opt => renderSelectOption(opt.value, opt.label, opt.group, opt.racialAbilityName))}
                    </SelectGroup>
                 )}
               </SelectContent>
@@ -404,6 +451,6 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
         </AlertDialogContent>
     </AlertDialog>
 
-    </>
+    </TooltipProvider>
   );
 }
