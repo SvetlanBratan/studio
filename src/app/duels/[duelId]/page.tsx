@@ -71,10 +71,12 @@ export default function DuelPage() {
   }, [isLocalSolo, localDuelState, user]);
   
     useEffect(() => {
-        if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0) {
-            // Randomize starting player only on the client-side to avoid hydration errors
+        if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0 && !duelData.log.some(l => l.includes('Первый ход'))) {
             const firstPlayer = Math.random() < 0.5 ? 'player1' : 'player2';
-            handleUpdateDuelState({ activePlayerId: firstPlayer });
+            handleUpdateDuelState({ 
+                activePlayerId: firstPlayer,
+                log: [`Первый ход определён случайно. Начинает ${firstPlayer === 'player1' ? duelData.player1.name : duelData.player2!.name}.`]
+            });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [duelData?.duelStarted]);
@@ -1088,11 +1090,20 @@ export default function DuelPage() {
 
             switch(action.type) {
                 case 'physical_attack': {
+                    const weapon = WEAPONS[activePlayer.weapon as WeaponType];
+                    const weaponRange = weapon.range;
+                    if(newDistance > weaponRange) {
+                        turnLog.push(`Действие "Атака оружием" не удалось: цель слишком далеко (${newDistance}м > ${weaponRange}м).`);
+                        return;
+                    }
                     const baseCost = RULES.NON_MAGIC_COSTS.physical_attack;
                     const finalCost = getFinalOdCost(baseCost);
+                    if (activePlayer.od < finalCost) {
+                        turnLog.push(`Действие "Атака оружием" не удалось: недостаточно ОД (требуется ${finalCost}, есть ${activePlayer.od}).`);
+                        return;
+                    }
                     activePlayer.od -= finalCost;
                     logOdCost(baseCost, finalCost);
-                    const weapon = WEAPONS[activePlayer.weapon as WeaponType];
                     damageDealt = calculateDamage(weapon.damage, false);
                     applyDamage(activePlayer, opponentPlayer, damageDealt, false, undefined, true);
                     activePlayer.cooldowns.physical_attack = RULES.COOLDOWNS.physical_attack;
@@ -1617,9 +1628,10 @@ export default function DuelPage() {
 
         const isResting = actions.some(a => a.type === 'rest');
         if (isResting) {
-            activePlayer.od = Math.min(activePlayer.maxOd, activePlayer.od + RULES.OD_REGEN_ON_REST);
-            activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + RULES.OM_REGEN_ON_REST);
-            turnLog.push(`${activePlayer.name} отдыхает и восстанавливает ${RULES.OD_REGEN_ON_REST} ОД и ${RULES.OM_REGEN_ON_REST} ОМ.`);
+            const restCount = actions.filter(a => a.type === 'rest').length;
+            activePlayer.od = Math.min(activePlayer.maxOd, activePlayer.od + (RULES.OD_REGEN_ON_REST * restCount));
+            activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + (RULES.OM_REGEN_ON_REST * restCount));
+            turnLog.push(`${activePlayer.name} отдыхает (${restCount} раз) и восстанавливает ${RULES.OD_REGEN_ON_REST * restCount} ОД и ${RULES.OM_REGEN_ON_REST * restCount} ОМ.`);
         }
 
         activePlayer.oz = Math.max(0, activePlayer.oz);
@@ -1918,4 +1930,3 @@ export default function DuelPage() {
     </div>
   );
 }
-

@@ -41,7 +41,12 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const [selectValue, setSelectValue] = useState('');
   const playerRaceInfo = RACES.find(r => r.name === player.race);
 
-  const maxActionsPerTurn = player.penalties.some(p => p.startsWith('Потеря действия')) ? 1 : RULES.MAX_ACTIONS_PER_TURN;
+  const maxActionsPerTurn = useMemo(() => {
+    return player.penalties.some(p => p.startsWith('Потеря действия')) ? 1 : RULES.MAX_ACTIONS_PER_TURN;
+  }, [player.penalties]);
+  
+  const restActionsCount = useMemo(() => actions.filter(a => a.type === 'rest').length, [actions]);
+
 
   const calculatePotentialDamage = (baseDamage: number, isSpell: boolean, spellElement?: string): number => {
     let damage = baseDamage;
@@ -103,6 +108,14 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     if (type === 'physical_attack') {
         const weapon = WEAPONS[player.weapon];
         setActions([...actions, {type: 'physical_attack', payload: { weapon: weapon.name }}]);
+        setSelectValue('');
+        return;
+    }
+    
+    if (type === 'rest') {
+        if (restActionsCount < 2) {
+            setActions([...actions, { type: 'rest', payload: {} }]);
+        }
         setSelectValue('');
         return;
     }
@@ -236,6 +249,10 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const physicalAttackDamage = calculatePotentialDamage(weaponInfo.damage, false);
   
   const getActionDisabledReason = (type: string, racialAbilityName?: string): string | null => {
+      if (type === 'rest') {
+          return restActionsCount >= 2 ? 'Можно отдохнуть только дважды за ход' : null;
+      }
+      
       const racialAbility = racialAbilityName ? playerRaceInfo?.activeAbilities.find(a => a.name === racialAbilityName) : null;
       let omCost = racialAbility?.cost?.om ?? RULES.RITUAL_COSTS[type.replace('_spell', '') as keyof typeof RULES.RITUAL_COSTS] ?? 0;
       if (type === 'heal_self') omCost = 0; // Dynamic cost
@@ -354,11 +371,11 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
                   </Button>
                   <Button 
                       onClick={() => addAction('rest')} 
-                      disabled={hasAddedAction('rest') || actions.length >= maxActionsPerTurn}
+                      disabled={restActionsCount >= 2 || actions.length >= maxActionsPerTurn}
                       className="w-full"
                       variant="secondary"
                   >
-                      Отдых (пропустить ход)
+                      Отдых ({restActionsCount}/2)
                   </Button>
               </div>
               <div className="space-y-2 mt-4">
