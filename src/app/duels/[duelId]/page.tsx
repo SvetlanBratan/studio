@@ -59,7 +59,7 @@ export default function DuelPage() {
             player2,
             turnHistory: [],
             currentTurn: 1,
-            activePlayerId: 'player1',
+            activePlayerId: 'player1', // Default, will be randomized on start
             winner: null,
             log: [],
             createdAt: new Date(),
@@ -68,6 +68,16 @@ export default function DuelPage() {
         });
     }
   }, [isLocalSolo, localDuelState, user]);
+  
+  useEffect(() => {
+    if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0) {
+        // Randomize starting player only on the client-side to avoid hydration errors
+        const firstPlayer = Math.random() < 0.5 ? 'player1' : 'player2';
+        handleUpdateDuelState({ activePlayerId: firstPlayer });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [duelData?.duelStarted]);
+
 
   const userRole: 'player1' | 'player2' | 'spectator' | null = React.useMemo(() => {
     if (!user || !duelData) return null;
@@ -80,10 +90,6 @@ export default function DuelPage() {
 
   useEffect(() => {
     if (userRole === 'spectator' && !isLocalSolo && user && onlineDuel && !onlineDuel.player2 && onlineDuel.player1.id !== user.uid) {
-        // This logic is now handled on the DuelsPage, but as a fallback,
-        // if a user lands here and could be P2, we can join them.
-        // However, with explicit spectator mode, we might want to prevent auto-joining.
-        // For now, let's keep it but it might be removed.
         const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
         if (shouldJoin) {
             joinDuel(duelId, user.uid, "Игрок 2");
@@ -115,18 +121,17 @@ export default function DuelPage() {
 
     if (updatedFullState.player1.isSetupComplete && updatedFullState.player2?.isSetupComplete && !updatedFullState.duelStarted) {
         newState.duelStarted = true;
-        newState.activePlayerId = Math.random() < 0.5 ? 'player1' : 'player2';
     }
 
     handleUpdateDuelState(newState);
   };
 
   const handleSoloSetupComplete = (player1: CharacterStats, player2: CharacterStats) => {
-    const newState: Partial<DuelState> = {
+    const newState: DuelState = {
+        ...(localDuelState!),
         player1: { ...player1, isSetupComplete: true },
         player2: { ...player2, isSetupComplete: true },
         duelStarted: true,
-        activePlayerId: Math.random() < 0.5 ? 'player1' : 'player2',
     };
     handleUpdateDuelState(newState);
   };
