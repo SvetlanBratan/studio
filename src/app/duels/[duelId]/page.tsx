@@ -403,11 +403,11 @@ export default function DuelPage() {
         }
         
         if (activePlayer.penalties.some(p => p.startsWith('Удержание'))) {
-            turnSkipped = true;
-            turnLog.push(`${activePlayer.name} находится под эффектом "Удержание" и может только попытаться снять его или отдохнуть.`);
             actions = actions.filter(a => a.type === 'remove_effect' || a.type === 'rest');
             if (actions.length === 0) {
+                 turnLog.push(`${activePlayer.name} находится под эффектом "Удержание" и пропускает ход, так как не было выбрано доступное действие.`);
                  actions.push({type: 'rest', payload: {name: 'Пропуск хода из-за Удержания'}});
+                 turnSkipped = true;
             }
         }
 
@@ -1133,10 +1133,15 @@ export default function DuelPage() {
                         const distanceToMove = action.payload?.distance || 0;
                         const baseCost = Math.abs(distanceToMove) * RULES.NON_MAGIC_COSTS.move_per_meter;
                         const finalCost = getFinalOdCost(baseCost, true);
-                        activePlayer.od -= finalCost;
-                        newDistance = Math.max(0, newDistance + distanceToMove);
-                        turnLog.push(`${activePlayer.name} изменяет дистанцию на ${distanceToMove > 0 ? '+' : ''}${distanceToMove}м. Новая дистанция: ${newDistance}м.`);
-                        logOdCost(baseCost, finalCost);
+
+                        if (activePlayer.od >= finalCost) {
+                            activePlayer.od -= finalCost;
+                            newDistance = Math.max(0, newDistance + distanceToMove);
+                            turnLog.push(`${activePlayer.name} изменяет дистанцию на ${distanceToMove > 0 ? '+' : ''}${distanceToMove}м. Новая дистанция: ${newDistance}м.`);
+                            logOdCost(baseCost, finalCost);
+                        } else {
+                            turnLog.push(`Действие "Передвижение" не удалось: недостаточно ОД (требуется ${finalCost}, есть ${activePlayer.od}).`);
+                        }
                     }
                     break;
                 case 'use_item':
@@ -1622,7 +1627,7 @@ export default function DuelPage() {
             endStats: { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) },
         };
         
-        const finalActivePlayer = activePlayer;
+        const finalActivePlayer = { ...activePlayer, isDodging: false };
         const finalOpponent = opponent;
 
         const updatedDuel: Partial<DuelState> = {
