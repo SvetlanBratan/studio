@@ -55,9 +55,9 @@ export const ITEMS = {
   'Малое зелье маны': { name: 'Малое зелье маны', type: 'heal_om', amount: 25 },
   'Среднее зелье маны': { name: 'Среднее зелье маны', type: 'heal_om', amount: 40 },
   'Большое зелье маны': { name: 'Большое зелье маны', type: 'heal_om', amount: 60 },
-  'Метательный кинжал': { name: 'Метательный кинжал', type: 'damage', amount: 15 },
-  'Бомба': { name: 'Бомба', type: 'damage', amount: 30 },
-  'Осколок кристалла': { name: 'Осколок кристалла', type: 'damage', amount: 45 },
+  'Обычный артефакт': { name: 'Обычный артефакт', type: 'damage', amount: 15 },
+  'Редкий артефакт': { name: 'Редкий артефакт', type: 'damage', amount: 30 },
+  'Легендарный артефакт': { name: 'Легендарный артефакт', type: 'damage', amount: 45 },
 } as const;
 
 
