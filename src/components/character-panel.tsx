@@ -5,7 +5,7 @@ import type { CharacterStats } from '@/types/duel';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import StatBar from './stat-bar';
-import { Heart, Sparkles, Wind, Shield, BookOpen, Cross, Briefcase, Siren, Timer, Package } from 'lucide-react';
+import { Heart, Sparkles, Wind, Shield, BookOpen, Cross, Briefcase, Siren, Timer, Package, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -30,6 +30,8 @@ export default function CharacterPanel({ character, isActive }: CharacterPanelPr
         </Tooltip>
     )
   }
+  
+  const statuses = character.statuses || [];
 
   return (
     <TooltipProvider>
@@ -93,9 +95,19 @@ export default function CharacterPanel({ character, isActive }: CharacterPanelPr
               <div>
                 <h4 className="font-semibold mb-2 text-sm">Бонусы:</h4>
                 <div className="flex flex-wrap gap-1">
-                  {character.bonuses.length > 0 ? character.bonuses.map((bonus, i) => <Badge key={i} variant="secondary" className="bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200">{bonus}</Badge>) : <span className="text-xs text-muted-foreground">Нет</span>}
+                  {character.bonuses.length > 0 ? character.bonuses.map((bonus, i) => <Badge key={i} variant="bonus">{bonus}</Badge>) : <span className="text-xs text-muted-foreground">Нет</span>}
                 </div>
               </div>
+              
+              {statuses.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Состояния:</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {statuses.map((status, i) => <Badge key={i} variant="status">{status}</Badge>)}
+                    </div>
+                  </div>
+              )}
+
 
               <div>
                 <h4 className="font-semibold mb-2 text-sm">Штрафы:</h4>

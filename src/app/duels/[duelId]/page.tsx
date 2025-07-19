@@ -136,7 +136,8 @@ export default function DuelPage() {
         let petrificationCount = 0;
         
         // Reset turn-based flags
-        activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Был атакован в прошлом ходу' && b !== 'Облик желания (-5 урон)');
+        activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Облик желания (-5 урон)');
+        activePlayer.statuses = activePlayer.statuses?.filter(s => s !== 'Был атакован в прошлом ходу') || [];
         
         // Mark if the player was attacked in the previous turn
         const lastTurn = duelData.turnHistory[duelData.turnHistory.length - 1];
@@ -146,8 +147,9 @@ export default function DuelPage() {
         if (lastTurn && lastTurn.playerId !== activePlayer.id) {
             wasAttackedLastTurn = lastTurn.log.some(log => log.includes(`${activePlayer.name} получает`) && log.includes('урона'));
             if(wasAttackedLastTurn) {
-                activePlayer.bonuses.push('Был атакован в прошлом ходу');
-                turnLog.push(`Пассивный эффект: ${activePlayer.name} был атакован в прошлом ходу.`);
+                activePlayer.statuses = activePlayer.statuses || [];
+                activePlayer.statuses.push('Был атакован в прошлом ходу');
+                turnLog.push(`Статус: ${activePlayer.name} был атакован в прошлом ходу.`);
 
                 const damageLogs = lastTurn.log.filter(log => log.includes(`${activePlayer.name} получает`) && log.includes('урона'));
                 damageLogs.forEach(log => {
@@ -286,7 +288,21 @@ export default function DuelPage() {
                 return '';
             }
             return p;
-        }).filter(p => p !== '' && !p.startsWith('Очарование (Сирена)'));
+        }).filter(p => p !== '' && !p.startsWith('Очарование (Сирена)') && !p.startsWith('Штраф ОД'));
+        
+        // Add OD penalties
+        const armorPenalty = ARMORS[activePlayer.armor as ArmorType]?.odPenalty ?? 0;
+        if (armorPenalty > 0) {
+            activePlayer.penalties.push(`Штраф ОД (Броня): +${armorPenalty}`);
+        }
+        if (activePlayer.race !== 'Куклы' || !activePlayer.bonuses.includes('Абсолютная память — не тратится ОД.')) {
+            for (const wound of RULES.WOUND_PENALTIES) {
+                if (activePlayer.oz < wound.threshold) {
+                    activePlayer.penalties.push(`Штраф ОД (Ранение): +${wound.penalty}`);
+                }
+            }
+        }
+
 
         if (petrificationCount >= 2) {
             turnSkipped = true;
@@ -1016,7 +1032,7 @@ export default function DuelPage() {
                 if (odReduction > 0) penaltyDetails.push(`бонус: -${odReduction}`);
 
                 if (penaltyDetails.length > 0) {
-                    turnLog.push(`Затраты ОД: ${finalCost} (база ${baseCost} + ${penaltyDetails.join(', ')})`);
+                    turnLog.push(`Затраты ОД: ${finalCost} (база ${baseCost}, ${penaltyDetails.join(', ')})`);
                 } else {
                     turnLog.push(`Затраты ОД: ${finalCost}`);
                 }
@@ -1160,8 +1176,12 @@ export default function DuelPage() {
                     break;
                 case 'remove_effect':
                     if (activePlayer.penalties.length > 0) {
-                        const removedEffect = activePlayer.penalties.shift();
-                        turnLog.push(`${activePlayer.name} снимает с себя эффект: "${removedEffect}".`);
+                        const removablePenalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД'));
+                        if (removablePenalties.length > 0) {
+                           const removedEffect = removablePenalties[0];
+                           activePlayer.penalties = activePlayer.penalties.filter(p => p !== removedEffect);
+                           turnLog.push(`${activePlayer.name} снимает с себя эффект: "${removedEffect}".`);
+                        }
                     }
                     break;
                 case 'racial_ability':

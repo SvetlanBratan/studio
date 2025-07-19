@@ -85,6 +85,7 @@ export interface CharacterStats {
   physicalCondition: string;
   bonuses: string[];
   penalties: string[];
+  statuses?: string[];
   inventory: InventoryItem[];
   weapon: WeaponType;
   armor: ArmorType;
