@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -39,10 +38,14 @@ const getPhysicalCondition = (oz: number, maxOz: number): string => {
 
 
 export default function DuelPage() {
+  // =================================================================
+  // HOOKS
+  // =================================================================
   const { user, loading: authLoading } = useAuth();
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  
   const duelId = params.duelId as string;
   const isLocalSolo = duelId === 'solo';
   const isPvE = duelId === 'monster';
@@ -59,160 +62,27 @@ export default function DuelPage() {
   const duelData = isLocalSolo || isPvE ? localDuelState : (onlineDuel as DuelState | undefined);
   const duelLoading = authLoading || (isLocalSolo || isPvE ? false : onlineDuelLoading);
 
-  useEffect(() => {
-    if ((isLocalSolo || isPvE) && !localDuelState && user) {
-        let player1;
-        let duelStarted = false;
-
-        if (fromLabyrinth) {
-            const savedChar = sessionStorage.getItem('labyrinthCharacter');
-            if (savedChar) {
-                player1 = JSON.parse(savedChar);
-                duelStarted = true;
-            } else {
-                router.push('/locations/labyrinth');
-                return;
-            }
-        } else {
-             player1 = initialPlayerStats(user.uid, 'Игрок 1');
-        }
-
-        const player2 = isPvE ? createEnemy() : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
-        setLocalDuelState({
-            player1,
-            player2,
-            turnHistory: [],
-            currentTurn: 1,
-            activePlayerId: 'player1',
-            winner: null,
-            log: [],
-            createdAt: new Date(),
-            duelStarted: duelStarted,
-            distance: RULES.INITIAL_DISTANCE,
-            animationState: { player1: 'idle', player2: 'idle' },
-        });
-    }
-  }, [isLocalSolo, isPvE, localDuelState, user, fromLabyrinth, router]);
-  
-    useEffect(() => {
-        if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0 && !duelData.log.some(l => l.includes('Первый ход'))) {
-            const firstPlayer = Math.random() < 0.5 ? 'player1' : 'player2';
-            handleUpdateDuelState({ 
-                activePlayerId: firstPlayer,
-                log: [`Первый ход определён случайно. Начинает ${firstPlayer === 'player1' ? duelData.player1.name : duelData.player2!.name}.`]
-            });
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [duelData?.duelStarted]);
-
-    // Enemy AI turn logic
-    useEffect(() => {
-        if (isPvE && duelData && duelData.duelStarted && duelData.activePlayerId === 'player2' && !duelData.winner && duelData.player2) {
-            
-            const performEnemyTurn = () => {
-                const enemyActions: Action[] = [];
-                let tempEnemyState = deepClone(duelData.player2!);
-                let tempDistance = duelData.distance;
-
-                // AI tries to perform up to 2 actions
-                for (let i = 0; i < RULES.MAX_ACTIONS_PER_TURN; i++) {
-                    const enemy = tempEnemyState;
-                    const weapon = WEAPONS[enemy.weapon];
-                    const spellRange = RULES.SPELL_RANGES[enemy.reserve];
-                    const hasMagic = enemy.elementalKnowledge.length > 0;
-                    
-                    let chosenAction: Action | null = null;
-                    
-                    const strongSpellCost = RULES.RITUAL_COSTS.strong;
-                    const mediumSpellCost = RULES.RITUAL_COSTS.medium;
-                    const smallSpellCost = RULES.RITUAL_COSTS.small;
-                    const canUseStrongSpell = hasMagic && tempDistance <= spellRange && enemy.om >= strongSpellCost && enemy.cooldowns.strongSpell <= 0;
-                    const canUseMediumSpell = hasMagic && tempDistance <= spellRange && enemy.om >= mediumSpellCost;
-                    const canUseSmallSpell = hasMagic && tempDistance <= spellRange && enemy.om >= smallSpellCost;
-                    const canUseWeapon = tempDistance <= weapon.range && enemy.od >= RULES.NON_MAGIC_COSTS.physical_attack;
-
-                    // Priority 1: Strong Magic
-                    if (canUseStrongSpell) {
-                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
-                        chosenAction = { type: 'strong_spell', payload: { element: randomElement } };
-                        tempEnemyState.om -= strongSpellCost;
-                        tempEnemyState.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
-                    } 
-                    // Priority 2: Medium Magic
-                    else if (canUseMediumSpell) {
-                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
-                        chosenAction = { type: 'medium_spell', payload: { element: randomElement } };
-                        tempEnemyState.om -= mediumSpellCost;
-                    }
-                     // Priority 3: Small Magic
-                    else if (canUseSmallSpell) {
-                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
-                        chosenAction = { type: 'small_spell', payload: { element: randomElement } };
-                        tempEnemyState.om -= smallSpellCost;
-                    }
-                    // Priority 4: Weapon Attack
-                    else if (canUseWeapon) {
-                        chosenAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
-                        tempEnemyState.od -= RULES.NON_MAGIC_COSTS.physical_attack;
-                    }
-                    // Priority 5: Move closer
-                    else {
-                        let distanceToClose = 0;
-                        if (hasMagic && tempDistance > spellRange) {
-                            distanceToClose = tempDistance - spellRange;
-                        } else if (tempDistance > weapon.range) {
-                            distanceToClose = tempDistance - weapon.range;
-                        }
-                        
-                        if (distanceToClose > 0) {
-                           const moveCost = Math.abs(distanceToClose) * RULES.NON_MAGIC_COSTS.move_per_meter;
-                           if (enemy.od >= moveCost) {
-                               chosenAction = { type: 'move', payload: { distance: -distanceToClose } };
-                               tempEnemyState.od -= moveCost;
-                               tempDistance -= distanceToClose;
-                           }
-                        }
-                    }
-
-                    // Priority 6: Rest
-                    if (!chosenAction) {
-                        chosenAction = { type: 'rest', payload: {} };
-                    }
-                    
-                    if (chosenAction) {
-                        enemyActions.push(chosenAction);
-                    }
-                }
-
-                if (enemyActions.length > 0) {
-                    setTimeout(() => {
-                        executeTurn(enemyActions);
-                    }, 1000); 
-                }
-            };
-            
-            performEnemyTurn();
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isPvE, duelData?.activePlayerId, duelData?.duelStarted, duelData?.winner]);
-
-
-  const userRole: 'player1' | 'player2' | 'spectator' | null = React.useMemo(() => {
+  const userRole: 'player1' | 'player2' | 'spectator' | null = useMemo(() => {
     if (!user || !duelData) return null;
     if (isLocalSolo || isPvE) return 'player1';
     if (user.uid === duelData.player1.id) return 'player1';
     if (duelData.player2 && user.uid === duelData.player2.id) return 'player2';
     return 'spectator';
   }, [user, duelData, isLocalSolo, isPvE]);
-
-
-  useEffect(() => {
-    const shouldJoin = searchParams.get('join') === 'true';
-    if (userRole === 'spectator' && duelData?.player1 && !duelData.player2 && shouldJoin && user) {
-        joinDuel(duelId, user.uid, "Игрок 2");
+  
+  const isMyTurn = useMemo(() => {
+    if (!duelData || !userRole) return false;
+    if (userRole === 'spectator') return false;
+    if (isLocalSolo || isPvE) {
+        return duelData.activePlayerId === 'player1';
     }
-  }, [userRole, duelData, duelId, user, searchParams]);
+    return userRole === duelData.activePlayerId;
+  }, [userRole, isLocalSolo, isPvE, duelData]);
 
+
+  // =================================================================
+  // CALLBACKS & EFFECTS
+  // =================================================================
 
   const handleUpdateDuelState = useCallback((updatedDuel: Partial<DuelState>) => {
     if (isLocalSolo || isPvE) {
@@ -224,48 +94,7 @@ export default function DuelPage() {
     }
   }, [isLocalSolo, isPvE, duelId]);
 
-  const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
-    if (!duelData) return;
-
-    const isPlayer1 = duelData.player1.id === updatedCharacter.id;
-    const key = isPlayer1 ? 'player1' : 'player2';
-    
-    let newState: Partial<DuelState> = {
-        [key]: { ...updatedCharacter, isSetupComplete: true }
-    };
-    
-    if (fromLabyrinth && isPlayer1) {
-        sessionStorage.setItem('labyrinthCharacter', JSON.stringify(newState.player1));
-    }
-
-
-    const updatedFullState = { ...duelData, ...newState };
-
-    if (updatedFullState.player1.isSetupComplete && updatedFullState.player2?.isSetupComplete && !updatedFullState.duelStarted) {
-        newState.duelStarted = true;
-    }
-
-    handleUpdateDuelState(newState);
-  };
-
-  const handleSoloSetupComplete = (player1: CharacterStats, player2: CharacterStats) => {
-    const newState: DuelState = {
-        ...(localDuelState!),
-        player1: { ...player1, isSetupComplete: true },
-        player2: { ...player2, isSetupComplete: true },
-        duelStarted: true,
-    };
-    handleUpdateDuelState(newState);
-  };
-  
-  const copyDuelId = () => {
-    navigator.clipboard.writeText(duelId).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  const executeTurn = (turnActions: Action[]) => {
+  const executeTurn = useCallback((turnActions: Action[]) => {
     if (!duelData || !duelData.player1 || !duelData.player2) return;
         let actions = [...turnActions];
         const turnLog: string[] = [];
@@ -276,12 +105,10 @@ export default function DuelPage() {
         
         const startStats = { oz: activePlayer.oz, om: activePlayer.om, od: activePlayer.od, shield: deepClone(activePlayer.shield) };
         
-        // Reset one-turn flags at the beginning of the turn
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Облик желания (-5 урон)');
         activePlayer.statuses = activePlayer.statuses?.filter(s => s !== 'Был атакован в прошлом ходу' && s !== 'Не атаковал в прошлом ходу') || [];
         activePlayer.isDodging = false;
         
-        // Mark if the player was attacked in the previous turn
         const lastTurn = duelData.turnHistory[duelData.turnHistory.length - 1];
         let wasAttackedLastTurn = false;
         let didNotAttackLastTurn = false;
@@ -339,7 +166,6 @@ export default function DuelPage() {
         }
 
         activePlayer.bonuses.forEach(bonus => {
-            // OZ Regen
             if (bonus === 'Глубинная стойкость (+5 ОЗ/ход)' || bonus === 'Живучесть (+5 ОЗ/ход)' || bonus === 'Аура благословения (+5 ОЗ/ход)' || bonus === 'Мелодия исцеления (+5 ОЗ/ход)' || bonus === 'Предчувствие (+3 ОЗ/ход)' || bonus === 'Живая защита (+5 ОЗ/ход)') {
                 const healAmount = bonus === 'Предчувствие (+3 ОЗ/ход)' ? 3 : 5;
                 if (bonus === 'Живая защита (+5 ОЗ/ход)') {
@@ -383,7 +209,6 @@ export default function DuelPage() {
              }
 
 
-            // OM Regen
             if (bonus === 'Этикет крови (+1 ОМ/ход)' || bonus === 'Холодный ум (+5 ОМ/ход)' || bonus === 'Слияние со стихией — +5 ОМ каждый ход.') {
                 const omAmount = bonus.includes('5') ? 5 : 1;
                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + omAmount);
@@ -413,7 +238,6 @@ export default function DuelPage() {
             }
         }
         
-        // Clear one-turn buffs
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Железный ёж' && b !== 'Инстинкт (-10 от этого урона)');
 
         activePlayer.penalties.forEach(p => {
@@ -471,19 +295,17 @@ export default function DuelPage() {
                         turnLog.push(`${activePlayer.name} использует действие: "Снять эффект" и снимает с себя эффект: "${removedEffect}".`);
                     }
                 }
-                return false; // Remove this action from the list to be processed later
+                return false; 
             }
             return true;
         });
 
-        // Handle "Frozen" effect by reducing actions
         const frozenIndex = activePlayer.penalties.findIndex(p => p.startsWith('Заморожен'));
         if (frozenIndex > -1) {
              turnLog.push(`${activePlayer.name} находится под эффектом "Заморожен" и теряет одно действие.`);
              if (actions.length > 1) {
                  actions = actions.slice(0, 1);
              }
-             // Consume the effect
              const removedEffect = activePlayer.penalties.splice(frozenIndex, 1)[0];
              turnLog.push(`Эффект "${removedEffect}" был использован и снят.`);
         }
@@ -496,11 +318,9 @@ export default function DuelPage() {
             }
         }
 
-        // Handle "lose action" effects
         const loseActionPenaltyIndex = activePlayer.penalties.findIndex(p => p.startsWith('Потеря действия'));
         if (loseActionPenaltyIndex > -1) {
              turnLog.push(`${activePlayer.name} теряет одно действие из-за штрафа.`);
-             // The turn-form will already limit actions to 1, so we just remove the penalty here.
              activePlayer.penalties.splice(loseActionPenaltyIndex, 1);
         }
 
@@ -756,7 +576,6 @@ export default function DuelPage() {
                  }
              }
 
-            // --- Physical/Spell Specific ---
             if(isPhysical) {
                  if (target.bonuses.includes('Ипостась силы — -10 урона от физических атак.')) {
                     finalDamage = Math.max(0, finalDamage - 10);
@@ -803,9 +622,7 @@ export default function DuelPage() {
                 if (target.bonuses.includes('Земная устойчивость (-10 урона от магических атак врага)') || target.bonuses.includes('Иллюзорный обман (-10 урона от магических атак врага)') || target.bonuses.includes('Светлая душа (-10 урона от магии эфира, света и иллюзий)') || target.bonuses.includes('Око истины (-30 урона от иллюзий и заклинаний)')) {
                     let text = `Пассивная способность (${target.race}):`;
                     if(target.race === 'Кунари' && spellElement && !['Эфир', 'Свет', 'Иллюзии'].includes(spellElement)){
-                       // no reduction
                     } else if (target.race === 'Сфинксы' && spellElement && !['Иллюзии'].includes(spellElement)) {
-                       // no reduction
                     } else {
                         const reduction = target.race === 'Сфинксы' ? 30 : 10;
                         finalDamage = Math.max(0, finalDamage - reduction);
@@ -1015,7 +832,7 @@ export default function DuelPage() {
                 animationState = {
                     ...animationState,
                     [activePlayerId]: 'casting',
-                    spellElement: undefined, // No projectile for shield
+                    spellElement: undefined,
                 };
             }
             if (action.type === 'physical_attack') {
@@ -1057,7 +874,7 @@ export default function DuelPage() {
             if ((isSpellAction || isHouseholdSpell) && activePlayer.race === 'Безликие') {
                 if (!isHouseholdSpell) {
                     turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: Безликие не могут использовать магию, кроме бытовой.`);
-                    return; // Skip this action
+                    return;
                 }
             }
 
@@ -1066,18 +883,20 @@ export default function DuelPage() {
                  return;
             }
             
+            const spellRange = RULES.SPELL_RANGES[activePlayer.reserve];
+            const isOpponentInRangeForSpells = (distance: number) => distance <= spellRange;
+
             const isSpellAttackAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell'].includes(action.type);
-            if (isSpellAttackAction && !isOpponentInRangeForSpells(activePlayer.reserve, newDistance)) {
-                 const spellRange = RULES.SPELL_RANGES[activePlayer.reserve];
+            if (isSpellAttackAction && !isOpponentInRangeForSpells(newDistance)) {
                  turnLog.push(`Действие "${getActionLabel(action.type, action.payload)}" не удалось: цель слишком далеко (${newDistance}м > ${spellRange}м).`);
-                 return; // Skip this action
+                 return;
             }
 
             const calculateDamage = (baseDamage: number, isSpell: boolean = false, spellElement?: string): number => {
                 let damage = baseDamage;
                 
                 if (opponentPlayer.penalties.includes('Уязвимость')) {
-                    const bonus = isSpell ? RULES.DAMAGE_BONUS.vulnerability.medium : 5; // Placeholder for physical
+                    const bonus = isSpell ? RULES.DAMAGE_BONUS.vulnerability.medium : 5;
                     damage += bonus;
                     turnLog.push(`Эффект "Уязвимость" увеличивает урон на ${bonus}.`);
                 }
@@ -1412,7 +1231,6 @@ export default function DuelPage() {
                      }
                     break;
                 case 'remove_effect':
-                    // This case is handled at the start of the turn now
                     break;
                 case 'racial_ability':
                     const abilityName = action.payload.name;
@@ -1443,178 +1261,140 @@ export default function DuelPage() {
                          turnLog.push(`Способность "${ability.name}": ${ability.description}.`);
 
                          switch(abilityName) {
-                            // Alahory
-                             case 'Железный ёж':
+                            case 'Железный ёж':
                                  activePlayer.bonuses.push('Железный ёж');
                                  turnLog.push(`${activePlayer.name} готовится поглотить следующее заклинание.`);
                                  break;
-                            // Alarieny
-                             case 'Дождь из осколков':
+                            case 'Дождь из осколков':
                                  applyDamage(activePlayer, opponentPlayer, 40, true, undefined, false);
                                  break;
-                            // Amphibii
-                             case 'Водяной захват':
+                            case 'Водяной захват':
                                  applyEffect(opponentPlayer, 'Потеря действия', 1);
                                  break;
-                            // Antaresy
-                             case 'Самоисцеление':
+                            case 'Самоисцеление':
                                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 50);
                                  turnLog.push(`${activePlayer.name} восстанавливает 50 ОЗ.`);
                                  break;
-                            // Antropomorphs
-                             case 'Ипостась зверя':
+                            case 'Ипостась зверя':
                                  applyDamage(activePlayer, opponentPlayer, 40, false);
                                  break;
-                            // Arahnii
-                             case 'Паутина':
+                            case 'Паутина':
                                  applyEffect(opponentPlayer, 'Потеря действия', 1);
                                  applyDamage(activePlayer, opponentPlayer, 20, false);
                                  break;
-                            // Arahnidy
-                             case 'Жало-хищника':
+                            case 'Жало-хищника':
                                  applyDamage(activePlayer, opponentPlayer, 50, false);
                                  break;
-                            // Aspidy & Vasiliski
-                             case 'Окаменяющий взгляд':
+                            case 'Окаменяющий взгляд':
                                  applyEffect(opponentPlayer, 'Потеря действия', 1);
                                  break;
-                            // Astroloidy
-                             case 'Метеорит':
+                            case 'Метеорит':
                                  applyDamage(activePlayer, opponentPlayer, 60, true, 'Огонь');
                                  break;
-                            // Babochki
-                             case 'Трепет крыльев':
+                            case 'Трепет крыльев':
                                  applyEffect(opponentPlayer, 'Потеря действия', 1);
                                  applyDamage(activePlayer, opponentPlayer, 10, false);
                                  break;
-                            // Beloyary
-                             case 'Удар предков':
+                            case 'Удар предков':
                                  applyDamage(activePlayer, opponentPlayer, 60, false);
                                  break;
-                            // Brakovannye peresmeshniki
-                             case 'Зеркальная любовь':
+                            case 'Зеркальная любовь':
                                  applyEffect(opponentPlayer, 'Потеря действия', 1);
                                  applyDamage(activePlayer, opponentPlayer, 20, false);
                                  break;
-                            // Vampiry
-                             case 'Укус':
+                            case 'Укус':
                                  applyDamage(activePlayer, opponentPlayer, 40, false);
                                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 20);
                                  turnLog.push(`${activePlayer.name} восстанавливает 20 ОЗ.`);
                                  break;
-                            // Vansaelians
                             case 'Приказ крови':
                                 applyDamage(activePlayer, opponentPlayer, 30, true);
                                 break;
-                            // Vespy
                             case 'Теневой прорыв':
                                 applyDamage(activePlayer, opponentPlayer, 45, false);
                                 break;
-                            // Vulgary
                             case 'Удар глыбы':
                                 applyDamage(activePlayer, opponentPlayer, 60, true, undefined, false);
                                 break;
-                            // Gurity
                             case 'Щупальца глубин':
                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
                                 applyDamage(activePlayer, opponentPlayer, 30, false);
                                 break;
-                            // Golos roda
                             case 'Голос рода':
                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
                                 applyDamage(activePlayer, opponentPlayer, 30, false);
                                 break;
-                             // Darnatiare
                             case 'Разлом ауры':
                                 applyDamage(activePlayer, opponentPlayer, 50, true);
                                 break;
-                            // Jakali
                             case 'Глас богов':
                                 applyDamage(activePlayer, opponentPlayer, 35, true, 'Звук');
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 15);
                                 turnLog.push(`${activePlayer.name} восстанавливает 15 ОЗ.`);
                                 break;
-                            // Dzhinny
                             case 'Исполнение желания':
                                 applyDamage(activePlayer, opponentPlayer, 50, true);
                                 break;
-                            // Domovye
                             case 'Очистка':
                                 activePlayer.penalties = [];
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 30);
                                 turnLog.push(`${activePlayer.name} снимает все негативные эффекты и восстанавливает 30 ОЗ.`);
                                 break;
-                            // Drakony
                             case 'Дыхание стихии':
                                 applyDamage(activePlayer, opponentPlayer, 100, true, action.payload?.element);
                                 break;
-                             // Driady
                             case 'Удушающее плетение':
                                 applyDamage(activePlayer, opponentPlayer, 40, true, 'Растения');
                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
                                 break;
-                            // Dridy
                             case 'Рывок мотылька':
                                 applyDamage(activePlayer, opponentPlayer, 45, false);
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 10);
                                 turnLog.push(`${activePlayer.name} восстанавливает 10 ОЗ.`);
                                 break;
-                             // Drou
-                            case 'Лунный кнут':
+                             case 'Лунный кнут':
                                  applyDamage(activePlayer, opponentPlayer, 55, true, 'Тьма');
                                  break;
-                             // Жнецы
                              case 'Коса Смерти':
                                  opponentPlayer.oz = 0;
                                  turnLog.push(`${activePlayer.name} использует Косу Смерти... ${opponentPlayer.name} повержен.`);
                                  break;
-                            // Insektoidy
                             case 'Кислотное жало':
                                 applyDamage(activePlayer, opponentPlayer, 50, false);
                                 break;
-                            // Karliki
                             case 'Кузнечный молот':
                                 applyDamage(activePlayer, opponentPlayer, 50, false);
                                 break;
-                            // Kentaury
                             case 'Копыта бури':
                                 applyDamage(activePlayer, opponentPlayer, 55, false);
                                 break;
-                            // Kitsune
                             case 'Танец девяти хвостов':
                                 applyEffect(opponentPlayer, 'Потеря действия', 1);
                                 applyDamage(activePlayer, opponentPlayer, 35, false);
                                 break;
-                            // Korality
                             case 'Коралловый плевок':
                                 applyDamage(activePlayer, opponentPlayer, 45, false);
                                 break;
-                            // Kordei
                             case 'Кровавая печать':
                                 applyDamage(activePlayer, opponentPlayer, 55, true, 'Кровь');
                                 break;
-                             // Kunari
-                            case 'Природное возрождение':
+                             case 'Природное возрождение':
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 60);
                                 turnLog.push(`${activePlayer.name} восстанавливает 60 ОЗ.`);
                                 break;
-                            // Lartisty
                             case 'Затягивание в полотно':
                                 applyEffect(opponentPlayer, 'Удержание', 1);
                                 turnLog.push(`${opponentPlayer.name} не может использовать магические способности.`);
                                 break;
-                            // Leprekony
                             case 'Подменный клад':
                                 applyEffect(activePlayer, 'Скрытность', 1);
                                 activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + 40);
                                 turnLog.push(`${activePlayer.name} уходит в скрытность на 1 ход и восстанавливает 40 ОЗ.`);
                                 break;
-                             // Mikanidy
-                            case 'Споровый взрыв':
+                             case 'Споровый взрыв':
                                 applyDamage(activePlayer, opponentPlayer, 40, false);
                                 applyEffect(opponentPlayer, 'Ослабление (1)');
                                 break;
-                            // Druidy
                             case 'Песня стихий':
                                 if (action.payload.subAction === 'damage') {
                                     applyDamage(activePlayer, opponentPlayer, 45, true, 'Земля');
@@ -1623,27 +1403,22 @@ export default function DuelPage() {
                                     turnLog.push(`${activePlayer.name} восстанавливает 45 ОЗ.`);
                                 }
                                 break;
-                            // Myriads
                             case 'Смертельный рывок':
                                 applyDamage(activePlayer, opponentPlayer, 60, false);
                                 break;
-                            // Narrators
                             case 'Конец главы':
                                 applyDamage(activePlayer, opponentPlayer, 50, true);
                                 applyEffect(opponentPlayer, 'Удержание', 1);
                                 break;
-                            // Ethereals
                             case 'Прыжок веры':
                                 activePlayer.isDodging = true;
                                 activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + 30);
                                 turnLog.push(`${activePlayer.name} готовится увернуться от следующей атаки и восстанавливает 30 ОМ.`);
                                 break;
-                            // Neonids
                             case 'Световой взрыв':
                                 applyDamage(activePlayer, opponentPlayer, 40, true, 'Свет');
                                 applyEffect(opponentPlayer, 'Ослепление', 1);
                                 break;
-                            // Incorruptible
                             case 'Откат':
                                 activePlayer.oz = activePlayer.maxOz;
                                 if (activePlayer.penalties.length > 0) {
@@ -1812,7 +1587,6 @@ export default function DuelPage() {
             return p;
         }).filter(p => p !== '');
         
-        // Recalculate wound penalties
         activePlayer.penalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД (Ранение)'));
         if (activePlayer.race !== 'Куклы' || !activePlayer.bonuses.includes('Абсолютная память — не тратится ОД.')) {
             for (const wound of RULES.WOUND_PENALTIES) {
@@ -1823,10 +1597,8 @@ export default function DuelPage() {
             }
         }
         
-        // Add armor penalty if not present
         const armorPenalty = ARMORS[activePlayer.armor as ArmorType]?.odPenalty ?? 0;
         const armorPenaltyName = `Штраф ОД (Броня): +${armorPenalty}`;
-        // First remove existing armor penalties to avoid duplicates if armor changes
         activePlayer.penalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД (Броня)'));
         if (armorPenalty > 0) {
             if (!activePlayer.penalties.includes(armorPenaltyName)) activePlayer.penalties.push(armorPenaltyName);
@@ -1874,7 +1646,6 @@ export default function DuelPage() {
         }
 
         
-        // Clear one-turn bonuses at the end of the turn
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Переформа');
 
         const isResting = actions.some(a => a.type === 'rest');
@@ -1932,12 +1703,197 @@ export default function DuelPage() {
         
         handleUpdateDuelState({ ...updatedDuel, animationState });
 
-        // Reset animations after a delay
         setTimeout(() => {
             handleUpdateDuelState({ animationState: { player1: 'idle', player2: 'idle' } });
-        }, 1500); // 1.5 seconds for animations
+        }, 1500);
+  }, [duelData, fromLabyrinth, handleUpdateDuelState]);
+
+  useEffect(() => {
+    if ((isLocalSolo || isPvE) && !localDuelState && user) {
+        let player1;
+        let duelStarted = false;
+
+        if (fromLabyrinth) {
+            const savedChar = sessionStorage.getItem('labyrinthCharacter');
+            if (savedChar) {
+                player1 = JSON.parse(savedChar);
+                duelStarted = true;
+            } else {
+                router.push('/locations/labyrinth');
+                return;
+            }
+        } else {
+             player1 = initialPlayerStats(user.uid, 'Игрок 1');
+        }
+
+        const player2 = isPvE ? createEnemy() : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
+        setLocalDuelState({
+            player1,
+            player2,
+            turnHistory: [],
+            currentTurn: 1,
+            activePlayerId: 'player1',
+            winner: null,
+            log: [],
+            createdAt: new Date(),
+            duelStarted: duelStarted,
+            distance: RULES.INITIAL_DISTANCE,
+            animationState: { player1: 'idle', player2: 'idle' },
+        });
+    }
+  }, [isLocalSolo, isPvE, localDuelState, user, fromLabyrinth, router]);
+  
+    useEffect(() => {
+        if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0 && !duelData.log.some(l => l.includes('Первый ход'))) {
+            const firstPlayer = Math.random() < 0.5 ? 'player1' : 'player2';
+            handleUpdateDuelState({ 
+                activePlayerId: firstPlayer,
+                log: [`Первый ход определён случайно. Начинает ${firstPlayer === 'player1' ? duelData.player1.name : duelData.player2!.name}.`]
+            });
+        }
+    }, [duelData, handleUpdateDuelState]);
+
+    useEffect(() => {
+        if (isPvE && duelData && duelData.duelStarted && duelData.activePlayerId === 'player2' && !duelData.winner && duelData.player2) {
+            
+            const performEnemyTurn = () => {
+                const enemyActions: Action[] = [];
+                let tempEnemyState = deepClone(duelData.player2!);
+                let tempDistance = duelData.distance;
+
+                for (let i = 0; i < RULES.MAX_ACTIONS_PER_TURN; i++) {
+                    const enemy = tempEnemyState;
+                    const weapon = WEAPONS[enemy.weapon];
+                    const spellRange = RULES.SPELL_RANGES[enemy.reserve];
+                    const hasMagic = enemy.elementalKnowledge.length > 0;
+                    
+                    let chosenAction: Action | null = null;
+                    
+                    const strongSpellCost = RULES.RITUAL_COSTS.strong;
+                    const mediumSpellCost = RULES.RITUAL_COSTS.medium;
+                    const smallSpellCost = RULES.RITUAL_COSTS.small;
+                    const canUseStrongSpell = hasMagic && tempDistance <= spellRange && enemy.om >= strongSpellCost && enemy.cooldowns.strongSpell <= 0;
+                    const canUseMediumSpell = hasMagic && tempDistance <= spellRange && enemy.om >= mediumSpellCost;
+                    const canUseSmallSpell = hasMagic && tempDistance <= spellRange && enemy.om >= smallSpellCost;
+                    const canUseWeapon = tempDistance <= weapon.range && enemy.od >= RULES.NON_MAGIC_COSTS.physical_attack;
+
+                    if (canUseStrongSpell) {
+                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
+                        chosenAction = { type: 'strong_spell', payload: { element: randomElement } };
+                        tempEnemyState.om -= strongSpellCost;
+                        tempEnemyState.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
+                    } 
+                    else if (canUseMediumSpell) {
+                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
+                        chosenAction = { type: 'medium_spell', payload: { element: randomElement } };
+                        tempEnemyState.om -= mediumSpellCost;
+                    }
+                     else if (canUseSmallSpell) {
+                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
+                        chosenAction = { type: 'small_spell', payload: { element: randomElement } };
+                        tempEnemyState.om -= smallSpellCost;
+                    }
+                    else if (canUseWeapon) {
+                        chosenAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
+                        tempEnemyState.od -= RULES.NON_MAGIC_COSTS.physical_attack;
+                    }
+                    else {
+                        let distanceToClose = 0;
+                        if (hasMagic && tempDistance > spellRange) {
+                            distanceToClose = tempDistance - spellRange;
+                        } else if (tempDistance > weapon.range) {
+                            distanceToClose = tempDistance - weapon.range;
+                        }
+                        
+                        if (distanceToClose > 0) {
+                           const moveCost = Math.abs(distanceToClose) * RULES.NON_MAGIC_COSTS.move_per_meter;
+                           if (enemy.od >= moveCost) {
+                               chosenAction = { type: 'move', payload: { distance: -distanceToClose } };
+                               tempEnemyState.od -= moveCost;
+                               tempDistance -= distanceToClose;
+                           }
+                        }
+                    }
+
+                    if (!chosenAction) {
+                        chosenAction = { type: 'rest', payload: {} };
+                    }
+                    
+                    if (chosenAction) {
+                        enemyActions.push(chosenAction);
+                    }
+                }
+
+                if (enemyActions.length > 0) {
+                    setTimeout(() => {
+                        executeTurn(enemyActions);
+                    }, 1000); 
+                }
+            };
+            
+            performEnemyTurn();
+        }
+    }, [isPvE, duelData, executeTurn]);
+
+  useEffect(() => {
+    const shouldJoin = searchParams.get('join') === 'true';
+    if (userRole === 'spectator' && duelData?.player1 && !duelData.player2 && shouldJoin && user) {
+        joinDuel(duelId, user.uid, "Игрок 2");
+    }
+  }, [userRole, duelData, duelId, user, searchParams]);
+
+  const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
+    if (!duelData) return;
+
+    const isPlayer1 = duelData.player1.id === updatedCharacter.id;
+    const key = isPlayer1 ? 'player1' : 'player2';
+    
+    let newState: Partial<DuelState> = {
+        [key]: { ...updatedCharacter, isSetupComplete: true }
+    };
+    
+    if (fromLabyrinth && isPlayer1) {
+        sessionStorage.setItem('labyrinthCharacter', JSON.stringify(newState.player1));
+    }
+
+    const updatedFullState = { ...duelData, ...newState };
+
+    if (updatedFullState.player1.isSetupComplete && updatedFullState.player2?.isSetupComplete && !updatedFullState.duelStarted) {
+        newState.duelStarted = true;
+    }
+
+    handleUpdateDuelState(newState);
+  };
+
+  const handleSoloSetupComplete = (player1: CharacterStats, player2: CharacterStats) => {
+    const newState: DuelState = {
+        ...(localDuelState!),
+        player1: { ...player1, isSetupComplete: true },
+        player2: { ...player2, isSetupComplete: true },
+        duelStarted: true,
+    };
+    handleUpdateDuelState(newState);
   };
   
+  const copyDuelId = () => {
+    navigator.clipboard.writeText(duelId).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleVictory = () => {
+    if (fromLabyrinth) {
+        router.push(`/locations/labyrinth?defeated=${enemyId}`);
+    } else {
+        router.push('/duels');
+    }
+  };
+
+  // =================================================================
+  // RENDER LOGIC
+  // =================================================================
+
   if (duelLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -1947,7 +1903,7 @@ export default function DuelPage() {
   }
 
   if (!user) {
-    router.push('/login');
+    if (!authLoading) router.push('/login');
     return null;
   }
   
@@ -1971,26 +1927,46 @@ export default function DuelPage() {
       );
   }
 
-  // --- STAGE LOGIC ---
-  const isPlayer1 = userRole === 'player1';
-  const isPlayer2 = userRole === 'player2';
+  const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
+  const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
+
+  const turnStatusText = () => {
+    if (!activePlayer) return "";
+    if (isLocalSolo) return "Ваш ход";
+    if (isPvE) return isMyTurn ? "Ваш ход" : `Ход противника: ${activePlayer.name}`;
+    if (userRole === 'spectator') return `Ход игрока ${activePlayer.name}`;
+    if (isMyTurn) return "Ваш ход";
+    return `Ход оппонента: ${activePlayer.name}`;
+  }
   
-  // 1. PVE and Solo setup
+  const scalingStartDistance = 150;
+  const minScale = 0.3;
+  const maxVisualDistance = 400;
+
+  let distanceScale = 1;
+  let distanceGap = duelData.distance * 4;
+  
+  if (duelData.distance > scalingStartDistance) {
+      distanceGap = scalingStartDistance * 4;
+      const distancePastThreshold = duelData.distance - scalingStartDistance;
+      const scalingRange = maxVisualDistance - scalingStartDistance;
+      const scaleReduction = (distancePastThreshold / scalingRange) * (1 - minScale);
+      distanceScale = Math.max(minScale, 1 - scaleReduction);
+  }
+
+  // --- STAGE LOGIC RENDER ---
+
   if ((isLocalSolo || isPvE) && !duelData.duelStarted) {
       if (isPvE && !fromLabyrinth) {
-          // For PvE, only the player sets up their character
           if (!duelData.player1.isSetupComplete) {
               return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
           }
       } else if(isLocalSolo) {
-          // For Solo, both players are set up
           return <SoloSetupForm player1={duelData.player1} player2={duelData.player2!} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
       }
   }
   
-  // --- Online Duel Flow ---
   if (!isLocalSolo && !isPvE && !duelData.duelStarted) {
-      // Spectator waiting view
       if (userRole === 'spectator') {
           return (
               <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
@@ -2009,12 +1985,13 @@ export default function DuelPage() {
           );
       }
 
-      // Player 1 setup
+      const isPlayer1 = userRole === 'player1';
+      const isPlayer2 = userRole === 'player2';
+
       if (isPlayer1 && !duelData.player1.isSetupComplete) {
         return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
       }
 
-      // Waiting for Player 2 to join
       if (isPlayer1 && !duelData.player2) {
         return (
           <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
@@ -2040,12 +2017,10 @@ export default function DuelPage() {
         );
       }
       
-      // Player 2 setup
       if (isPlayer2 && duelData.player2 && !duelData.player2.isSetupComplete) {
           return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
       }
       
-      // Waiting for opponent to finish setup
       if ((isPlayer1 && duelData.player2 && !duelData.player2.isSetupComplete) || (isPlayer2 && !duelData.player1.isSetupComplete)) {
            return (
               <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
@@ -2066,67 +2041,15 @@ export default function DuelPage() {
   }
 
 
-  // At this point, setup is complete for both players.
   if (!duelData.duelStarted) {
-      // This can happen briefly for online duels
       return <div className="flex items-center justify-center min-h-screen"><div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div></div>;
   }
   
   if (!duelData.player2) {
-    // Should not happen if logic is correct, but a safeguard
     return <div>Ошибка: Данные второго игрока отсутствуют.</div>
   }
   
-    const isOpponentInRangeForSpells = (reserve: CharacterStats['reserve'], distance: number) => {
-        const spellRange = RULES.SPELL_RANGES[reserve];
-        return distance <= spellRange;
-    };
-
-  const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
-  const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
-  
-  const isMyTurn = useMemo(() => {
-    if (!duelData) return false;
-    if (userRole === 'spectator') return false;
-    if (isLocalSolo || isPvE) {
-        return duelData.activePlayerId === 'player1';
-    }
-    return userRole === duelData.activePlayerId;
-  }, [userRole, isLocalSolo, isPvE, duelData]);
-
-  const turnStatusText = () => {
-    if (!duelData || !activePlayer) return "";
-    if (isLocalSolo) return "Ваш ход";
-    if (isPvE) return isMyTurn ? "Ваш ход" : `Ход противника: ${activePlayer.name}`;
-    if (userRole === 'spectator') return `Ход игрока ${activePlayer.name}`;
-    if (isMyTurn) return "Ваш ход";
-    return `Ход оппонента: ${activePlayer.name}`;
-  }
-  
-  const scalingStartDistance = 150;
-  const minScale = 0.3;
-  const maxVisualDistance = 400;
-
-  let distanceScale = 1;
-  let distanceGap = duelData.distance * 4;
-  
-  if (duelData.distance > scalingStartDistance) {
-      distanceGap = scalingStartDistance * 4;
-      const distancePastThreshold = duelData.distance - scalingStartDistance;
-      const scalingRange = maxVisualDistance - scalingStartDistance;
-      const scaleReduction = (distancePastThreshold / scalingRange) * (1 - minScale);
-      distanceScale = Math.max(minScale, 1 - scaleReduction);
-  }
-  
-  const handleVictory = () => {
-    if (fromLabyrinth) {
-        router.push(`/locations/labyrinth?defeated=${enemyId}`);
-    } else {
-        router.push('/duels');
-    }
-  }
-
-  // --- Main Duel Interface ---
+  // --- MAIN DUEL INTERFACE ---
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="p-4 border-b border-border shadow-md bg-card">
@@ -2185,7 +2108,7 @@ export default function DuelPage() {
                 <CardHeader>
                 <CardTitle className="flex items-center justify-between text-lg md:text-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1">
-                      <span>Ход {duelData.currentTurn}: {activePlayer.name}</span>
+                      <span>Ход {duelData.currentTurn}: {activePlayer?.name}</span>
                        {fromLabyrinth && <Badge variant="outline"><MapPin className="mr-2"/>Битва в лабиринте</Badge>}
                     </div>
                     <span className={`text-sm font-medium ${(isMyTurn && userRole !== 'spectator') ? 'text-accent' : 'text-muted-foreground'}`}>
@@ -2275,5 +2198,3 @@ export default function DuelPage() {
     </div>
   );
 }
-
-    
