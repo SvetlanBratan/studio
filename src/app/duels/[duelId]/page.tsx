@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { doc } from 'firebase/firestore';
@@ -68,7 +68,6 @@ export default function DuelPage() {
             const savedChar = sessionStorage.getItem('labyrinthCharacter');
             if (savedChar) {
                 player1 = JSON.parse(savedChar);
-                // When coming from labyrinth, the duel starts immediately
                 duelStarted = true;
             } else {
                 router.push('/locations/labyrinth');
@@ -1978,12 +1977,12 @@ export default function DuelPage() {
   
   // 1. PVE and Solo setup
   if ((isLocalSolo || isPvE) && !duelData.duelStarted) {
-      if (isPvE) {
+      if (isPvE && !fromLabyrinth) {
           // For PvE, only the player sets up their character
           if (!duelData.player1.isSetupComplete) {
               return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
           }
-      } else {
+      } else if(isLocalSolo) {
           // For Solo, both players are set up
           return <SoloSetupForm player1={duelData.player1} player2={duelData.player2!} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
       }
@@ -2087,11 +2086,11 @@ export default function DuelPage() {
   const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
   
   const isMyTurn = useMemo(() => {
-      if (userRole === 'spectator') return false;
-      if (isLocalSolo || isPvE) {
-          return duelData.activePlayerId === 'player1';
-      }
-      return userRole === duelData.activePlayerId;
+    if (userRole === 'spectator') return false;
+    if (isLocalSolo || isPvE) {
+        return duelData.activePlayerId === 'player1';
+    }
+    return userRole === duelData.activePlayerId;
   }, [userRole, isLocalSolo, isPvE, duelData.activePlayerId]);
 
   const turnStatusText = () => {
