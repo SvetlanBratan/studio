@@ -228,11 +228,6 @@ export default function Labyrinth() {
                 
                 const newUrl = window.location.pathname;
                 window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-
-                if (enemiesRef.current.length === 0) {
-                    alert('Вы зачистили лабиринт! Появляются новые враги.');
-                    generateEnemies();
-                }
                 
                 saveState();
                 draw();
@@ -372,5 +367,3 @@ export default function Labyrinth() {
         </div>
     );
 }
-
-    
