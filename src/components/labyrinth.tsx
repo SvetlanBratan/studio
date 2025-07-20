@@ -5,7 +5,6 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { initialPlayerStats } from '@/lib/rules';
 import type { CharacterStats } from '@/types/duel';
-import PixelCharacter from './pixel-character';
 import CharacterSetupModal from './character-setup-modal';
 
 interface Enemy {
@@ -99,7 +98,7 @@ export default function Labyrinth() {
         if (!character) return;
         // Simplified pixel character drawing for the map
         const playerX = playerPosRef.current.x * CELL_SIZE;
-        const playerY = player.y * CELL_SIZE;
+        const playerY = playerPosRef.current.y * CELL_SIZE;
         const pixel = 2; // scale factor
 
         const drawRect = (color: string, rectX: number, rectY: number, w: number, h: number) => {
