@@ -3,7 +3,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
@@ -44,15 +44,12 @@ export default function DuelPage() {
   // =================================================================
   const { user, loading: authLoading } = useAuth();
   const params = useParams();
-  const searchParams = useSearchParams();
   const router = useRouter();
   
   const duelId = params.duelId as string;
   const isLocalSolo = duelId === 'solo';
   const isPvE = duelId === 'monster';
   
-  const enemyReserve = searchParams.get('reserve') as ReserveLevel | null;
-
   const [localDuelState, setLocalDuelState] = useState<DuelState | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -64,7 +61,7 @@ export default function DuelPage() {
 
   const userRole: 'player1' | 'player2' | 'spectator' | null = useMemo(() => {
     if (!user || !duelData) return null;
-    if (isLocalSolo) return 'player1'; // For solo, user controls both, but we can treat them as P1.
+    if (isLocalSolo) return 'player1';
     if (isPvE) return 'player1';
     if (user.uid === duelData.player1.id) return 'player1';
     if (duelData.player2 && user.uid === duelData.player2.id) return 'player2';
@@ -74,7 +71,7 @@ export default function DuelPage() {
   const isMyTurn = useMemo(() => {
     if (!duelData || !userRole) return false;
     if (userRole === 'spectator') return false;
-    if (isLocalSolo) return true; // In solo mode, it's always the user's turn.
+    if (isLocalSolo) return true;
     if (isPvE) {
         return duelData.activePlayerId === 'player1';
     }
@@ -1702,10 +1699,9 @@ export default function DuelPage() {
   }, [duelData, handleUpdateDuelState]);
 
   useEffect(() => {
-    if ((isLocalSolo || isPvE) && !localDuelState && user) {
+    if (isLocalSolo && !localDuelState && user) {
         let player1 = initialPlayerStats(user.uid, 'Игрок 1');
-        const player2 = isPvE ? createEnemy(enemyReserve ?? undefined) : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
-        
+        const player2 = initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
         setLocalDuelState({
             player1,
             player2,
@@ -1719,8 +1715,23 @@ export default function DuelPage() {
             distance: RULES.INITIAL_DISTANCE,
             animationState: { player1: 'idle', player2: 'idle' },
         });
+    } else if (isPvE && !localDuelState && user) {
+        let player1 = initialPlayerStats(user.uid, 'Игрок 1');
+        setLocalDuelState({
+            player1,
+            player2: null,
+            turnHistory: [],
+            currentTurn: 1,
+            activePlayerId: 'player1',
+            winner: null,
+            log: [],
+            createdAt: new Date(),
+            duelStarted: false,
+            distance: RULES.INITIAL_DISTANCE,
+            animationState: { player1: 'idle', player2: 'idle' },
+        });
     }
-  }, [isLocalSolo, isPvE, localDuelState, user, router, enemyReserve]);
+  }, [isLocalSolo, isPvE, localDuelState, user, router]);
   
     useEffect(() => {
         if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0 && !duelData.log.some(l => l.includes('Первый ход'))) {
@@ -1815,14 +1826,25 @@ export default function DuelPage() {
     }, [isPvE, duelData, executeTurn]);
 
   useEffect(() => {
-    const shouldJoin = searchParams.get('join') === 'true';
+    const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
     if (userRole === 'spectator' && duelData?.player1 && !duelData.player2 && shouldJoin && user) {
         joinDuel(duelId, user.uid, "Игрок 2");
     }
-  }, [userRole, duelData, duelId, user, searchParams]);
+  }, [userRole, duelData, duelId, user]);
 
-  const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
+  const handleCharacterUpdate = (updatedCharacter: CharacterStats, enemyReserveLevel?: ReserveLevel) => {
     if (!duelData) return;
+
+    if (isPvE) {
+        const enemy = createEnemy(enemyReserveLevel);
+        const newState: Partial<DuelState> = {
+            player1: { ...updatedCharacter, isSetupComplete: true },
+            player2: enemy,
+            duelStarted: true,
+        };
+        handleUpdateDuelState(newState);
+        return;
+    }
 
     const isPlayer1 = duelData.player1.id === updatedCharacter.id;
     const key = isPlayer1 ? 'player1' : 'player2';
@@ -1905,8 +1927,8 @@ export default function DuelPage() {
 
   if (!duelData.duelStarted) {
       if (isPvE && !duelData.player1.isSetupComplete) {
-        return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
-      } else if (!isLocalSolo) { // Online PvP
+        return <CharacterSetupModal isPvE={true} character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+      } else if (!isLocalSolo && !isPvE) { // Online PvP
           if (userRole === 'spectator') {
               return (
                   <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
@@ -1999,7 +2021,11 @@ export default function DuelPage() {
   const turnStatusText = () => {
     if (!activePlayer) return "";
     
-    if (isLocalSolo || isPvE) {
+    if (isLocalSolo) {
+        return isMyTurn ? `Ход: ${activePlayer.name}` : `Ход: ${activePlayer.name}`;
+    }
+    
+    if (isPvE) {
         return isMyTurn ? "Ваш ход" : `Ход противника: ${activePlayer.name}`;
     }
 
@@ -2083,7 +2109,7 @@ export default function DuelPage() {
                 <CardHeader>
                 <CardTitle className="flex items-center justify-between text-lg md:text-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1">
-                      <span>Ход {duelData.currentTurn}: {activePlayer?.name}</span>
+                      <span>Ход {duelData.currentTurn}</span>
                     </div>
                     <span className={`text-sm font-medium ${(isMyTurn && userRole !== 'spectator') ? 'text-accent' : 'text-muted-foreground'}`}>
                         {turnStatusText()}

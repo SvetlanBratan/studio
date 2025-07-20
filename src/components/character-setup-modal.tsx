@@ -3,20 +3,25 @@
 'use client';
 
 import { useState } from 'react';
-import type { CharacterStats } from '@/types/duel';
+import type { CharacterStats, ReserveLevel } from '@/types/duel';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, ShieldQuestion } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from './ui/dialog';
 import CharacterSetupForm from './character-setup-form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Label } from './ui/label';
+import { RESERVE_LEVELS } from '@/lib/rules';
 
 interface CharacterSetupModalProps {
   character: CharacterStats;
-  onSave: (character: CharacterStats) => void;
+  onSave: (character: CharacterStats, enemyReserveLevel?: ReserveLevel) => void;
   onCancel: () => void;
+  isPvE?: boolean;
 }
 
-export default function CharacterSetupModal({ character, onSave, onCancel }: CharacterSetupModalProps) {
+export default function CharacterSetupModal({ character, onSave, onCancel, isPvE = false }: CharacterSetupModalProps) {
   const [editableCharacter, setEditableCharacter] = useState<CharacterStats>(character);
+  const [enemyReserveLevel, setEnemyReserveLevel] = useState<ReserveLevel>('Неофит');
   const [isOpen, setIsOpen] = useState(true);
 
   const handleOpenChange = (open: boolean) => {
@@ -31,7 +36,7 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
         ...editableCharacter,
         isSetupComplete: true 
     };
-    onSave(finalCharacter);
+    onSave(finalCharacter, isPvE ? enemyReserveLevel : undefined);
     setIsOpen(false);
   };
   
@@ -51,6 +56,22 @@ export default function CharacterSetupModal({ character, onSave, onCancel }: Cha
                     character={editableCharacter}
                     onCharacterChange={setEditableCharacter}
                 />
+                {isPvE && (
+                    <div className="mt-6 pt-4 border-t">
+                         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><ShieldQuestion/>Настройка врага</h3>
+                         <div className="grid w-full max-w-sm items-center gap-1.5">
+                            <Label>Резерв врага (Сложность)</Label>
+                            <Select value={enemyReserveLevel} onValueChange={(v: ReserveLevel) => setEnemyReserveLevel(v)}>
+                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                <SelectContent>
+                                    {Object.keys(RESERVE_LEVELS).map(level => (
+                                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                         </div>
+                    </div>
+                )}
             </div>
             <DialogFooter className="pt-4 border-t shrink-0">
                  <DialogClose asChild>

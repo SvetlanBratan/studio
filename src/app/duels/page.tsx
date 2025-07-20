@@ -10,16 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dices, LogIn, LogOut, Swords, User as UserIcon, Eye, ShieldQuestion } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RESERVE_LEVELS } from '@/lib/rules';
-import type { ReserveLevel } from '@/types/duel';
 
 export default function DuelsPage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [joinDuelId, setJoinDuelId] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [pveDifficulty, setPveDifficulty] = useState<ReserveLevel>('Неофит');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -59,7 +55,7 @@ export default function DuelsPage() {
   };
 
   const handleCreateMonsterDuel = () => {
-    router.push(`/duels/monster?reserve=${pveDifficulty}`);
+    router.push(`/duels/monster`);
   };
 
   const handleJoinDuel = (e: React.FormEvent, asSpectator = false) => {
@@ -103,22 +99,10 @@ export default function DuelsPage() {
                         <UserIcon className="mr-2" />
                         Создать пробную дуэль (Соло)
                     </Button>
-                     <div className='flex flex-col sm:flex-row gap-2'>
-                        <Button onClick={handleCreateMonsterDuel} className="w-full" variant="secondary">
-                            <ShieldQuestion className="mr-2" />
-                            Быстрая битва (PvE)
-                        </Button>
-                        <Select value={pveDifficulty} onValueChange={(v: ReserveLevel) => setPveDifficulty(v)}>
-                            <SelectTrigger className="sm:w-[180px]">
-                                <SelectValue placeholder="Сложность"/>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {Object.keys(RESERVE_LEVELS).map(level => (
-                                    <SelectItem key={level} value={level}>{level}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                     </div>
+                    <Button onClick={handleCreateMonsterDuel} className="w-full" variant="secondary">
+                        <ShieldQuestion className="mr-2" />
+                        Быстрая битва (PvE)
+                    </Button>
                      <div className="relative">
                         <div className="absolute inset-0 flex items-center">
                             <span className="w-full border-t" />
