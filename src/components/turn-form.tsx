@@ -258,7 +258,14 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
       }
       
       const racialAbility = racialAbilityName ? playerRaceInfo?.activeAbilities.find(a => a.name === racialAbilityName) : null;
-      let omCost = racialAbility?.cost?.om ?? RULES.RITUAL_COSTS[type.replace('_spell', '') as keyof typeof RULES.RITUAL_COSTS] ?? 0;
+      
+      let omCost = 0;
+      if (type === 'shield') {
+          omCost = RULES.RITUAL_COSTS.medium;
+      } else {
+          omCost = racialAbility?.cost?.om ?? RULES.RITUAL_COSTS[type.replace('_spell', '') as keyof typeof RULES.RITUAL_COSTS] ?? 0;
+      }
+      
       if (type === 'heal_self') omCost = 0; // Dynamic cost
       
       const odCost = getFinalOdCost(racialAbility?.cost?.od ?? RULES.NON_MAGIC_COSTS[type as keyof typeof RULES.NON_MAGIC_COSTS] ?? 0, type as ActionType);
@@ -284,8 +291,11 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
       }
 
       const actionsOfTypeCount = actions.filter(a => a.type === type).length;
-      if (type === 'physical_attack' && actionsOfTypeCount >= 2) {
-          return 'Можно атаковать оружием только дважды за ход';
+      if (type === 'physical_attack' && player.weapon !== 'Лук' && actionsOfTypeCount >= 2) {
+        return 'Можно атаковать этим оружием только дважды за ход';
+      }
+       if (type === 'physical_attack' && player.weapon === 'Лук' && actionsOfTypeCount >= 1) {
+        return 'Это действие уже добавлено';
       }
       if (type !== 'physical_attack' && actionsOfTypeCount >= 1) {
           return 'Это действие уже добавлено';
