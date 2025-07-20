@@ -232,16 +232,17 @@ export default function Labyrinth() {
                 const enemyWasDefeated = updatedEnemies.length < enemiesRef.current.length;
 
                 if (enemyWasDefeated) {
-                    const newScore = savedState.score + 100;
                     enemiesRef.current = updatedEnemies;
-                    setScore(newScore);
+                    setScore(prevScore => prevScore + 100);
 
                     if (enemiesRef.current.length === 0) {
                         alert('Вы зачистили лабиринт! Появляются новые враги.');
                         shouldGenerateNewEnemies = true;
                     }
                 }
-                router.replace('/locations/labyrinth', { scroll: false });
+                const newUrl = window.location.pathname;
+                window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+
             }
         } else {
             setCharacter(initialPlayerStats('labyrinth-player', 'Искатель приключений'));
@@ -249,7 +250,7 @@ export default function Labyrinth() {
         if (shouldGenerateNewEnemies) {
             generateEnemies();
         }
-    }, []); // Run only on mount
+    }, []); 
     
     useEffect(() => {
         if(isSetupComplete) {

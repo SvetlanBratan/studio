@@ -74,12 +74,9 @@ export default function DuelPage() {
   const isMyTurn = useMemo(() => {
     if (!duelData || !userRole) return false;
     if (userRole === 'spectator') return false;
-    
-    // In Solo or PvE (including labyrinth), player1 is always the user.
     if (isLocalSolo || isPvE) {
         return duelData.activePlayerId === 'player1';
     }
-    
     return userRole === duelData.activePlayerId;
   }, [userRole, isLocalSolo, isPvE, duelData]);
 
@@ -1723,13 +1720,13 @@ export default function DuelPage() {
                 player1 = JSON.parse(savedChar);
                 duelStarted = true;
             } else {
-                router.push('/locations/labyrinth');
+                router.push('/duels'); // Should not happen if flow is correct
                 return;
             }
         } else {
              player1 = initialPlayerStats(user.uid, 'Игрок 1');
         }
-
+        
         const player2 = isPvE ? createEnemy(enemyReserve ?? undefined) : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
         
         setLocalDuelState({
@@ -1741,7 +1738,7 @@ export default function DuelPage() {
             winner: null,
             log: [],
             createdAt: new Date(),
-            duelStarted: duelStarted || !isPvE,
+            duelStarted: duelStarted,
             distance: RULES.INITIAL_DISTANCE,
             animationState: { player1: 'idle', player2: 'idle' },
         });
@@ -1889,9 +1886,9 @@ export default function DuelPage() {
 
   const handleVictory = () => {
     if (fromLabyrinth) {
-      const newUrl = `/locations/labyrinth?defeated=${enemyId}`;
-      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-      router.back();
+        const newUrl = `/locations/labyrinth?defeated=${enemyId}`;
+        window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+        router.back();
     } else {
         router.push('/duels');
     }
@@ -1910,7 +1907,6 @@ export default function DuelPage() {
   // RENDER LOGIC
   // =================================================================
 
-  // Stage 1: Loading
   if (duelLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -1919,13 +1915,11 @@ export default function DuelPage() {
     );
   }
 
-  // Stage 2: Auth check
   if (!user) {
     if (!authLoading) router.push('/login');
     return null;
   }
   
-  // Stage 3: Error check
   if (onlineDuelError && !isLocalSolo && !isPvE) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -1938,7 +1932,6 @@ export default function DuelPage() {
     );
   }
 
-  // Stage 4: Data check
   if (!duelData) {
       return (
         <div className="flex items-center justify-center min-h-screen">
@@ -1947,7 +1940,6 @@ export default function DuelPage() {
       );
   }
 
-  // Stage 5: Setup check
   if (!duelData.duelStarted) {
       if ((isLocalSolo || isPvE)) {
           if (isPvE && !fromLabyrinth) {
