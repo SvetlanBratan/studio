@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -2084,11 +2085,18 @@ export default function DuelPage() {
 
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
   const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
-  const isMyTurn = isLocalSolo || (isPvE && userRole === 'player1') || userRole === (duelData.activePlayerId === 'player1' ? 'player1' : 'player2');
+  
+  const isMyTurn = useMemo(() => {
+      if (userRole === 'spectator') return false;
+      if (isLocalSolo || isPvE) {
+          return duelData.activePlayerId === 'player1';
+      }
+      return userRole === duelData.activePlayerId;
+  }, [userRole, isLocalSolo, isPvE, duelData.activePlayerId]);
 
   const turnStatusText = () => {
     if (isLocalSolo) return "Ваш ход";
-    if (isPvE) return activePlayer.id === user?.uid ? "Ваш ход" : `Ход противника: ${activePlayer.name}`;
+    if (isPvE) return isMyTurn ? "Ваш ход" : `Ход противника: ${activePlayer.name}`;
     if (userRole === 'spectator') return `Ход игрока ${activePlayer.name}`;
     if (isMyTurn) return "Ваш ход";
     return `Ход оппонента: ${activePlayer.name}`;
@@ -2224,7 +2232,7 @@ export default function DuelPage() {
                 </div>
 
 
-                {isMyTurn && userRole !== 'spectator' && (!isPvE || activePlayer.id === user?.uid) ? (
+                {isMyTurn ? (
                     <TurnForm
                         player={activePlayer}
                         opponent={currentOpponent}
