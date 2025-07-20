@@ -205,35 +205,51 @@ export default function Labyrinth() {
         draw();
     }, [router, saveState, draw]);
 
+    // This effect runs once on component mount to initialize the game.
     useEffect(() => {
-        const defeatedEnemyId = searchParams.get('defeated');
         const savedStateJson = sessionStorage.getItem('labyrinthState');
-
         if (savedStateJson) {
             const savedState = JSON.parse(savedStateJson);
-            if (defeatedEnemyId) {
-                savedState.enemies = savedState.enemies.filter((e: Enemy) => e.id !== defeatedEnemyId);
-                savedState.score += 100;
-                
-                const newUrl = window.location.pathname;
-                window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-            }
             playerPosRef.current = savedState.playerPos;
             enemiesRef.current = savedState.enemies;
             setScore(savedState.score);
             setCharacter(savedState.character);
             setIsSetupComplete(true);
-            sessionStorage.setItem('labyrinthState', JSON.stringify(savedState));
         } else {
             setCharacter(initialPlayerStats('labyrinth-player', 'Искатель приключений'));
         }
-    }, [searchParams]);
+    }, []);
 
+    // This effect handles returning from a duel.
     useEffect(() => {
-        if (isSetupComplete) {
-            draw();
+        const defeatedEnemyId = searchParams.get('defeated');
+
+        if (defeatedEnemyId) {
+            const savedStateJson = sessionStorage.getItem('labyrinthState');
+            if (savedStateJson) {
+                const savedState = JSON.parse(savedStateJson);
+                
+                savedState.enemies = savedState.enemies.filter((e: Enemy) => e.id !== defeatedEnemyId);
+                savedState.score += 100;
+                
+                // Update refs and state
+                enemiesRef.current = savedState.enemies;
+                playerPosRef.current = savedState.playerPos;
+                setCharacter(savedState.character);
+                setScore(savedState.score);
+                
+                // Save the updated state back to sessionStorage
+                sessionStorage.setItem('labyrinthState', JSON.stringify(savedState));
+
+                // Clean up URL
+                const newUrl = window.location.pathname;
+                window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+                
+                // Redraw canvas
+                draw();
+            }
         }
-    }, [isSetupComplete, draw]);
+    }, [searchParams, draw]);
 
 
     const movePlayer = useCallback((dx: number, dy: number) => {
@@ -286,9 +302,11 @@ export default function Labyrinth() {
             }
             requestAnimationFrame(gameLoop);
         };
+        
+        draw(); // Initial draw when setup is complete
         const frameId = requestAnimationFrame(gameLoop);
         return () => cancelAnimationFrame(frameId);
-    }, [isSetupComplete, moveEnemies]);
+    }, [isSetupComplete, moveEnemies, draw]);
     
     const handleCharacterSave = (char: CharacterStats) => {
         setCharacter(char);
@@ -305,7 +323,7 @@ export default function Labyrinth() {
     }
     
     if (!character) {
-        return <div>Загрузка...</div>;
+        return <div className="flex items-center justify-center min-h-screen"><div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div></div>;
     }
     
     if (!isSetupComplete) {
