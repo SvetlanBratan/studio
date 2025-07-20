@@ -88,23 +88,65 @@ export default function DuelPage() {
     useEffect(() => {
         if (isPvE && duelData && duelData.duelStarted && duelData.activePlayerId === 'player2' && !duelData.winner && duelData.player2) {
             const enemy = duelData.player2;
+            const player = duelData.player1;
+            const distance = duelData.distance;
             const weapon = WEAPONS[enemy.weapon];
-            
-            let enemyAction: Action;
 
-            if (duelData.distance <= weapon.range) {
-                // Attack if in range
+            const spellRange = RULES.SPELL_RANGES[enemy.reserve];
+            const hasMagic = enemy.elementalKnowledge.length > 0;
+            const canUseMagic = hasMagic && distance <= spellRange;
+
+            let enemyAction: Action | null = null;
+
+            // Priority: Magic > Weapon > Move
+            if (canUseMagic) {
+                const spells = [
+                    { type: 'strong_spell', cost: RULES.RITUAL_COSTS.strong, cooldown: enemy.cooldowns.strongSpell },
+                    { type: 'medium_spell', cost: RULES.RITUAL_COSTS.medium, cooldown: 0 }, // no cooldown
+                    { type: 'small_spell', cost: RULES.RITUAL_COSTS.small, cooldown: 0 }, // no cooldown
+                ] as const;
+                
+                for (const spell of spells) {
+                    if (enemy.om >= spell.cost && spell.cooldown <= 0) {
+                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
+                        enemyAction = { type: spell.type, payload: { element: randomElement } };
+                        break; 
+                    }
+                }
+            }
+            
+            if (!enemyAction && distance <= weapon.range) {
+                // If no magic action was chosen, try to attack with weapon
                 enemyAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
-            } else {
-                // Move closer if out of range
-                const distanceToClose = duelData.distance - weapon.range;
-                enemyAction = { type: 'move', payload: { distance: -distanceToClose } };
+            }
+
+            if (!enemyAction) {
+                // If still no action, move closer
+                let distanceToClose = 0;
+                if (hasMagic && weapon.range > spellRange) {
+                    // if weapon range is bigger than spell range, but cant use magic, move to weapon range
+                    distanceToClose = distance - weapon.range;
+                } else {
+                    // Prioritize getting into spell range
+                    distanceToClose = distance - spellRange;
+                }
+
+                if (distanceToClose < 0) distanceToClose = 0; // Don't move if already in range
+
+                if (distanceToClose > 0) {
+                   enemyAction = { type: 'move', payload: { distance: -distanceToClose } };
+                } else {
+                   // Fallback if already in range but can't attack (e.g. not enough OD)
+                   enemyAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
+                }
             }
             
             // Execute turn after a short delay for visual feedback
-            setTimeout(() => {
-                executeTurn([enemyAction]);
-            }, 1000); 
+            if (enemyAction) {
+                setTimeout(() => {
+                    executeTurn([enemyAction!]);
+                }, 1000); 
+            }
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isPvE, duelData?.activePlayerId, duelData?.duelStarted, duelData?.winner]);
@@ -121,8 +163,8 @@ export default function DuelPage() {
 
   useEffect(() => {
     const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
-    if (userRole === 'spectator' && duelData && !duelData.player2 && shouldJoin && !isLocalSolo && !isPvE) {
-      joinDuel(duelId, user!.uid, "Игрок 2");
+    if (userRole === 'spectator' && duelData && !duelData.player2 && shouldJoin && !isLocalSolo && !isPvE && user) {
+      joinDuel(duelId, user.uid, "Игрок 2");
     }
   }, [userRole, duelData, duelId, user, isLocalSolo, isPvE]);
 

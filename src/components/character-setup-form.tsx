@@ -100,7 +100,7 @@ export default function CharacterSetupForm({ character, onCharacterChange }: Cha
                     <Select value={character.race} onValueChange={(v) => handleSelectChange('race', v)}>
                         <SelectTrigger><SelectValue placeholder="Раса" /></SelectTrigger>
                         <SelectContent>
-                            {RACES.map(r => <SelectItem key={r.name} value={r.name}>{r.name}</SelectItem>)}
+                            {RACES.filter(r => r.name !== 'Монстр').map(r => <SelectItem key={r.name} value={r.name}>{r.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
