@@ -99,7 +99,7 @@ export default function Labyrinth() {
         if (!character) return;
         // Simplified pixel character drawing for the map
         const playerX = playerPosRef.current.x * CELL_SIZE;
-        const playerY = playerPosRef.current.y * CELL_SIZE;
+        const playerY = player.y * CELL_SIZE;
         const pixel = 2; // scale factor
 
         const drawRect = (color: string, rectX: number, rectY: number, w: number, h: number) => {
@@ -157,6 +157,8 @@ export default function Labyrinth() {
         const defeatedEnemyId = searchParams.get('defeated');
         const savedState = sessionStorage.getItem('labyrinthState');
 
+        let shouldGenerateNewEnemies = false;
+
         if (savedState) {
             const { playerPos, enemies, score: savedScore, character: savedChar } = JSON.parse(savedState);
             playerPosRef.current = playerPos;
@@ -168,13 +170,18 @@ export default function Labyrinth() {
             if (defeatedEnemyId) {
                 enemiesRef.current = enemiesRef.current.filter(e => e.id !== defeatedEnemyId);
                 setScore(prev => prev + 100);
+                if (enemiesRef.current.length === 0) {
+                    shouldGenerateNewEnemies = true;
+                }
                 router.replace('/locations/labyrinth', { scroll: false });
             }
         } else {
-            // First time entry, requires setup
             setCharacter(initialPlayerStats('labyrinth-player', 'Искатель приключений'));
         }
-    }, [searchParams, router]);
+        if (shouldGenerateNewEnemies) {
+            generateEnemies();
+        }
+    }, [searchParams, router, generateEnemies]);
     
     useEffect(() => {
         if(isSetupComplete) {
@@ -261,4 +268,3 @@ export default function Labyrinth() {
         </div>
     );
 }
-

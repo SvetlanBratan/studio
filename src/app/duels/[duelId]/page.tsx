@@ -61,12 +61,15 @@ export default function DuelPage() {
   useEffect(() => {
     if ((isLocalSolo || isPvE) && !localDuelState && user) {
         let player1;
+        let duelStarted = false;
+
         if (fromLabyrinth) {
             const savedChar = sessionStorage.getItem('labyrinthCharacter');
             if (savedChar) {
                 player1 = JSON.parse(savedChar);
+                // When coming from labyrinth, the duel starts immediately
+                duelStarted = true;
             } else {
-                // This case should ideally not be hit if labyrinth flow is correct
                 router.push('/locations/labyrinth');
                 return;
             }
@@ -80,11 +83,11 @@ export default function DuelPage() {
             player2,
             turnHistory: [],
             currentTurn: 1,
-            activePlayerId: 'player1', // Default, will be randomized on start
+            activePlayerId: 'player1',
             winner: null,
             log: [],
             createdAt: new Date(),
-            duelStarted: false,
+            duelStarted: duelStarted,
             distance: RULES.INITIAL_DISTANCE,
             animationState: { player1: 'idle', player2: 'idle' },
         });
