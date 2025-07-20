@@ -60,7 +60,20 @@ export default function DuelPage() {
 
   useEffect(() => {
     if ((isLocalSolo || isPvE) && !localDuelState && user) {
-        const player1 = initialPlayerStats(user.uid, 'Игрок 1');
+        let player1;
+        if (fromLabyrinth) {
+            const savedChar = sessionStorage.getItem('labyrinthCharacter');
+            if (savedChar) {
+                player1 = JSON.parse(savedChar);
+            } else {
+                // This case should ideally not be hit if labyrinth flow is correct
+                router.push('/locations/labyrinth');
+                return;
+            }
+        } else {
+             player1 = initialPlayerStats(user.uid, 'Игрок 1');
+        }
+
         const player2 = isPvE ? createEnemy() : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
         setLocalDuelState({
             player1,
@@ -76,7 +89,7 @@ export default function DuelPage() {
             animationState: { player1: 'idle', player2: 'idle' },
         });
     }
-  }, [isLocalSolo, isPvE, localDuelState, user]);
+  }, [isLocalSolo, isPvE, localDuelState, user, fromLabyrinth, router]);
   
     useEffect(() => {
         if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0 && !duelData.log.some(l => l.includes('Первый ход'))) {
@@ -217,6 +230,11 @@ export default function DuelPage() {
     let newState: Partial<DuelState> = {
         [key]: { ...updatedCharacter, isSetupComplete: true }
     };
+    
+    if (fromLabyrinth && isPlayer1) {
+        sessionStorage.setItem('labyrinthCharacter', JSON.stringify(newState.player1));
+    }
+
 
     const updatedFullState = { ...duelData, ...newState };
 
@@ -1875,6 +1893,15 @@ export default function DuelPage() {
         let winner = null;
         if (activePlayer.oz <= 0) winner = opponentPlayer.name;
         if (opponentPlayer.oz <= 0) winner = activePlayer.name;
+
+        if (winner && fromLabyrinth && activePlayer.name === winner) {
+            const savedChar = sessionStorage.getItem('labyrinthCharacter');
+            if (savedChar) {
+                const updatedChar = { ...JSON.parse(savedChar), oz: activePlayer.oz };
+                sessionStorage.setItem('labyrinthCharacter', JSON.stringify(updatedChar));
+            }
+        }
+
 
         const newTurn: Turn = {
             turnNumber: duelData.currentTurn,
