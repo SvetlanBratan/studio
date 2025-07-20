@@ -1895,12 +1895,13 @@ export default function DuelPage() {
   };
 
   const handleLeave = () => {
-      router.push('/duels');
-      if (fromLabyrinth) {
-          sessionStorage.removeItem('labyrinthState');
-          sessionStorage.removeItem('labyrinthCharacter');
-      }
-  }
+    if (fromLabyrinth) {
+        sessionStorage.removeItem('labyrinthState');
+        sessionStorage.removeItem('labyrinthCharacter');
+    }
+    // Hard navigation to prevent any React state from triggering a new duel
+    window.location.assign('/duels');
+  };
 
 
   // =================================================================
