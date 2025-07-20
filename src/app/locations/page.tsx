@@ -33,7 +33,7 @@ export default function LocationsPage() {
                         alt="Forest Labyrinth"
                         layout="fill"
                         objectFit="cover"
-                        data-ai-hint="forest path"
+                        data-ai-hint="mystical forest"
                     />
                 </div>
                 <CardHeader>
