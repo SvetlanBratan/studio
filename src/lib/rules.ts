@@ -60,8 +60,24 @@ export const ITEMS = {
   'Легендарный артефакт': { name: 'Легендарный артефакт', type: 'damage', amount: 45 },
 } as const;
 
+const MONSTER_PASSIVES = [
+    'Шерсть стужи (-10 урона от атак стихии льда)',
+    'Панцирь (-10 урона от физических атак)',
+    'Жало (враг теряет 5 ОЗ после атаки)',
+    'Раскалённая кожа (-10 урона от огненных атак)',
+    'Слизь (-5 урона от физической атаки)',
+    'Регенерация (+5 ОЗ каждый ход)',
+    'Удушение (враг теряет 5 ОМ при атаке вблизи)',
+    'Хладнокровие (-5 урона если ОЗ > 150)',
+    'Громовая броня (-10 урона от звуковых атак)',
+    'Удар панциря (+5 урона при контратаке)',
+    'Толстая шкура (-10 урона от первой атаки)',
+    'Разгон (+5 урона если не атаковал)',
+];
+
 
 export const RACES: Race[] = [
+    { name: 'Монстр', passiveBonuses: [], activeAbilities: [] },
     { name: 'Алахоры', passiveBonuses: ['Беззвучие (противник теряет 5 ОМ)', 'Гибкость (-5 урона от физических атак)'], activeAbilities: [{ name: 'Железный ёж', description: 'Поглощает урон от след. заклинания и дает физ. щит.', cost: {om: 30} }] },
     { name: 'Алариены', passiveBonuses: ['Меткость— + 10 к урону'], activeAbilities: [{ name: 'Дождь из осколков', description: 'Наносит 40 урона.', cost: {om: 30} }] },
     { name: 'Амфибии', passiveBonuses: ['Аморфное тело (-10 урон)', 'Глубинная стойкость (+5 ОЗ/ход)'], activeAbilities: [{ name: 'Водяной захват', description: 'Лишает врага одного действия.', cost: {om: 30} }] },
@@ -114,7 +130,6 @@ export const RACES: Race[] = [
     { name: 'Оборотни', passiveBonuses: ['Инстинкт (-10 от этого урона)', 'Взрыв ярости (+10 урона по врагу в случае, если ОЗ ниже 100)'], activeAbilities: [{ name: 'Полный Зверь', description: 'наносит 50 урона.', cost: { om: 30 } }] },
     { name: 'Огненные крыланы (Фениксы)', passiveBonuses: ['Теплокровность (+50 иммунитет к огню)', 'Перерождение (+50 ОЗ при падении ниже 30 ОЗ)'], activeAbilities: [{ name: 'Крылья пламени', description: 'наносят 60 урона огнём.', cost: { om: 40 } }] },
     { name: 'Оприты', passiveBonuses: ['Электроустойчивость (-50 урона от атак стихии молний)'], activeAbilities: [{ name: 'Электрический разряд', description: 'наносит 50 урона стихией молний и врагу, и себе.', cost: { om: 30 } }] },
-    { name: 'Орк', passiveBonuses: ['Расовая ярость (+10 к урону)'], activeAbilities: [] },
     { name: 'Пересмешники', passiveBonuses: ['Смена облика (-10 урона от первой атаки противника)'], activeAbilities: [{ name: 'Кража лица', description: 'лишает врага одного действия.', cost: { om: 30 } }] },
     { name: 'Полукоты', passiveBonuses: ['Девять жизней (+50 ОЗ при падении ниже 10 ОЗ)', 'Уверенность в прыжке (+10 к физическим атакам)'], activeAbilities: [{ name: 'Когти судьбы', description: 'наносит 40 урона.', cost: { om: 30 } }] },
     { name: 'Полузаи', passiveBonuses: ['Усиленный слух (-5 урона от звуковых атак)', 'Воздушное ускорение (-5 ОД на действия, связанные с перемещением)'], activeAbilities: [{ name: 'Вихрь эфира', description: 'накладывает эффект удержания.', cost: { om: 30 } }] },
@@ -369,8 +384,8 @@ export const initialPlayerStats = (id: string, name: string): CharacterStats => 
 };
 
 export const createEnemy = (): CharacterStats => {
-    const race = RACES.find(r => r.name === 'Человек');
-    if (!race) throw new Error("Could not find 'Человек' race.");
+    const race = RACES.find(r => r.name === 'Монстр');
+    if (!race) throw new Error("Could not find 'Монстр' race.");
 
     const reserveLevels = Object.keys(RESERVE_LEVELS).filter(level => level !== 'Божественный сын') as ReserveLevel[];
     const randomReserve = reserveLevels[Math.floor(Math.random() * reserveLevels.length)];
@@ -387,7 +402,12 @@ export const createEnemy = (): CharacterStats => {
     const randomArmor = armorTypes[Math.floor(Math.random() * armorTypes.length)];
 
     const maxOm = getOmFromReserve(randomReserve);
-    let bonuses = [...race.passiveBonuses];
+    
+    // Select 2-3 random passives for the monster
+    const shuffledPassives = MONSTER_PASSIVES.sort(() => 0.5 - Math.random());
+    const passivesCount = Math.floor(Math.random() * 2) + 2; // 2 or 3
+    let bonuses = shuffledPassives.slice(0, passivesCount);
+
 
     return {
         id: 'ENEMY_ID',

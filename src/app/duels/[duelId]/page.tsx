@@ -112,8 +112,7 @@ export default function DuelPage() {
 
   const userRole: 'player1' | 'player2' | 'spectator' | null = React.useMemo(() => {
     if (!user || !duelData) return null;
-    if (isLocalSolo) return 'player1';
-    if (isPvE) return user.uid === duelData.player1.id ? 'player1' : 'spectator';
+    if (isLocalSolo || isPvE) return 'player1';
     if (user.uid === duelData.player1.id) return 'player1';
     if (duelData.player2 && user.uid === duelData.player2.id) return 'player2';
     return 'spectator';
@@ -187,12 +186,13 @@ export default function DuelPage() {
         
         // Reset one-turn flags at the beginning of the turn
         activePlayer.bonuses = activePlayer.bonuses.filter(b => b !== 'Облик желания (-5 урон)');
-        activePlayer.statuses = activePlayer.statuses?.filter(s => s !== 'Был атакован в прошлом ходу') || [];
+        activePlayer.statuses = activePlayer.statuses?.filter(s => s !== 'Был атакован в прошлом ходу' && s !== 'Не атаковал в прошлом ходу') || [];
         activePlayer.isDodging = false;
         
         // Mark if the player was attacked in the previous turn
         const lastTurn = duelData.turnHistory[duelData.turnHistory.length - 1];
         let wasAttackedLastTurn = false;
+        let didNotAttackLastTurn = false;
         let damageTakenLastTurn = 0;
         
         if (lastTurn && lastTurn.playerId !== activePlayer.id) {
@@ -218,6 +218,11 @@ export default function DuelPage() {
                     activePlayer.om = Math.min(activePlayer.maxOm, activePlayer.om + 10);
                     turnLog.push(`Пассивная способность (Нарраторы): ${activePlayer.name} получил сильный урон и восстанавливает 10 ОМ.`);
                 }
+            } else {
+                 activePlayer.statuses = activePlayer.statuses || [];
+                 activePlayer.statuses.push('Не атаковал в прошлом ходу');
+                 turnLog.push(`Статус: ${activePlayer.name} не атаковал в прошлом ходу.`);
+                 didNotAttackLastTurn = true;
             }
         }
         
@@ -268,6 +273,11 @@ export default function DuelPage() {
                  const healAmount = 5;
                  activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + healAmount);
                  turnLog.push(`Пассивная способность (Вампиры): ${activePlayer.name} восстанавливает ${healAmount} ОЗ.`);
+            }
+            if (bonus === 'Регенерация (+5 ОЗ каждый ход)') {
+                const healAmount = 5;
+                activePlayer.oz = Math.min(activePlayer.maxOz, activePlayer.oz + healAmount);
+                turnLog.push(`Пассивная способность (Монстр): ${activePlayer.name} восстанавливает ${healAmount} ОЗ.`);
             }
             if(bonus === 'Сила очага (+10 ОЗ/ход без урона)' && !wasAttackedLastTurn) {
                 const healAmount = 10;
@@ -641,6 +651,18 @@ export default function DuelPage() {
                     turnLog.push(`Пассивная способность (Джинны): Иллюзии плоти снижают урон на 10.`);
                  }
             }
+             if (target.bonuses.includes('Хладнокровие (-5 урона если ОЗ > 150)') && target.oz > 150) {
+                 finalDamage = Math.max(0, finalDamage - 5);
+                 turnLog.push(`Пассивная способность (Монстр): Хладнокровие снижает урон на 5.`);
+             }
+             if (target.bonuses.includes('Толстая шкура (-10 урона от первой атаки)')) {
+                 const firstHitIndex = target.bonuses.indexOf('Толстая шкура (-10 урона от первой атаки)');
+                 if (firstHitIndex > -1) {
+                     finalDamage = Math.max(0, finalDamage - 10);
+                     target.bonuses.splice(firstHitIndex, 1);
+                     turnLog.push(`Пассивная способность (Монстр): Толстая шкура снижает урон от первой атаки на 10.`);
+                 }
+             }
 
             // --- Physical/Spell Specific ---
             if(isPhysical) {
@@ -663,6 +685,14 @@ export default function DuelPage() {
                  if (attacker.race === 'Энергетические вампиры' && attacker.bonuses.includes('Аура желания — враг теряет 10 ОМ при физической атаке.')) {
                     target.om = Math.max(0, target.om - 10);
                     turnLog.push(`Пассивная способность (Энергетические вампиры): ${target.name} теряет 10 ОМ.`);
+                 }
+                 if (target.bonuses.includes('Панцирь (-10 урона от физических атак)')) {
+                     finalDamage = Math.max(0, finalDamage - 10);
+                     turnLog.push(`Пассивная способность (Монстр): Панцирь снижает физ. урон на 10.`);
+                 }
+                 if (target.bonuses.includes('Слизь (-5 урона от физической атаки)')) {
+                     finalDamage = Math.max(0, finalDamage - 5);
+                     turnLog.push(`Пассивная способность (Монстр): Слизь снижает физ. урон на 5.`);
                  }
             }
             if(isSpell) {
@@ -700,6 +730,18 @@ export default function DuelPage() {
                 finalDamage = Math.max(0, finalDamage - 10);
                 turnLog.push(`Пассивная способность (Антропоморфы): урон от звука снижен на 10.`);
             }
+             if (isSpell && spellElement === 'Лёд' && target.bonuses.includes('Шерсть стужи (-10 урона от атак стихии льда)')) {
+                 finalDamage = Math.max(0, finalDamage - 10);
+                 turnLog.push(`Пассивная способность (Монстр): Шерсть стужи снижает урон от льда на 10.`);
+             }
+             if (isSpell && spellElement === 'Огонь' && target.bonuses.includes('Раскалённая кожа (-10 урона от огненных атак)')) {
+                 finalDamage = Math.max(0, finalDamage - 10);
+                 turnLog.push(`Пассивная способность (Монстр): Раскалённая кожа снижает урон от огня на 10.`);
+             }
+             if (isSpell && spellElement === 'Звук' && target.bonuses.includes('Громовая броня (-10 урона от звуковых атак)')) {
+                 finalDamage = Math.max(0, finalDamage - 10);
+                 turnLog.push(`Пассивная способность (Монстр): Громовая броня снижает урон от звука на 10.`);
+             }
 
             if (isSpell) {
                 if (spellElement === 'Вода') {
@@ -824,6 +866,18 @@ export default function DuelPage() {
                     applyEffect(target, 'Ослабление (1)');
                     turnLog.push(`Пассивная способность (Миканиды) "Споры" ослабляет следующую атаку ${target.name}.`);
                 }
+                 if (attacker.bonuses.includes('Жало (враг теряет 5 ОЗ после атаки)')) {
+                     const stingIndex = attacker.bonuses.indexOf('Жало (враг теряет 5 ОЗ после атаки)');
+                     if (stingIndex > -1) {
+                         target.oz -= 5;
+                         turnLog.push(`Пассивная способность (Монстр): Жало наносит 5 урона ${target.name}.`);
+                         attacker.bonuses.splice(stingIndex, 1); // one time effect
+                     }
+                 }
+                 if (isPhysical && newDistance < 5 && attacker.bonuses.includes('Удушение (враг теряет 5 ОМ при атаке вблизи)')) {
+                     target.om = Math.max(0, target.om - 5);
+                     turnLog.push(`Пассивная способность (Монстр): Удушение заставляет ${target.name} потерять 5 ОМ.`);
+                 }
             }
             
             if (target.oz < 30 && target.bonuses.includes('Перерождение (+50 ОЗ при падении ниже 30 ОЗ)')) {
@@ -987,6 +1041,14 @@ export default function DuelPage() {
                     damage += 10;
                     turnLog.push(`Пассивная способность (Белояры): "Воинская слава" увеличивает урон на 10.`);
                 }
+                 if (activePlayer.bonuses.includes('Удар панциря (+5 урона при контратаке)') && wasAttackedLastTurn) {
+                     damage += 5;
+                     turnLog.push(`Пассивная способность (Монстр): "Удар панциря" увеличивает урон на 5.`);
+                 }
+                 if (activePlayer.bonuses.includes('Разгон (+5 урона если не атаковал)') && didNotAttackLastTurn) {
+                     damage += 5;
+                     turnLog.push(`Пассивная способность (Монстр): "Разгон" увеличивает урон на 5.`);
+                 }
                 if (activePlayer.bonuses.includes('Рёв предков (+5 урона по врагу, если персонаж был атакован в прошлом ходу)') && wasAttackedLastTurn) {
                     damage += 5;
                     turnLog.push(`Пассивная способность (Вулгары): "Рёв предков" увеличивает урон на 5.`);
