@@ -8,6 +8,7 @@ import type { Shield, WeaponType, AnimationState } from '@/types/duel';
 interface PixelCharacterProps {
   pose?: AnimationState;
   weapon?: WeaponType;
+  weaponType?: WeaponType; // For projectiles
   isFlipped?: boolean;
   shield?: Shield;
   isActive?: boolean;
@@ -43,6 +44,7 @@ const PHYSICAL_SHIELD_COLOR = 'rgba(200, 200, 200, 0.5)';
 export default function PixelCharacter({
   pose = 'idle',
   weapon = 'Кулаки',
+  weaponType,
   isFlipped = false,
   shield,
   isActive = false,
@@ -179,9 +181,8 @@ export default function PixelCharacter({
     )
   }
   
-  const renderSpellProjectile = () => {
-    if (pose !== 'casting' || !spellElement) return null;
-    const color = ELEMENT_COLORS[spellElement] || PHYSICAL_SHIELD_COLOR;
+  const renderProjectile = () => {
+    if (pose !== 'casting') return null;
 
     const projectileWrapperStyle: React.CSSProperties = {
       position: 'absolute',
@@ -189,18 +190,53 @@ export default function PixelCharacter({
       left: `calc(10 * ${pixelSize})`,
       width: `calc(20 * ${pixelSize})`,
       animation: 'fly-right 1s ease-out forwards',
+    };
+
+    // Spell projectile
+    if (spellElement) {
+      const color = ELEMENT_COLORS[spellElement] || PHYSICAL_SHIELD_COLOR;
+      return (
+        <div style={projectileWrapperStyle}>
+          <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+              {createPixel(0,0, color, 2, 2)}
+              {createPixel(-1,1, color, 1, 1)}
+              {createPixel(2,1, color, 1, 1)}
+          </div>
+        </div>
+      );
     }
 
-    return (
-      <div style={projectileWrapperStyle}>
-        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-            {/* Orb */}
-            {createPixel(0,0, color, 2, 2)}
-            {createPixel(-1,1, color, 1, 1)}
-            {createPixel(2,1, color, 1, 1)}
-        </div>
-      </div>
-    );
+    // Physical weapon projectile
+    if (weaponType) {
+       switch(weaponType) {
+         case 'Сюрикены':
+           return (
+              <div style={projectileWrapperStyle}>
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  {createPixel(0,1,'#a9a9a9', 1, 1)}
+                  {createPixel(1,0,'#a9a9a9', 1, 1)}
+                  {createPixel(1,2,'#a9a9a9', 1, 1)}
+                  {createPixel(2,1,'#a9a9a9', 1, 1)}
+                  {createPixel(1,1,'#696969', 1, 1)}
+                </div>
+              </div>
+            );
+         case 'Кинжал':
+         case 'Лук': // Simplified arrow
+            return (
+              <div style={projectileWrapperStyle}>
+                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                  {createPixel(1,0,'#c0c0c0', 1, 1)}
+                  {createPixel(1,1,'#8B4513', 2, 1)}
+                </div>
+              </div>
+            )
+         default:
+            return null;
+       }
+    }
+
+    return null;
   }
 
   const renderHealthBar = () => {
@@ -302,13 +338,14 @@ export default function PixelCharacter({
             {renderHealthBar()}
             {renderPose()}
             <div style={shieldStyles} />
-            {renderSpellProjectile()}
+            {renderProjectile()}
             {renderStatusEffects()}
           </div>
       </div>
     </div>
   );
 }
+
 
 
 

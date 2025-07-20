@@ -127,7 +127,7 @@ export default function DuelPage() {
                 if (hasMagic && distance > spellRange) {
                     // if has magic, prioritize getting into spell range
                     distanceToClose = distance - spellRange;
-                } else if (!hasMagic && distance > weapon.range) {
+                } else if (distance > weapon.range) {
                     // if no magic, prioritize getting into weapon range
                      distanceToClose = distance - weapon.range;
                 }
@@ -957,6 +957,7 @@ export default function DuelPage() {
         actions.forEach(action => {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
             const isCastingAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'prayer'].includes(action.type);
+            const isRangedWeapon = ['Кинжал', 'Сюрикены', 'Лук'].includes(activePlayer.weapon);
 
             const activePlayerId = duelData.activePlayerId;
             if (isCastingAction) {
@@ -974,7 +975,11 @@ export default function DuelPage() {
                 };
             }
             if (action.type === 'physical_attack') {
-                animationState = { ...animationState, [activePlayerId]: 'attack' };
+                 if (isRangedWeapon) {
+                     animationState = { ...animationState, [activePlayerId]: 'casting', weaponType: activePlayer.weapon };
+                 } else {
+                     animationState = { ...animationState, [activePlayerId]: 'attack' };
+                 }
             }
              if (action.type === 'heal_self') {
                 animationState = { ...animationState, [activePlayerId]: 'heal' };
@@ -2127,6 +2132,7 @@ export default function DuelPage() {
                       shield={duelData.player1.shield}
                       isActive={duelData.activePlayerId === 'player1'}
                       spellElement={duelData.animationState?.spellElement}
+                      weaponType={duelData.animationState?.weaponType}
                       penalties={duelData.player1.penalties}
                       oz={duelData.player1.oz}
                       maxOz={duelData.player1.maxOz}
@@ -2139,6 +2145,7 @@ export default function DuelPage() {
                       shield={duelData.player2.shield}
                       isActive={duelData.activePlayerId === 'player2'}
                       spellElement={duelData.animationState?.spellElement}
+                      weaponType={duelData.animationState?.weaponType}
                       penalties={duelData.player2.penalties}
                       oz={duelData.player2.oz}
                       maxOz={duelData.player2.maxOz}
