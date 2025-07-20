@@ -1110,8 +1110,8 @@ export default function DuelPage() {
                 }
                 case 'shield': {
                     const omCost = RULES.RITUAL_COSTS.medium;
-                    if (player.om < omCost) {
-                      turnLog.push(`Действие "Создать щит" не удалось: недостаточно ОМ (требуется ${omCost}, есть ${player.om}).`);
+                    if (activePlayer.om < omCost) {
+                      turnLog.push(`Действие "Создать щит" не удалось: недостаточно ОМ (требуется ${omCost}, есть ${activePlayer.om}).`);
                       return;
                     }
                     activePlayer.om -= omCost;
@@ -1889,7 +1889,9 @@ export default function DuelPage() {
 
   const handleVictory = () => {
     if (fromLabyrinth) {
-        router.push(`/locations/labyrinth?defeated=${enemyId}`);
+      const newUrl = `/locations/labyrinth?defeated=${enemyId}`;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+      router.back();
     } else {
         router.push('/duels');
     }
@@ -1908,6 +1910,7 @@ export default function DuelPage() {
   // RENDER LOGIC
   // =================================================================
 
+  // Stage 1: Loading
   if (duelLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -1916,11 +1919,13 @@ export default function DuelPage() {
     );
   }
 
+  // Stage 2: Auth check
   if (!user) {
     if (!authLoading) router.push('/login');
     return null;
   }
   
+  // Stage 3: Error check
   if (onlineDuelError && !isLocalSolo && !isPvE) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -1933,6 +1938,7 @@ export default function DuelPage() {
     );
   }
 
+  // Stage 4: Data check
   if (!duelData) {
       return (
         <div className="flex items-center justify-center min-h-screen">
@@ -1941,6 +1947,100 @@ export default function DuelPage() {
       );
   }
 
+  // Stage 5: Setup check
+  if (!duelData.duelStarted) {
+      if ((isLocalSolo || isPvE)) {
+          if (isPvE && !fromLabyrinth) {
+              if (!duelData.player1.isSetupComplete) {
+                  return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
+              }
+          } else if(isLocalSolo) {
+              return <SoloSetupForm player1={duelData.player1} player2={duelData.player2!} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
+          }
+      } else { // Online PvP
+          if (userRole === 'spectator') {
+              return (
+                  <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+                      <Card className="w-full max-w-md">
+                          <CardHeader>
+                              <CardTitle className="flex items-center justify-center gap-2">
+                                  <Settings2 className="animate-spin" />
+                                  Ожидание начала дуэли...
+                              </CardTitle>
+                              <CardDescription>
+                                  Игроки настраивают своих персонажей.
+                              </CardDescription>
+                          </CardHeader>
+                      </Card>
+                  </div>
+              );
+          }
+
+          const isPlayer1 = userRole === 'player1';
+          const isPlayer2 = userRole === 'player2';
+
+          if (isPlayer1 && !duelData.player1.isSetupComplete) {
+            return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+          }
+
+          if (isPlayer1 && !duelData.player2) {
+            return (
+              <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+                  <Card className="w-full max-w-md">
+                      <CardHeader>
+                          <CardTitle>Ожидание второго игрока...</CardTitle>
+                          <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                          <div className="flex items-center space-x-2">
+                              <Input value={duelId} readOnly className="flex-1" />
+                              <Button onClick={copyDuelId} size="icon">
+                                  {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
+                              </Button>
+                          </div>
+                          <Button onClick={() => router.push('/duels')} variant="outline">
+                              <ArrowLeft className="mr-2" />
+                              Выбрать другую дуэль
+                          </Button>
+                      </CardContent>
+                  </Card>
+              </div>
+            );
+          }
+          
+          if (isPlayer2 && duelData.player2 && !duelData.player2.isSetupComplete) {
+              return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
+          }
+          
+          if ((isPlayer1 && duelData.player2 && !duelData.player2.isSetupComplete) || (isPlayer2 && !duelData.player1.isSetupComplete)) {
+               return (
+                  <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
+                      <Card className="w-full max-w-md">
+                          <CardHeader>
+                              <CardTitle className="flex items-center justify-center gap-2">
+                                  <Settings2 className="animate-spin" />
+                                  Ожидание оппонента
+                              </CardTitle>
+                              <CardDescription>
+                                  Ваш оппонент еще настраивает своего персонажа.
+                              </CardDescription>
+                          </CardHeader>
+                      </Card>
+                  </div>
+              );
+          }
+      }
+  }
+
+
+  if (!duelData.duelStarted) {
+      return <div className="flex items-center justify-center min-h-screen"><div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div></div>;
+  }
+  
+  if (!duelData.player2) {
+    return <div>Ошибка: Данные второго игрока отсутствуют.</div>
+  }
+  
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
   const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
 
@@ -1971,100 +2071,6 @@ export default function DuelPage() {
       distanceScale = Math.max(minScale, 1 - scaleReduction);
   }
 
-  // --- STAGE LOGIC RENDER ---
-
-  if ((isLocalSolo || isPvE) && !duelData.duelStarted) {
-      if (isPvE && !fromLabyrinth) {
-          if (!duelData.player1.isSetupComplete) {
-              return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
-          }
-      } else if(isLocalSolo) {
-          return <SoloSetupForm player1={duelData.player1} player2={duelData.player2!} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
-      }
-  }
-  
-  if (!isLocalSolo && !isPvE && !duelData.duelStarted) {
-      if (userRole === 'spectator') {
-          return (
-              <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
-                  <Card className="w-full max-w-md">
-                      <CardHeader>
-                          <CardTitle className="flex items-center justify-center gap-2">
-                              <Settings2 className="animate-spin" />
-                              Ожидание начала дуэли...
-                          </CardTitle>
-                          <CardDescription>
-                              Игроки настраивают своих персонажей.
-                          </CardDescription>
-                      </CardHeader>
-                  </Card>
-              </div>
-          );
-      }
-
-      const isPlayer1 = userRole === 'player1';
-      const isPlayer2 = userRole === 'player2';
-
-      if (isPlayer1 && !duelData.player1.isSetupComplete) {
-        return <CharacterSetupModal character={duelData.player1} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
-      }
-
-      if (isPlayer1 && !duelData.player2) {
-        return (
-          <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
-              <Card className="w-full max-w-md">
-                  <CardHeader>
-                      <CardTitle>Ожидание второго игрока...</CardTitle>
-                      <CardDescription>Поделитесь ID дуэли со своим оппонентом.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                      <div className="flex items-center space-x-2">
-                          <Input value={duelId} readOnly className="flex-1" />
-                          <Button onClick={copyDuelId} size="icon">
-                              {copied ? <Check className="h-4 w-4" /> : <ClipboardCopy className="h-4 w-4" />}
-                          </Button>
-                      </div>
-                      <Button onClick={() => router.push('/duels')} variant="outline">
-                          <ArrowLeft className="mr-2" />
-                          Выбрать другую дуэль
-                      </Button>
-                  </CardContent>
-              </Card>
-          </div>
-        );
-      }
-      
-      if (isPlayer2 && duelData.player2 && !duelData.player2.isSetupComplete) {
-          return <CharacterSetupModal character={duelData.player2} onSave={handleCharacterUpdate} onCancel={() => router.push('/duels')} />;
-      }
-      
-      if ((isPlayer1 && duelData.player2 && !duelData.player2.isSetupComplete) || (isPlayer2 && !duelData.player1.isSetupComplete)) {
-           return (
-              <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
-                  <Card className="w-full max-w-md">
-                      <CardHeader>
-                          <CardTitle className="flex items-center justify-center gap-2">
-                              <Settings2 className="animate-spin" />
-                              Ожидание оппонента
-                          </CardTitle>
-                          <CardDescription>
-                              Ваш оппонент еще настраивает своего персонажа.
-                          </CardDescription>
-                      </CardHeader>
-                  </Card>
-              </div>
-          );
-      }
-  }
-
-
-  if (!duelData.duelStarted) {
-      return <div className="flex items-center justify-center min-h-screen"><div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div></div>;
-  }
-  
-  if (!duelData.player2) {
-    return <div>Ошибка: Данные второго игрока отсутствуют.</div>
-  }
   
   // --- MAIN DUEL INTERFACE ---
   return (
@@ -2215,5 +2221,3 @@ export default function DuelPage() {
     </div>
   );
 }
-
-    
