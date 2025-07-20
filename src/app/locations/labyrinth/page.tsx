@@ -20,7 +20,7 @@ export default function LabyrinthPage() {
                             Лесной Лабиринт
                         </h1>
                     </div>
-                    <Button onClick={() => router.push('/locations')} variant="secondary" size="sm">
+                    <Button onClick={() => router.push('/duels')} variant="secondary" size="sm">
                         <ArrowLeft className="mr-2 h-4 w-4" /> Покинуть
                     </Button>
                 </div>

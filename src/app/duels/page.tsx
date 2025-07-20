@@ -95,9 +95,9 @@ export default function DuelsPage() {
                     <CardDescription>Создайте дуэль, войдите в существующую или отправляйтесь в приключение.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Button onClick={() => router.push('/locations')} className="w-full">
+                    <Button onClick={() => router.push('/locations/labyrinth')} className="w-full">
                         <Map className="mr-2" />
-                        Локации (Лабиринт)
+                        Лабиринт
                     </Button>
                     <Button onClick={handleCreateSoloDuel} className="w-full" variant="secondary">
                         <UserIcon className="mr-2" />
