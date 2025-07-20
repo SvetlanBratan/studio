@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -63,7 +64,8 @@ export default function DuelPage() {
 
   const userRole: 'player1' | 'player2' | 'spectator' | null = useMemo(() => {
     if (!user || !duelData) return null;
-    if (isLocalSolo || isPvE) return 'player1';
+    if (isLocalSolo) return 'player1'; // For solo, user controls both, but we can treat them as P1.
+    if (isPvE) return 'player1';
     if (user.uid === duelData.player1.id) return 'player1';
     if (duelData.player2 && user.uid === duelData.player2.id) return 'player2';
     return 'spectator';
@@ -72,7 +74,8 @@ export default function DuelPage() {
   const isMyTurn = useMemo(() => {
     if (!duelData || !userRole) return false;
     if (userRole === 'spectator') return false;
-    if (isLocalSolo || isPvE) {
+    if (isLocalSolo) return true; // In solo mode, it's always the user's turn.
+    if (isPvE) {
         return duelData.activePlayerId === 'player1';
     }
     return userRole === duelData.activePlayerId;
@@ -1901,10 +1904,8 @@ export default function DuelPage() {
   }
 
   if (!duelData.duelStarted) {
-      if (isPvE) {
-          if (!duelData.player1.isSetupComplete) {
-            return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
-          }
+      if (isPvE && !duelData.player1.isSetupComplete) {
+        return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
       } else if (!isLocalSolo) { // Online PvP
           if (userRole === 'spectator') {
               return (
