@@ -1878,10 +1878,10 @@ export default function DuelPage() {
   const maxVisualDistance = 400;
 
   let distanceScale = 1;
-  let distanceGap = duelData.distance * 2;
+  let distanceGap = duelData.distance * 4;
   
   if (duelData.distance > scalingStartDistance) {
-      distanceGap = scalingStartDistance * 2;
+      distanceGap = scalingStartDistance * 4;
       const distancePastThreshold = duelData.distance - scalingStartDistance;
       const scalingRange = maxVisualDistance - scalingStartDistance;
       const scaleReduction = (distancePastThreshold / scalingRange) * (1 - minScale);
@@ -2036,4 +2036,5 @@ export default function DuelPage() {
     
 
     
+
 
