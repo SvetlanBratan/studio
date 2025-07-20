@@ -95,10 +95,11 @@ export default function DuelPage() {
 
   useEffect(() => {
     const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
-    if (!isLocalSolo && user && duelData && !duelData.player2 && user.uid !== duelData.player1.id && shouldJoin) {
-        joinDuel(duelId, user.uid, "Игрок 2");
+    if (userRole === 'spectator' && duelData && !duelData.player2 && shouldJoin) {
+      joinDuel(duelId, user!.uid, "Игрок 2");
     }
-  }, [isLocalSolo, user, duelData, duelId]);
+  }, [userRole, duelData, duelId, user]);
+
 
   const handleUpdateDuelState = useCallback((updatedDuel: Partial<DuelState>) => {
     if (isLocalSolo) {
@@ -331,19 +332,20 @@ export default function DuelPage() {
             turnLog.push(`Пассивная способность (Нимфилус): ОМ на нуле, ${activePlayer.name} теряет 10 ОЗ.`);
         }
         
-        actions.forEach(action => {
+        actions = actions.filter(action => {
             if (action.type === 'remove_effect') {
                 if (activePlayer.penalties.length > 0) {
                     const removablePenalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД'));
                     if (removablePenalties.length > 0) {
-                       const removedEffect = removablePenalties[0];
-                       activePlayer.penalties = activePlayer.penalties.filter(p => p !== removedEffect);
-                       turnLog.push(`${activePlayer.name} использует действие: "Снять эффект" и снимает с себя эффект: "${removedEffect}".`);
+                        const removedEffect = removablePenalties[0];
+                        activePlayer.penalties = activePlayer.penalties.filter(p => p !== removedEffect);
+                        turnLog.push(`${activePlayer.name} использует действие: "Снять эффект" и снимает с себя эффект: "${removedEffect}".`);
                     }
                 }
+                return false; // Remove this action from the list to be processed later
             }
+            return true;
         });
-        actions = actions.filter(a => a.type !== 'remove_effect');
 
         // Handle "Frozen" effect by reducing actions
         const frozenIndex = activePlayer.penalties.findIndex(p => p.startsWith('Заморожен'));
@@ -382,7 +384,7 @@ export default function DuelPage() {
                  turnLog.push(`${target.name} имеет иммунитет к эффекту "${effectName}" и он не был наложен.`);
                  return;
             }
-            if ((effectName === 'Горение' && (target.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду') || target.race === 'Куклы' || target.race === 'Скелеты' || target.bonuses.includes('Безжизненность — иммунитет к ядам и горению') || target.bonuses.includes('Бессмертие костей — иммунитет к ядам и горению'))) ||
+            if ((effectName === 'Горение' && (target.bonuses.some(b => b === 'Иммунитет к огню' || b === 'Иммунитет к льду') || target.race === 'Куклы' || target.race === 'Скелеты' || (target.race === 'Саламандры' && target.bonuses.includes('Огненная суть — иммунитет к огню')) || target.bonuses.includes('Безжизненность — иммунитет к ядам и горению') || target.bonuses.includes('Бессмертие костей — иммунитет к ядам и горению'))) ||
                 (effectName === 'Отравление' && (target.race === 'Куклы' || target.race === 'Скелеты' || target.bonuses.includes('Безжизненность — иммунитет к ядам и горению') || target.bonuses.includes('Бессмертие костей — иммунитет к ядам и горению')))) {
                 turnLog.push(`${target.name} имеет иммунитет к ${effectName}, и эффект не был наложен.`);
                 return;
@@ -825,7 +827,7 @@ export default function DuelPage() {
 
         actions.forEach(action => {
             turnLog.push(`${activePlayer.name} использует действие: "${getActionLabel(action.type, action.payload)}".`);
-            const isCastingAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'shield', 'heal_self', 'prayer'].includes(action.type);
+            const isCastingAction = ['strong_spell', 'medium_spell', 'small_spell', 'household_spell', 'prayer'].includes(action.type);
 
             const activePlayerId = duelData.activePlayerId;
             if (isCastingAction) {
@@ -833,6 +835,13 @@ export default function DuelPage() {
                   ...animationState, 
                   [activePlayerId]: 'casting', 
                   spellElement: action.payload?.element 
+                };
+            }
+            if (action.type === 'shield') {
+                animationState = {
+                    ...animationState,
+                    [activePlayerId]: 'casting',
+                    spellElement: undefined, // No projectile for shield
                 };
             }
             if (action.type === 'physical_attack') {
@@ -2038,3 +2047,6 @@ export default function DuelPage() {
     
 
 
+
+
+    
