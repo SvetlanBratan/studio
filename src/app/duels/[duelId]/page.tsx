@@ -331,14 +331,6 @@ export default function DuelPage() {
             turnLog.push(`Пассивная способность (Нимфилус): ОМ на нуле, ${activePlayer.name} теряет 10 ОЗ.`);
         }
         
-        if (activePlayer.penalties.some(p => p.startsWith('Удержание'))) {
-            actions = actions.filter(a => ['remove_effect', 'rest'].includes(a.type));
-            if (actions.length === 0) {
-                 turnLog.push(`${activePlayer.name} находится под эффектом "Удержание" и пропускает ход, так как не было выбрано доступное действие.`);
-                 actions.push({type: 'rest', payload: {name: 'Пропуск хода из-за Удержания'}});
-            }
-        }
-        
         // Handle "Frozen" effect by reducing actions
         const frozenIndex = activePlayer.penalties.findIndex(p => p.startsWith('Заморожен'));
         if (frozenIndex > -1) {
@@ -349,6 +341,14 @@ export default function DuelPage() {
              // Consume the effect
              const removedEffect = activePlayer.penalties.splice(frozenIndex, 1)[0];
              turnLog.push(`Эффект "${removedEffect}" был использован и снят.`);
+        }
+        
+        if (activePlayer.penalties.some(p => p.startsWith('Удержание'))) {
+            actions = actions.filter(a => ['remove_effect', 'rest'].includes(a.type));
+            if (actions.length === 0) {
+                 turnLog.push(`${activePlayer.name} находится под эффектом "Удержание" и пропускает ход, так как не было выбрано доступное действие.`);
+                 actions.push({type: 'rest', payload: {name: 'Пропуск хода из-за Удержания'}});
+            }
         }
 
         // Handle "lose action" effects
@@ -1728,6 +1728,7 @@ export default function DuelPage() {
   }
 
   if (!user) {
+    router.push('/login');
     return null;
   }
   
@@ -1873,7 +1874,7 @@ export default function DuelPage() {
   const maxVisualDistance = 400; // The distance at which characters are smallest
 
   let distanceScale = 1;
-  let distanceGap = (Math.min(duelData.distance, maxVisualGapDistance) / maxVisualGapDistance) * maxGap;
+  let distanceGap = (Math.min(duelData.distance, maxVisualGapDistance) / maxVisualGapDistance) * maxGap + (duelData.distance * 0.2);
   
   if (duelData.distance > scalingStartDistance) {
       const distancePastThreshold = duelData.distance - scalingStartDistance;
