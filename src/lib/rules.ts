@@ -1,5 +1,6 @@
 
 
+
 import type { ReserveLevel, FaithLevel, ActionType, Race, RaceAbility, PrayerEffectType, Element, CharacterStats, WeaponType, ArmorType, Weapon, Armor, ItemName } from '@/types/duel';
 
 type RitualType = 'household' | 'small' | 'medium' | 'strong';
@@ -383,12 +384,11 @@ export const initialPlayerStats = (id: string, name: string): CharacterStats => 
     };
 };
 
-export const createEnemy = (): CharacterStats => {
+export const createEnemy = (reserve?: ReserveLevel): CharacterStats => {
     const race = RACES.find(r => r.name === 'Монстр');
     if (!race) throw new Error("Could not find 'Монстр' race.");
 
-    const reserveLevels = Object.keys(RESERVE_LEVELS).filter(level => level !== 'Божественный сын') as ReserveLevel[];
-    const randomReserve = reserveLevels[Math.floor(Math.random() * reserveLevels.length)];
+    const finalReserve = reserve || 'Неофит';
 
     const allElements = Object.keys(ELEMENTS).filter(el => el !== 'Божественная');
     const shuffledElements = allElements.sort(() => 0.5 - Math.random());
@@ -401,7 +401,7 @@ export const createEnemy = (): CharacterStats => {
     const armorTypes = Object.keys(ARMORS) as ArmorType[];
     const randomArmor = armorTypes[Math.floor(Math.random() * armorTypes.length)];
 
-    const maxOm = getOmFromReserve(randomReserve);
+    const maxOm = getOmFromReserve(finalReserve);
     
     const shuffledPassives = MONSTER_PASSIVES.sort(() => 0.5 - Math.random());
     const passivesCount = Math.floor(Math.random() * 2) + 2; // 2 or 3
@@ -412,7 +412,7 @@ export const createEnemy = (): CharacterStats => {
         id: 'ENEMY_ID',
         name: 'Враг',
         race: race.name,
-        reserve: randomReserve,
+        reserve: finalReserve,
         elementalKnowledge: randomElements,
         faithLevel: 0,
         faithLevelName: 'Равнодушие',

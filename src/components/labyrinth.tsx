@@ -6,7 +6,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { initialPlayerStats } from '@/lib/rules';
 import type { CharacterStats } from '@/types/duel';
 import CharacterSetupModal from './character-setup-modal';
-import { DoorOpen } from 'lucide-react';
+import { DoorOpen, Award, CheckCircle } from 'lucide-react';
+import PixelCharacter from './pixel-character';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 interface Enemy {
     x: number;
@@ -54,6 +58,7 @@ export default function Labyrinth() {
     const [score, setScore] = useState(0);
     const [character, setCharacter] = useState<CharacterStats | null>(null);
     const [isSetupComplete, setIsSetupComplete] = useState(false);
+    const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
     
     const saveState = useCallback(() => {
         if (!character) return;
@@ -265,10 +270,7 @@ export default function Labyrinth() {
         const newY = playerPosRef.current.y + dy;
 
         if (newX === EXIT_POS.x && newY === EXIT_POS.y) {
-            alert('Поздравляем! Вы нашли выход из лабиринта.');
-            sessionStorage.removeItem('labyrinthState');
-            sessionStorage.removeItem('labyrinthCharacter');
-            router.push('/duels');
+            setIsExitDialogOpen(true);
             return;
         }
 
@@ -325,6 +327,12 @@ export default function Labyrinth() {
         }
     };
     
+    const handleExitConfirm = () => {
+        sessionStorage.removeItem('labyrinthState');
+        sessionStorage.removeItem('labyrinthCharacter');
+        router.push('/duels');
+    }
+    
     if (!character) {
         return <div>Загрузка...</div>;
     }
@@ -340,6 +348,36 @@ export default function Labyrinth() {
                 <p>Очки: {score}</p>
                 <p>Управление: WASD или стрелки</p>
             </div>
+            <Dialog open={isExitDialogOpen} onOpenChange={setIsExitDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-2xl">
+                    <CheckCircle className="text-green-500"/>
+                    Лабиринт пройден!
+                  </DialogTitle>
+                  <DialogDescription>
+                    Вы успешно нашли выход.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="my-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Award />
+                        Ваш результат
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-4xl font-bold text-center">
+                      {score}
+                      <p className="text-sm font-normal text-muted-foreground mt-1">очков</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleExitConfirm} className="w-full">В главное меню</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
         </div>
     );
 }

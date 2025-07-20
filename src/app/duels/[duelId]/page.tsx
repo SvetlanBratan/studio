@@ -7,7 +7,7 @@ import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
 
-import type { DuelState, Turn, Action, CharacterStats, ArmorType, WeaponType } from '@/types/duel';
+import type { DuelState, Turn, Action, CharacterStats, ArmorType, WeaponType, ReserveLevel } from '@/types/duel';
 import CharacterPanel from '@/components/character-panel';
 import TurnForm from '@/components/turn-form';
 import CharacterSetupModal from '@/components/character-setup-modal';
@@ -52,6 +52,7 @@ export default function DuelPage() {
   
   const fromLabyrinth = searchParams.get('from') === 'labyrinth';
   const enemyId = searchParams.get('enemyId');
+  const enemyReserve = searchParams.get('reserve') as ReserveLevel | null;
 
   const [localDuelState, setLocalDuelState] = useState<DuelState | null>(null);
   const [copied, setCopied] = useState(false);
@@ -1719,6 +1720,8 @@ export default function DuelPage() {
                 player1 = JSON.parse(savedChar);
                 duelStarted = true;
             } else {
+                // This case should ideally not happen if the flow is correct,
+                // but as a fallback, we direct to labyrinth setup.
                 router.push('/locations/labyrinth');
                 return;
             }
@@ -1726,7 +1729,8 @@ export default function DuelPage() {
              player1 = initialPlayerStats(user.uid, 'Игрок 1');
         }
 
-        const player2 = isPvE ? createEnemy() : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
+        const player2 = isPvE ? createEnemy(enemyReserve ?? undefined) : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
+        
         setLocalDuelState({
             player1,
             player2,
@@ -1736,12 +1740,12 @@ export default function DuelPage() {
             winner: null,
             log: [],
             createdAt: new Date(),
-            duelStarted: duelStarted,
+            duelStarted: duelStarted || !isPvE,
             distance: RULES.INITIAL_DISTANCE,
             animationState: { player1: 'idle', player2: 'idle' },
         });
     }
-  }, [isLocalSolo, isPvE, localDuelState, user, fromLabyrinth, router]);
+  }, [isLocalSolo, isPvE, localDuelState, user, fromLabyrinth, router, enemyReserve]);
   
     useEffect(() => {
         if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0 && !duelData.log.some(l => l.includes('Первый ход'))) {
@@ -1889,6 +1893,15 @@ export default function DuelPage() {
         router.push('/duels');
     }
   };
+
+  const handleLeave = () => {
+      if (fromLabyrinth) {
+          router.push('/duels');
+      } else {
+          router.push('/duels');
+      }
+  }
+
 
   // =================================================================
   // RENDER LOGIC
@@ -2060,7 +2073,7 @@ export default function DuelPage() {
               Magic Duel Assistant
             </h1>
           </div>
-           <Button onClick={() => router.push('/duels')} variant="secondary" size="sm">
+           <Button onClick={handleLeave} variant="secondary" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" /> Покинуть
           </Button>
         </div>

@@ -1,17 +1,10 @@
 
 
 
-import type { ITEMS } from '@/lib/rules';
 
-export type ReserveLevel =
-  | 'Неофит'
-  | 'Адепт'
-  | 'Специалист'
-  | 'Мастер'
-  | 'Магистр'
-  | 'Архимаг'
-  | 'Архимагистр'
-  | 'Божественный сын';
+import type { ITEMS, RESERVE_LEVELS } from '@/lib/rules';
+
+export type ReserveLevel = keyof typeof RESERVE_LEVELS;
 
 export type FaithLevel =
   | 'Ненависть/Проклят'
