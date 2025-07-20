@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { initialPlayerStats } from '@/lib/rules';
 import type { CharacterStats } from '@/types/duel';
 import CharacterSetupModal from './character-setup-modal';
-import { DoorOpen, Award, CheckCircle } from 'lucide-react';
+import { Award, CheckCircle } from 'lucide-react';
 import PixelCharacter from './pixel-character';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { Button } from './ui/button';

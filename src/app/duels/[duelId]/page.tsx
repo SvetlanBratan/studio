@@ -74,9 +74,12 @@ export default function DuelPage() {
   const isMyTurn = useMemo(() => {
     if (!duelData || !userRole) return false;
     if (userRole === 'spectator') return false;
+    
+    // In Solo or PvE (including labyrinth), player1 is always the user.
     if (isLocalSolo || isPvE) {
         return duelData.activePlayerId === 'player1';
     }
+    
     return userRole === duelData.activePlayerId;
   }, [userRole, isLocalSolo, isPvE, duelData]);
 
@@ -1107,9 +1110,9 @@ export default function DuelPage() {
                 }
                 case 'shield': {
                     const omCost = RULES.RITUAL_COSTS.medium;
-                    if (activePlayer.om < omCost) {
-                        turnLog.push(`Действие "Создать щит" не удалось: недостаточно ОМ (требуется ${omCost}, есть ${activePlayer.om}).`);
-                        return;
+                    if (player.om < omCost) {
+                      turnLog.push(`Действие "Создать щит" не удалось: недостаточно ОМ (требуется ${omCost}, есть ${player.om}).`);
+                      return;
                     }
                     activePlayer.om -= omCost;
                     activePlayer.shield.hp += RULES.BASE_SHIELD_VALUE;
@@ -1720,8 +1723,6 @@ export default function DuelPage() {
                 player1 = JSON.parse(savedChar);
                 duelStarted = true;
             } else {
-                // This case should ideally not happen if the flow is correct,
-                // but as a fallback, we direct to labyrinth setup.
                 router.push('/locations/labyrinth');
                 return;
             }
@@ -1896,10 +1897,10 @@ export default function DuelPage() {
 
   const handleLeave = () => {
       if (fromLabyrinth) {
-          router.push('/duels');
-      } else {
-          router.push('/duels');
+          sessionStorage.removeItem('labyrinthState');
+          sessionStorage.removeItem('labyrinthCharacter');
       }
+      router.push('/duels');
   }
 
 
@@ -1945,8 +1946,11 @@ export default function DuelPage() {
 
   const turnStatusText = () => {
     if (!activePlayer) return "";
-    if (isLocalSolo) return "Ваш ход";
-    if (isPvE) return isMyTurn ? "Ваш ход" : `Ход противника: ${activePlayer.name}`;
+    
+    if (isLocalSolo || isPvE) {
+        return isMyTurn ? "Ваш ход" : `Ход противника: ${activePlayer.name}`;
+    }
+
     if (userRole === 'spectator') return `Ход игрока ${activePlayer.name}`;
     if (isMyTurn) return "Ваш ход";
     return `Ход оппонента: ${activePlayer.name}`;
