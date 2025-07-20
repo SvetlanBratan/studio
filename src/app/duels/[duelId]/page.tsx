@@ -50,8 +50,6 @@ export default function DuelPage() {
   const isLocalSolo = duelId === 'solo';
   const isPvE = duelId === 'monster';
   
-  const fromLabyrinth = searchParams.get('from') === 'labyrinth';
-  const enemyId = searchParams.get('enemyId');
   const enemyReserve = searchParams.get('reserve') as ReserveLevel | null;
 
   const [localDuelState, setLocalDuelState] = useState<DuelState | null>(null);
@@ -1669,15 +1667,6 @@ export default function DuelPage() {
         if (activePlayer.oz <= 0) winner = opponentPlayer.name;
         if (opponentPlayer.oz <= 0) winner = activePlayer.name;
 
-        if (winner && fromLabyrinth && activePlayer.name === winner) {
-            const savedChar = sessionStorage.getItem('labyrinthCharacter');
-            if (savedChar) {
-                const updatedChar = { ...JSON.parse(savedChar), oz: activePlayer.oz };
-                sessionStorage.setItem('labyrinthCharacter', JSON.stringify(updatedChar));
-            }
-        }
-
-
         const newTurn: Turn = {
             turnNumber: duelData.currentTurn,
             playerId: activePlayer.id,
@@ -1707,26 +1696,11 @@ export default function DuelPage() {
         setTimeout(() => {
             handleUpdateDuelState({ animationState: { player1: 'idle', player2: 'idle' } });
         }, 1500);
-  }, [duelData, fromLabyrinth, handleUpdateDuelState]);
+  }, [duelData, handleUpdateDuelState]);
 
   useEffect(() => {
     if ((isLocalSolo || isPvE) && !localDuelState && user) {
-        let player1;
-        let duelStarted = false;
-
-        if (fromLabyrinth) {
-            const savedChar = sessionStorage.getItem('labyrinthCharacter');
-            if (savedChar) {
-                player1 = JSON.parse(savedChar);
-                duelStarted = true;
-            } else {
-                router.push('/duels'); // Should not happen if flow is correct
-                return;
-            }
-        } else {
-             player1 = initialPlayerStats(user.uid, 'Игрок 1');
-        }
-        
+        let player1 = initialPlayerStats(user.uid, 'Игрок 1');
         const player2 = isPvE ? createEnemy(enemyReserve ?? undefined) : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
         
         setLocalDuelState({
@@ -1738,12 +1712,12 @@ export default function DuelPage() {
             winner: null,
             log: [],
             createdAt: new Date(),
-            duelStarted: duelStarted,
+            duelStarted: false,
             distance: RULES.INITIAL_DISTANCE,
             animationState: { player1: 'idle', player2: 'idle' },
         });
     }
-  }, [isLocalSolo, isPvE, localDuelState, user, fromLabyrinth, router, enemyReserve]);
+  }, [isLocalSolo, isPvE, localDuelState, user, router, enemyReserve]);
   
     useEffect(() => {
         if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0 && !duelData.log.some(l => l.includes('Первый ход'))) {
@@ -1854,10 +1828,6 @@ export default function DuelPage() {
         [key]: { ...updatedCharacter, isSetupComplete: true }
     };
     
-    if (fromLabyrinth && isPlayer1) {
-        sessionStorage.setItem('labyrinthCharacter', JSON.stringify(newState.player1));
-    }
-
     const updatedFullState = { ...duelData, ...newState };
 
     if (updatedFullState.player1.isSetupComplete && updatedFullState.player2?.isSetupComplete && !updatedFullState.duelStarted) {
@@ -1885,21 +1855,10 @@ export default function DuelPage() {
   };
 
   const handleVictory = () => {
-    if (fromLabyrinth) {
-        const newUrl = `/locations/labyrinth?defeated=${enemyId}`;
-        window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-        router.back();
-    } else {
-        router.push('/duels');
-    }
+    router.push('/duels');
   };
 
   const handleLeave = () => {
-    if (fromLabyrinth) {
-        sessionStorage.removeItem('labyrinthState');
-        sessionStorage.removeItem('labyrinthCharacter');
-    }
-    // Hard navigation to prevent any React state from triggering a new duel
     window.location.assign('/duels');
   };
 
@@ -1943,12 +1902,8 @@ export default function DuelPage() {
 
   if (!duelData.duelStarted) {
       if ((isLocalSolo || isPvE)) {
-          if (isPvE && !fromLabyrinth) {
-              if (!duelData.player1.isSetupComplete) {
-                  return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
-              }
-          } else if(isLocalSolo) {
-              return <SoloSetupForm player1={duelData.player1} player2={duelData.player2!} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
+          if (!duelData.player1.isSetupComplete) {
+            return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
           }
       } else { // Online PvP
           if (userRole === 'spectator') {
@@ -2027,6 +1982,9 @@ export default function DuelPage() {
 
 
   if (!duelData.duelStarted) {
+      if(isLocalSolo) {
+        return <SoloSetupForm player1={duelData.player1} player2={duelData.player2!} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
+      }
       return <div className="flex items-center justify-center min-h-screen"><div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-primary"></div></div>;
   }
   
@@ -2100,7 +2058,7 @@ export default function DuelPage() {
                 )}
                 
                 <Button onClick={handleVictory} className="mt-6">
-                    {fromLabyrinth ? 'Вернуться в лабиринт' : 'Начать новую'}
+                    Начать новую
                 </Button>
             </CardContent>
         </Card>
@@ -2125,7 +2083,6 @@ export default function DuelPage() {
                 <CardTitle className="flex items-center justify-between text-lg md:text-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1">
                       <span>Ход {duelData.currentTurn}: {activePlayer?.name}</span>
-                       {fromLabyrinth && <Badge variant="outline"><MapPin className="mr-2"/>Битва в лабиринте</Badge>}
                     </div>
                     <span className={`text-sm font-medium ${(isMyTurn && userRole !== 'spectator') ? 'text-accent' : 'text-muted-foreground'}`}>
                         {turnStatusText()}

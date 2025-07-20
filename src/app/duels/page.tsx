@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dices, LogIn, LogOut, Swords, User as UserIcon, Eye, ShieldQuestion, Map } from 'lucide-react';
+import { Dices, LogIn, LogOut, Swords, User as UserIcon, Eye, ShieldQuestion } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RESERVE_LEVELS } from '@/lib/rules';
 import type { ReserveLevel } from '@/types/duel';
@@ -96,13 +96,9 @@ export default function DuelsPage() {
            <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle>Меню дуэлей</CardTitle>
-                    <CardDescription>Создайте дуэль, войдите в существующую или отправляйтесь в приключение.</CardDescription>
+                    <CardDescription>Создайте дуэль, войдите в существующую или сразитесь с монстром.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Button onClick={() => router.push('/locations/labyrinth')} className="w-full">
-                        <Map className="mr-2" />
-                        Лабиринт
-                    </Button>
                     <Button onClick={handleCreateSoloDuel} className="w-full" variant="secondary">
                         <UserIcon className="mr-2" />
                         Создать пробную дуэль (Соло)
