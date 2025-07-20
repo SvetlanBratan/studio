@@ -77,7 +77,7 @@ export default function Labyrinth() {
                     ctx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
                     ctx.fillStyle = '#4a7c23';
                     ctx.fillRect(cellX + 2, cellY + 2, CELL_SIZE - 4, CELL_SIZE - 4);
-                } else if (mapData[y][x] === 3) { // Exit
+                } else if (x === EXIT_POS.x && y === EXIT_POS.y) { // Exit
                     ctx.fillStyle = '#3e7b27';
                     ctx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
                     ctx.fillStyle = '#a88a53'; // gold-ish door
@@ -205,10 +205,9 @@ export default function Labyrinth() {
         draw();
     }, [router, saveState, draw]);
 
+    // This effect runs only once on mount to initialize the game state.
     useEffect(() => {
-        const defeatedEnemyId = searchParams.get('defeated');
         const savedStateJson = sessionStorage.getItem('labyrinthState');
-
         if (savedStateJson) {
             const savedState = JSON.parse(savedStateJson);
             playerPosRef.current = savedState.playerPos;
@@ -216,32 +215,41 @@ export default function Labyrinth() {
             setScore(savedState.score);
             setCharacter(savedState.character);
             setIsSetupComplete(true);
-
-            if (defeatedEnemyId) {
-                const updatedEnemies = enemiesRef.current.filter(e => e.id !== defeatedEnemyId);
-                const enemyWasDefeated = updatedEnemies.length < enemiesRef.current.length;
-
-                if (enemyWasDefeated) {
-                    enemiesRef.current = updatedEnemies;
-                    setScore(prevScore => prevScore + 100);
-                }
-                
-                const newUrl = window.location.pathname;
-                window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-                
-                saveState();
-                draw();
-            }
         } else {
             setCharacter(initialPlayerStats('labyrinth-player', 'Искатель приключений'));
         }
-    }, [searchParams, generateEnemies, saveState, draw]); 
-    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // This effect runs when returning from a duel
     useEffect(() => {
-        if(isSetupComplete && !searchParams.get('defeated')) {
-           saveState();
+        const defeatedEnemyId = searchParams.get('defeated');
+        if (defeatedEnemyId) {
+            const updatedEnemies = enemiesRef.current.filter(e => e.id !== defeatedEnemyId);
+            const enemyWasDefeated = updatedEnemies.length < enemiesRef.current.length;
+
+            if (enemyWasDefeated) {
+                enemiesRef.current = updatedEnemies;
+                setScore(prevScore => {
+                    const newScore = prevScore + 100;
+                    if (character) {
+                        const state = {
+                            playerPos: playerPosRef.current,
+                            enemies: enemiesRef.current,
+                            score: newScore,
+                            character: character,
+                        };
+                        sessionStorage.setItem('labyrinthState', JSON.stringify(state));
+                    }
+                    return newScore;
+                });
+            }
+            
+            const newUrl = window.location.pathname;
+            window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+            draw();
         }
-    }, [score, isSetupComplete, saveState, searchParams]);
+    }, [searchParams, character, draw]);
 
 
     useEffect(() => {
@@ -367,3 +375,5 @@ export default function Labyrinth() {
         </div>
     );
 }
+
+    
