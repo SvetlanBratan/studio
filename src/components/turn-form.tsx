@@ -216,23 +216,30 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
   const weaponInfo = WEAPONS[player.weapon as WeaponType];
   const isOpponentInRangeForWeapon = distance <= weaponInfo.range;
   
-  const getFinalOdCost = (baseCost: number, isMove: boolean = false) => {
+  const getFinalOdCost = (baseCost: number, actionType?: ActionType) => {
     if (odPenalties.wound === -Infinity) return 0; // Check for the special value
     
     let cost = baseCost + odPenalties.wound + odPenalties.armor + odPenalties.charm;
     
     let reduction = 0;
-     if (isMove && player.bonuses.includes('Быстрые мышцы (-5 ОД на действия, связанные с перемещением)')) {
-        reduction += 5;
+    if (actionType === 'move') {
+      if (player.bonuses.includes('Быстрые мышцы (-5 ОД на действия, связанные с перемещением)')) reduction += 5;
+      if (player.bonuses.includes('Ловкие конечности (-5 ОД на действия)')) reduction += 5;
+      if (player.bonuses.includes('Галоп (-5 ОД на действия)')) reduction += 5;
+    } else if (actionType === 'dodge') {
+      if (player.bonuses.includes('Лёгкость (-5 ОД на уклонение)')) reduction += 5;
+      if (player.bonuses.includes('Мимикрия (-15 ОД на уклонение)')) reduction += 15;
+    } else if (actionType === 'physical_attack') {
+      if (player.bonuses.includes('Животная реакция (-5 ОД на физические действия)')) reduction += 5;
     }
-    if (player.bonuses.includes('Лёгкость (-5 ОД на уклонение)')) reduction += 5;
-    if (player.bonuses.includes('Мимикрия (-15 ОД на уклонение)')) reduction += 15;
-    if (player.bonuses.includes('Животная реакция (-5 ОД на физические действия)') || player.bonuses.includes('Ловкие конечности (-5 ОД на действия)') || player.bonuses.includes('Галоп (-5 ОД на действия)')) {
-        reduction += 5;
-    }
+    // Generic bonuses
+    if (player.bonuses.includes('Ловкие конечности (-5 ОД на действия)') && actionType !== 'move') reduction += 5;
+    if (player.bonuses.includes('Галоп (-5 ОД на действия)') && actionType !== 'move') reduction += 5;
+
     return Math.max(0, cost - reduction);
   };
-  const physicalAttackCost = getFinalOdCost(RULES.NON_MAGIC_COSTS.physical_attack);
+  
+  const physicalAttackCost = getFinalOdCost(RULES.NON_MAGIC_COSTS.physical_attack, 'physical_attack');
 
   const isSubmitDisabled = useMemo(() => {
     if (actions.length === 0) return true;
@@ -257,7 +264,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
       let omCost = racialAbility?.cost?.om ?? RULES.RITUAL_COSTS[type.replace('_spell', '') as keyof typeof RULES.RITUAL_COSTS] ?? 0;
       if (type === 'heal_self') omCost = 0; // Dynamic cost
       
-      const odCost = getFinalOdCost(racialAbility?.cost?.od ?? RULES.NON_MAGIC_COSTS[type as keyof typeof RULES.NON_MAGIC_COSTS] ?? 0);
+      const odCost = getFinalOdCost(racialAbility?.cost?.od ?? RULES.NON_MAGIC_COSTS[type as keyof typeof RULES.NON_MAGIC_COSTS] ?? 0, type as ActionType);
       const cooldown = racialAbilityName ? (player.cooldowns[racialAbilityName] ?? 0) : (player.cooldowns[type as keyof typeof player.cooldowns] ?? 0);
       
       if (cooldown > 0) return `На перезарядке (Осталось: ${cooldown} хода)`;
@@ -302,7 +309,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     return item;
   }
   
-  const moveCostPerMeter = getFinalOdCost(RULES.NON_MAGIC_COSTS.move_per_meter, true);
+  const moveCostPerMeter = getFinalOdCost(RULES.NON_MAGIC_COSTS.move_per_meter, 'move');
   const maxMoveDistance = moveCostPerMeter > 0 ? Math.floor(player.od / moveCostPerMeter) : Infinity;
   const currentMoveCost = moveCostPerMeter * moveAmount;
   
@@ -338,7 +345,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
     { group: 'magic', value: 'heal_self', label: 'Исцелить себя' },
 
     // Other
-    { group: 'other', value: 'dodge', label: `Уворот (${getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge)} ОД)` },
+    { group: 'other', value: 'dodge', label: `Уворот (${getFinalOdCost(RULES.NON_MAGIC_COSTS.dodge, 'dodge')} ОД)` },
     { group: 'other', value: 'move', label: 'Передвижение' },
     { group: 'other', value: 'use_item', label: 'Использовать предмет' },
     { group: 'other', value: 'prayer', label: 'Молитва' },
