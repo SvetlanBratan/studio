@@ -1950,6 +1950,8 @@ export default function DuelPage() {
                       isActive={duelData.activePlayerId === 'player1'}
                       spellElement={duelData.animationState?.spellElement}
                       penalties={duelData.player1.penalties}
+                      oz={duelData.player1.oz}
+                      maxOz={duelData.player1.maxOz}
                     />
                     <PixelCharacter
                       pose={duelData.animationState?.player2 || 'idle'}
@@ -1959,6 +1961,8 @@ export default function DuelPage() {
                       isActive={duelData.activePlayerId === 'player2'}
                       spellElement={duelData.animationState?.spellElement}
                       penalties={duelData.player2.penalties}
+                      oz={duelData.player2.oz}
+                      maxOz={duelData.player2.maxOz}
                     />
                 </div>
 
@@ -2014,5 +2018,6 @@ export default function DuelPage() {
 
 
     
+
 
 

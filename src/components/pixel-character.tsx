@@ -13,6 +13,8 @@ interface PixelCharacterProps {
   isActive?: boolean;
   spellElement?: string;
   penalties?: string[];
+  oz?: number;
+  maxOz?: number;
 }
 
 const ELEMENT_COLORS: Record<string, string> = {
@@ -45,6 +47,8 @@ export default function PixelCharacter({
   isActive = false,
   spellElement,
   penalties = [],
+  oz = 100,
+  maxOz = 100,
 }: PixelCharacterProps) {
   const pixelSize = '6px'; // Controls the size of each "pixel"
 
@@ -197,6 +201,31 @@ export default function PixelCharacter({
     );
   }
 
+  const renderHealthBar = () => {
+    const healthPercentage = (oz / maxOz) * 100;
+    
+    return (
+      <div style={{
+        position: 'absolute',
+        top: `calc(-4 * ${pixelSize})`, // Position above the hat
+        left: `calc(1 * ${pixelSize})`,
+        width: `calc(8 * ${pixelSize})`,
+        height: `calc(1.5 * ${pixelSize})`,
+        backgroundColor: '#333',
+        borderRadius: '1px',
+        border: '1px solid #111',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${healthPercentage}%`,
+          height: '100%',
+          backgroundColor: healthPercentage > 50 ? '#22c55e' : healthPercentage > 25 ? '#f59e0b' : '#ef4444',
+          transition: 'width 0.5s ease-in-out',
+        }}/>
+      </div>
+    );
+  }
+
   const renderPose = () => {
     let rightArm, leftArm;
     const hatColor = '#444';
@@ -258,6 +287,7 @@ export default function PixelCharacter({
       style={lungeStyle}
     >
       <div style={characterStyles}>
+        {renderHealthBar()}
         {renderPose()}
         <div style={shieldStyles} />
         {renderSpellProjectile()}
@@ -266,6 +296,7 @@ export default function PixelCharacter({
     </div>
   );
 }
+
 
 
 
