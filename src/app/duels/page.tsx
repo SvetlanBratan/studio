@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dices, LogIn, LogOut, Swords, User as UserIcon, Eye, ShieldQuestion } from 'lucide-react';
+import { Dices, LogIn, LogOut, Swords, User as UserIcon, Eye, ShieldQuestion, Map } from 'lucide-react';
 
 export default function DuelsPage() {
   const { user, loading, signOut } = useAuth();
@@ -91,13 +91,13 @@ export default function DuelsPage() {
         <main className="container mx-auto p-4 md:p-8 flex items-center justify-center" style={{minHeight: 'calc(100vh - 80px)'}}>
            <Card className="w-full max-w-md">
                 <CardHeader>
-                    <CardTitle>Присоединиться к дуэли</CardTitle>
-                    <CardDescription>Создайте новую дуэль или войдите в существующую по ID.</CardDescription>
+                    <CardTitle>Меню дуэлей</CardTitle>
+                    <CardDescription>Создайте дуэль, войдите в существующую или отправляйтесь в приключение.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Button onClick={handleCreateDuel} disabled={isCreating} className="w-full">
-                        <Dices className="mr-2" />
-                        {isCreating ? 'Создание...' : 'Создать дуэль (Онлайн)'}
+                    <Button onClick={() => router.push('/locations')} className="w-full">
+                        <Map className="mr-2" />
+                        Локации (Лабиринт)
                     </Button>
                     <Button onClick={handleCreateSoloDuel} className="w-full" variant="secondary">
                         <UserIcon className="mr-2" />
@@ -105,19 +105,23 @@ export default function DuelsPage() {
                     </Button>
                      <Button onClick={handleCreateMonsterDuel} className="w-full" variant="secondary">
                         <ShieldQuestion className="mr-2" />
-                        Битва с врагом (PvE)
+                        Быстрая битва (PvE)
                     </Button>
-                    
-                    <div className="relative">
+                     <div className="relative">
                         <div className="absolute inset-0 flex items-center">
                             <span className="w-full border-t" />
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
                             <span className="bg-card px-2 text-muted-foreground">
-                            Или
+                            Онлайн
                             </span>
                         </div>
                     </div>
+                    <Button onClick={handleCreateDuel} disabled={isCreating} className="w-full">
+                        <Dices className="mr-2" />
+                        {isCreating ? 'Создание...' : 'Создать дуэль (PvP)'}
+                    </Button>
+                    
 
                     <form onSubmit={(e) => handleJoinDuel(e)} className="space-y-2">
                         <div>

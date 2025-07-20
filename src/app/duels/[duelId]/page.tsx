@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useDocumentData } from 'react-firebase-hooks/firestore';
 import { doc } from 'firebase/firestore';
 import { firestore } from '@/lib/firestore';
@@ -14,7 +14,7 @@ import CharacterSetupModal from '@/components/character-setup-modal';
 import SoloSetupForm from '@/components/solo-setup-form';
 import PixelCharacter from '@/components/pixel-character';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler, Eye, ScrollText } from 'lucide-react';
+import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler, Eye, ScrollText, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS, WEAPONS, ARMORS, ITEMS, createEnemy } from '@/lib/rules';
@@ -39,10 +39,14 @@ const getPhysicalCondition = (oz: number, maxOz: number): string => {
 export default function DuelPage() {
   const { user, loading: authLoading } = useAuth();
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const duelId = params.duelId as string;
   const isLocalSolo = duelId === 'solo';
   const isPvE = duelId === 'monster';
+  
+  const fromLabyrinth = searchParams.get('from') === 'labyrinth';
+  const enemyId = searchParams.get('enemyId');
 
   const [localDuelState, setLocalDuelState] = useState<DuelState | null>(null);
   const [copied, setCopied] = useState(false);
@@ -99,39 +103,43 @@ export default function DuelPage() {
                     const weapon = WEAPONS[enemy.weapon];
                     const spellRange = RULES.SPELL_RANGES[enemy.reserve];
                     const hasMagic = enemy.elementalKnowledge.length > 0;
-                    const canUseMagic = hasMagic && tempDistance <= spellRange;
-
-                    let chosenAction: Action | null = null;
-
-                    // Priority 1: Magic
-                    if (canUseMagic) {
-                        const spells = [
-                            { type: 'strong_spell', cost: RULES.RITUAL_COSTS.strong, cooldown: enemy.cooldowns.strongSpell },
-                            { type: 'medium_spell', cost: RULES.RITUAL_COSTS.medium, cooldown: 0 },
-                            { type: 'small_spell', cost: RULES.RITUAL_COSTS.small, cooldown: 0 },
-                        ] as const;
-                        
-                        for (const spell of spells) {
-                            if (enemy.om >= spell.cost && (spell.cooldown || 0) <= 0) {
-                                const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
-                                chosenAction = { type: spell.type, payload: { element: randomElement } };
-                                tempEnemyState.om -= spell.cost;
-                                if(spell.type === 'strong_spell') tempEnemyState.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
-                                break; 
-                            }
-                        }
-                    }
                     
-                    // Priority 2: Weapon Attack
-                    if (!chosenAction && tempDistance <= weapon.range) {
-                        if(enemy.od >= RULES.NON_MAGIC_COSTS.physical_attack) {
-                            chosenAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
-                            tempEnemyState.od -= RULES.NON_MAGIC_COSTS.physical_attack;
-                        }
-                    }
+                    let chosenAction: Action | null = null;
+                    
+                    const strongSpellCost = RULES.RITUAL_COSTS.strong;
+                    const mediumSpellCost = RULES.RITUAL_COSTS.medium;
+                    const smallSpellCost = RULES.RITUAL_COSTS.small;
+                    const canUseStrongSpell = hasMagic && tempDistance <= spellRange && enemy.om >= strongSpellCost && enemy.cooldowns.strongSpell <= 0;
+                    const canUseMediumSpell = hasMagic && tempDistance <= spellRange && enemy.om >= mediumSpellCost;
+                    const canUseSmallSpell = hasMagic && tempDistance <= spellRange && enemy.om >= smallSpellCost;
+                    const canUseWeapon = tempDistance <= weapon.range && enemy.od >= RULES.NON_MAGIC_COSTS.physical_attack;
 
-                    // Priority 3: Move closer
-                    if (!chosenAction) {
+                    // Priority 1: Strong Magic
+                    if (canUseStrongSpell) {
+                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
+                        chosenAction = { type: 'strong_spell', payload: { element: randomElement } };
+                        tempEnemyState.om -= strongSpellCost;
+                        tempEnemyState.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
+                    } 
+                    // Priority 2: Medium Magic
+                    else if (canUseMediumSpell) {
+                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
+                        chosenAction = { type: 'medium_spell', payload: { element: randomElement } };
+                        tempEnemyState.om -= mediumSpellCost;
+                    }
+                     // Priority 3: Small Magic
+                    else if (canUseSmallSpell) {
+                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
+                        chosenAction = { type: 'small_spell', payload: { element: randomElement } };
+                        tempEnemyState.om -= smallSpellCost;
+                    }
+                    // Priority 4: Weapon Attack
+                    else if (canUseWeapon) {
+                        chosenAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
+                        tempEnemyState.od -= RULES.NON_MAGIC_COSTS.physical_attack;
+                    }
+                    // Priority 5: Move closer
+                    else {
                         let distanceToClose = 0;
                         if (hasMagic && tempDistance > spellRange) {
                             distanceToClose = tempDistance - spellRange;
@@ -149,7 +157,7 @@ export default function DuelPage() {
                         }
                     }
 
-                    // Priority 4: Rest
+                    // Priority 6: Rest
                     if (!chosenAction) {
                         chosenAction = { type: 'rest', payload: {} };
                     }
@@ -182,11 +190,11 @@ export default function DuelPage() {
 
 
   useEffect(() => {
-    const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
+    const shouldJoin = searchParams.get('join') === 'true';
     if (userRole === 'spectator' && duelData?.player1 && !duelData.player2 && shouldJoin && user) {
         joinDuel(duelId, user.uid, "Игрок 2");
     }
-  }, [userRole, duelData, duelId, user]);
+  }, [userRole, duelData, duelId, user, searchParams]);
 
 
   const handleUpdateDuelState = useCallback((updatedDuel: Partial<DuelState>) => {
@@ -2069,6 +2077,14 @@ export default function DuelPage() {
       const scaleReduction = (distancePastThreshold / scalingRange) * (1 - minScale);
       distanceScale = Math.max(minScale, 1 - scaleReduction);
   }
+  
+  const handleVictory = () => {
+    if (fromLabyrinth) {
+        router.push(`/locations/labyrinth?defeated=${enemyId}`);
+    } else {
+        router.push('/duels');
+    }
+  }
 
   // --- Main Duel Interface ---
   return (
@@ -2104,7 +2120,9 @@ export default function DuelPage() {
                     </div>
                 )}
                 
-                <Button onClick={() => router.push('/duels')} className="mt-6">Начать новую</Button>
+                <Button onClick={handleVictory} className="mt-6">
+                    {fromLabyrinth ? 'Вернуться в лабиринт' : 'Начать новую'}
+                </Button>
             </CardContent>
         </Card>
         ) : (
@@ -2128,6 +2146,7 @@ export default function DuelPage() {
                 <CardTitle className="flex items-center justify-between text-lg md:text-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1">
                       <span>Ход {duelData.currentTurn}: {activePlayer.name}</span>
+                       {fromLabyrinth && <Badge variant="outline"><MapPin className="mr-2"/>Битва в лабиринте</Badge>}
                     </div>
                     <span className={`text-sm font-medium ${(isMyTurn && userRole !== 'spectator') ? 'text-accent' : 'text-muted-foreground'}`}>
                         {turnStatusText()}
@@ -2216,6 +2235,3 @@ export default function DuelPage() {
     </div>
   );
 }
-
-
-    
