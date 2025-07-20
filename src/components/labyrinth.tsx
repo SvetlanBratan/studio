@@ -205,52 +205,29 @@ export default function Labyrinth() {
         draw();
     }, [router, saveState, draw]);
 
-    // This effect runs only once on mount to initialize the game state.
     useEffect(() => {
+        const defeatedEnemyId = searchParams.get('defeated');
         const savedStateJson = sessionStorage.getItem('labyrinthState');
+
         if (savedStateJson) {
             const savedState = JSON.parse(savedStateJson);
+            if (defeatedEnemyId) {
+                savedState.enemies = savedState.enemies.filter((e: Enemy) => e.id !== defeatedEnemyId);
+                savedState.score += 100;
+                
+                const newUrl = window.location.pathname;
+                window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+            }
             playerPosRef.current = savedState.playerPos;
             enemiesRef.current = savedState.enemies;
             setScore(savedState.score);
             setCharacter(savedState.character);
             setIsSetupComplete(true);
+            sessionStorage.setItem('labyrinthState', JSON.stringify(savedState));
         } else {
             setCharacter(initialPlayerStats('labyrinth-player', 'Искатель приключений'));
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // This effect runs when returning from a duel
-    useEffect(() => {
-        const defeatedEnemyId = searchParams.get('defeated');
-        if (defeatedEnemyId) {
-            const updatedEnemies = enemiesRef.current.filter(e => e.id !== defeatedEnemyId);
-            const enemyWasDefeated = updatedEnemies.length < enemiesRef.current.length;
-
-            if (enemyWasDefeated) {
-                enemiesRef.current = updatedEnemies;
-                setScore(prevScore => {
-                    const newScore = prevScore + 100;
-                    if (character) {
-                        const state = {
-                            playerPos: playerPosRef.current,
-                            enemies: enemiesRef.current,
-                            score: newScore,
-                            character: character,
-                        };
-                        sessionStorage.setItem('labyrinthState', JSON.stringify(state));
-                    }
-                    return newScore;
-                });
-            }
-            
-            const newUrl = window.location.pathname;
-            window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-            draw();
-        }
-    }, [searchParams, character, draw]);
-
+    }, [searchParams]);
 
     useEffect(() => {
         if (isSetupComplete) {
@@ -375,5 +352,3 @@ export default function Labyrinth() {
         </div>
     );
 }
-
-    
