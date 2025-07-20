@@ -210,26 +210,31 @@ export default function Labyrinth() {
 
     useEffect(() => {
         const defeatedEnemyId = searchParams.get('defeated');
-        const savedState = sessionStorage.getItem('labyrinthState');
+        const savedStateJson = sessionStorage.getItem('labyrinthState');
 
         let shouldGenerateNewEnemies = false;
 
-        if (savedState) {
-            const { playerPos, enemies, score: savedScore, character: savedChar } = JSON.parse(savedState);
-            playerPosRef.current = playerPos;
-            enemiesRef.current = enemies;
-            setScore(savedScore);
-            setCharacter(savedChar);
+        if (savedStateJson) {
+            const savedState = JSON.parse(savedStateJson);
+            playerPosRef.current = savedState.playerPos;
+            enemiesRef.current = savedState.enemies;
+            setScore(savedState.score);
+            setCharacter(savedState.character);
             setIsSetupComplete(true);
 
             if (defeatedEnemyId) {
-                const newScore = savedScore + 100;
-                enemiesRef.current = enemiesRef.current.filter(e => e.id !== defeatedEnemyId);
-                setScore(newScore);
+                const updatedEnemies = enemiesRef.current.filter(e => e.id !== defeatedEnemyId);
+                const enemyWasDefeated = updatedEnemies.length < enemiesRef.current.length;
 
-                if (enemiesRef.current.length === 0) {
-                    alert('Вы зачистили лабиринт! Появляются новые враги.');
-                    shouldGenerateNewEnemies = true;
+                if (enemyWasDefeated) {
+                    const newScore = savedState.score + 100;
+                    enemiesRef.current = updatedEnemies;
+                    setScore(newScore);
+
+                    if (enemiesRef.current.length === 0) {
+                        alert('Вы зачистили лабиринт! Появляются новые враги.');
+                        shouldGenerateNewEnemies = true;
+                    }
                 }
                 router.replace('/locations/labyrinth', { scroll: false });
             }
@@ -239,7 +244,7 @@ export default function Labyrinth() {
         if (shouldGenerateNewEnemies) {
             generateEnemies();
         }
-    }, [searchParams, router, generateEnemies]);
+    }, []); // Run only on mount
     
     useEffect(() => {
         if(isSetupComplete) {
@@ -338,3 +343,5 @@ export default function Labyrinth() {
         </div>
     );
 }
+
+    
