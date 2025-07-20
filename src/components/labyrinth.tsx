@@ -205,22 +205,28 @@ export default function Labyrinth() {
         draw();
     }, [router, saveState, draw]);
 
-    // This effect runs once on component mount to initialize the game.
+    // This effect runs only once on initial mount to load or initialize the game state.
     useEffect(() => {
         const savedStateJson = sessionStorage.getItem('labyrinthState');
         if (savedStateJson) {
-            const savedState = JSON.parse(savedStateJson);
-            playerPosRef.current = savedState.playerPos;
-            enemiesRef.current = savedState.enemies;
-            setScore(savedState.score);
-            setCharacter(savedState.character);
-            setIsSetupComplete(true);
+            try {
+                const savedState = JSON.parse(savedStateJson);
+                playerPosRef.current = savedState.playerPos;
+                enemiesRef.current = savedState.enemies;
+                setScore(savedState.score);
+                setCharacter(savedState.character);
+                setIsSetupComplete(true);
+            } catch (e) {
+                console.error("Failed to parse saved state, starting new game.", e);
+                sessionStorage.removeItem('labyrinthState');
+                setCharacter(initialPlayerStats('labyrinth-player', 'Искатель приключений'));
+            }
         } else {
             setCharacter(initialPlayerStats('labyrinth-player', 'Искатель приключений'));
         }
     }, []);
 
-    // This effect handles returning from a duel.
+    // This effect runs ONLY when returning from a duel (when searchParams change).
     useEffect(() => {
         const defeatedEnemyId = searchParams.get('defeated');
 
@@ -229,23 +235,26 @@ export default function Labyrinth() {
             if (savedStateJson) {
                 const savedState = JSON.parse(savedStateJson);
                 
-                savedState.enemies = savedState.enemies.filter((e: Enemy) => e.id !== defeatedEnemyId);
-                savedState.score += 100;
+                const updatedEnemies = savedState.enemies.filter((e: Enemy) => e.id !== defeatedEnemyId);
+                const updatedScore = savedState.score + 100;
                 
-                // Update refs and state
-                enemiesRef.current = savedState.enemies;
+                enemiesRef.current = updatedEnemies;
                 playerPosRef.current = savedState.playerPos;
                 setCharacter(savedState.character);
-                setScore(savedState.score);
+                setScore(updatedScore);
                 
-                // Save the updated state back to sessionStorage
-                sessionStorage.setItem('labyrinthState', JSON.stringify(savedState));
+                // Immediately save the updated state back to sessionStorage
+                const newState = {
+                    ...savedState,
+                    enemies: updatedEnemies,
+                    score: updatedScore
+                };
+                sessionStorage.setItem('labyrinthState', JSON.stringify(newState));
 
-                // Clean up URL
+                // Clean up URL to prevent re-processing on refresh
                 const newUrl = window.location.pathname;
                 window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
                 
-                // Redraw canvas
                 draw();
             }
         }
