@@ -204,9 +204,6 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
 
   const odPenalties = getOdCostPenalty(player);
 
-  const hasPrayerAction = actions.some(a => a.type === 'prayer');
-  const hasAddedAction = (actionType: ActionType) => actions.some(a => a.type === actionType);
-
   const isFaceless = player.race === 'Безликие';
   const hasElementalKnowledge = player.elementalKnowledge.length > 0;
   
@@ -286,7 +283,14 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
         return 'Требуется знание стихии "Исцеление"';
       }
 
-      if(hasAddedAction(type as ActionType)) return 'Это действие уже добавлено';
+      const actionsOfTypeCount = actions.filter(a => a.type === type).length;
+      if (type === 'physical_attack' && actionsOfTypeCount >= 2) {
+          return 'Можно атаковать оружием только дважды за ход';
+      }
+      if (type !== 'physical_attack' && actionsOfTypeCount >= 1) {
+          return 'Это действие уже добавлено';
+      }
+
       if(type === 'use_item' && player.inventory.length === 0) return 'Инвентарь пуст';
 
       return null;
@@ -378,7 +382,7 @@ export default function TurnForm({ player, opponent, onSubmit, distance }: TurnF
               <div className="space-y-2">
                   <Button 
                       onClick={() => addAction('remove_effect')} 
-                      disabled={hasAddedAction('remove_effect') || actions.length >= maxActionsPerTurn}
+                      disabled={actions.some(a => a.type === 'remove_effect') || actions.length >= maxActionsPerTurn}
                       className="w-full"
                   >
                       Снять с себя эффект

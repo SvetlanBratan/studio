@@ -1064,7 +1064,9 @@ export default function DuelPage() {
                     logOdCost(baseCost, finalCost);
                     damageDealt = calculateDamage(weapon.damage, false);
                     applyDamage(activePlayer, opponentPlayer, damageDealt, false, undefined, true);
-                    activePlayer.cooldowns.physical_attack = RULES.COOLDOWNS.physical_attack;
+                    if (activePlayer.weapon === 'Лук') {
+                        activePlayer.cooldowns.physical_attack = RULES.COOLDOWNS.physical_attack;
+                    }
                     break;
                 }
                 case 'strong_spell':
