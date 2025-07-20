@@ -7,7 +7,6 @@ import { initialPlayerStats } from '@/lib/rules';
 import type { CharacterStats } from '@/types/duel';
 import CharacterSetupModal from './character-setup-modal';
 import { Award, CheckCircle } from 'lucide-react';
-import PixelCharacter from './pixel-character';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -60,31 +59,15 @@ export default function Labyrinth() {
     const [isSetupComplete, setIsSetupComplete] = useState(false);
     const [isExitDialogOpen, setIsExitDialogOpen] = useState(false);
     
-    const saveState = useCallback(() => {
-        if (!character) return;
-        const state = {
-            playerPos: playerPosRef.current,
-            enemies: enemiesRef.current,
-            score: score,
-            character: character,
-        };
-        sessionStorage.setItem('labyrinthState', JSON.stringify(state));
-        sessionStorage.setItem('labyrinthCharacter', JSON.stringify(character));
-    }, [score, character]);
-
-    const drawEnemies = useCallback((ctx: CanvasRenderingContext2D) => {
-        enemiesRef.current.forEach(enemy => {
-            const enemyX = enemy.x * CELL_SIZE;
-            const enemyY = enemy.y * CELL_SIZE;
-            ctx.fillStyle = enemy.type === 'orc' ? '#8B4513' : '#006400';
-            ctx.fillRect(enemyX + 8, enemyY + 8, 16, 16);
-            ctx.fillStyle = enemy.isChasing ? '#FF4500' : '#FF0000';
-            ctx.fillRect(enemyX + 10, enemyY + 10, 4, 4);
-            ctx.fillRect(enemyX + 18, enemyY + 10, 4, 4);
-        });
-    }, []);
-
-    const drawMap = useCallback((ctx: CanvasRenderingContext2D) => {
+    const draw = useCallback(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw Map
         for (let y = 0; y < MAP_HEIGHT; y++) {
             for (let x = 0; x < MAP_WIDTH; x++) {
                 const cellX = x * CELL_SIZE;
@@ -110,59 +93,68 @@ export default function Labyrinth() {
                 }
             }
         }
-    }, []);
-    
-    const drawPlayer = useCallback((ctx: CanvasRenderingContext2D) => {
-        if (!character) return;
-        const playerX = playerPosRef.current.x * CELL_SIZE;
-        const playerY = playerPosRef.current.y * CELL_SIZE;
-        const pixel = 2;
-
-        const drawRect = (color: string, rectX: number, rectY: number, w: number, h: number) => {
-            ctx.fillStyle = color;
-            ctx.fillRect(playerX + rectX * pixel, playerY + rectY * pixel, w * pixel, h * pixel);
-        };
-        drawRect('#444', 2, 0, 6, 1);
-        drawRect('#444', 3, -1, 4, 1);
-        drawRect('#f2d5ab', 2, 1, 6, 3);
-        drawRect('#222', 3, 2, 1, 1);
-        drawRect('#666', 6, 2, 1, 1);
-        drawRect('#6b4f3b', 2, 4, 6, 5);
-        drawRect('#4a382b', 3, 9, 4, 1);
-        drawRect('#4a382b', 2, 10, 2, 4);
-        drawRect('#4a382b', 6, 10, 2, 4);
-    }, [character]);
-
-
-    const draw = useCallback(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
         
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawMap(ctx);
-        drawEnemies(ctx);
-        if (isSetupComplete) {
-            drawPlayer(ctx);
+        // Draw Enemies
+        enemiesRef.current.forEach(enemy => {
+            const enemyX = enemy.x * CELL_SIZE;
+            const enemyY = enemy.y * CELL_SIZE;
+            ctx.fillStyle = enemy.type === 'orc' ? '#8B4513' : '#006400';
+            ctx.fillRect(enemyX + 8, enemyY + 8, 16, 16);
+            ctx.fillStyle = enemy.isChasing ? '#FF4500' : '#FF0000';
+            ctx.fillRect(enemyX + 10, enemyY + 10, 4, 4);
+            ctx.fillRect(enemyX + 18, enemyY + 10, 4, 4);
+        });
+        
+        // Draw Player
+        if (isSetupComplete && character) {
+            const playerX = playerPosRef.current.x * CELL_SIZE;
+            const playerY = playerPosRef.current.y * CELL_SIZE;
+            const pixel = 2;
+
+            const drawRect = (color: string, rectX: number, rectY: number, w: number, h: number) => {
+                ctx.fillStyle = color;
+                ctx.fillRect(playerX + rectX * pixel, playerY + rectY * pixel, w * pixel, h * pixel);
+            };
+            drawRect('#444', 2, 0, 6, 1);
+            drawRect('#444', 3, -1, 4, 1);
+            drawRect('#f2d5ab', 2, 1, 6, 3);
+            drawRect('#222', 3, 2, 1, 1);
+            drawRect('#666', 6, 2, 1, 1);
+            drawRect('#6b4f3b', 2, 4, 6, 5);
+            drawRect('#4a382b', 3, 9, 4, 1);
+            drawRect('#4a382b', 2, 10, 2, 4);
+            drawRect('#4a382b', 6, 10, 2, 4);
         }
 
-    }, [drawMap, drawEnemies, drawPlayer, isSetupComplete]);
-    
-    
+    }, [isSetupComplete, character]);
+
+    const saveState = useCallback(() => {
+        if (!character) return;
+        const state = {
+            playerPos: playerPosRef.current,
+            enemies: enemiesRef.current,
+            score: score,
+            character: character,
+        };
+        sessionStorage.setItem('labyrinthState', JSON.stringify(state));
+        sessionStorage.setItem('labyrinthCharacter', JSON.stringify(character));
+    }, [score, character]);
+
     const generateEnemies = useCallback(() => {
         const newEnemies: Enemy[] = [];
         const enemyCount = 8;
+        const currentPlayerPos = playerPosRef.current;
+
         for (let i = 0; i < enemyCount; i++) {
             let x, y;
             do {
                 x = Math.floor(Math.random() * (MAP_WIDTH - 2)) + 1;
                 y = Math.floor(Math.random() * (MAP_HEIGHT - 2)) + 1;
-            } while (mapData[y][x] !== 0 || (x === 1 && y === 1) || newEnemies.some(e => e.x === x && e.y === y));
+            } while (mapData[y][x] !== 0 || (x === currentPlayerPos.x && y === currentPlayerPos.y) || newEnemies.some(e => e.x === x && e.y === y));
             
             newEnemies.push({
                 x, y,
-                id: `enemy_${x}_${y}_${Date.now()}`,
+                id: `enemy_${x}_${y}_${Date.now()}_${i}`,
                 type: Math.random() > 0.5 ? 'orc' : 'goblin',
                 isChasing: false,
             });
@@ -186,7 +178,7 @@ export default function Labyrinth() {
                 else if (enemy.y < playerPos.y) dy = 1;
                 else if (enemy.y > playerPos.y) dy = -1;
             } else {
-                if (Math.random() < 0.25) { // 25% chance to move randomly
+                if (Math.random() < 0.25) {
                    const directions = [{x: 0, y: -1}, {x: 1, y: 0}, {x: 0, y: 1}, {x: -1, y: 0}];
                    const randDir = directions[Math.floor(Math.random() * 4)];
                    dx = randDir.x;
@@ -217,8 +209,6 @@ export default function Labyrinth() {
         const defeatedEnemyId = searchParams.get('defeated');
         const savedStateJson = sessionStorage.getItem('labyrinthState');
 
-        let shouldGenerateNewEnemies = false;
-
         if (savedStateJson) {
             const savedState = JSON.parse(savedStateJson);
             playerPosRef.current = savedState.playerPos;
@@ -234,29 +224,29 @@ export default function Labyrinth() {
                 if (enemyWasDefeated) {
                     enemiesRef.current = updatedEnemies;
                     setScore(prevScore => prevScore + 100);
-
-                    if (enemiesRef.current.length === 0) {
-                        alert('Вы зачистили лабиринт! Появляются новые враги.');
-                        shouldGenerateNewEnemies = true;
-                    }
                 }
+                
                 const newUrl = window.location.pathname;
                 window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
 
+                if (enemiesRef.current.length === 0) {
+                    alert('Вы зачистили лабиринт! Появляются новые враги.');
+                    generateEnemies();
+                }
+                
+                saveState();
+                draw();
             }
         } else {
             setCharacter(initialPlayerStats('labyrinth-player', 'Искатель приключений'));
         }
-        if (shouldGenerateNewEnemies) {
-            generateEnemies();
-        }
-    }, []); 
+    }, [searchParams, generateEnemies, saveState, draw]); 
     
     useEffect(() => {
-        if(isSetupComplete) {
+        if(isSetupComplete && !searchParams.get('defeated')) {
            saveState();
         }
-    }, [score, isSetupComplete, saveState]);
+    }, [score, isSetupComplete, saveState, searchParams]);
 
 
     useEffect(() => {
