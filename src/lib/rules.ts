@@ -390,9 +390,9 @@ export const createEnemy = (): CharacterStats => {
     const reserveLevels = Object.keys(RESERVE_LEVELS).filter(level => level !== 'Божественный сын') as ReserveLevel[];
     const randomReserve = reserveLevels[Math.floor(Math.random() * reserveLevels.length)];
 
-    const allElements = Object.keys(ELEMENTS);
+    const allElements = Object.keys(ELEMENTS).filter(el => el !== 'Божественная');
     const shuffledElements = allElements.sort(() => 0.5 - Math.random());
-    const randomElementsCount = Math.floor(Math.random() * 6); // 0 to 5
+    const randomElementsCount = Math.floor(Math.random() * 5) + 1; // 1 to 5
     const randomElements = shuffledElements.slice(0, randomElementsCount);
 
     const weaponTypes = Object.keys(WEAPONS) as WeaponType[];
@@ -403,7 +403,6 @@ export const createEnemy = (): CharacterStats => {
 
     const maxOm = getOmFromReserve(randomReserve);
     
-    // Select 2-3 random passives for the monster
     const shuffledPassives = MONSTER_PASSIVES.sort(() => 0.5 - Math.random());
     const passivesCount = Math.floor(Math.random() * 2) + 2; // 2 or 3
     let bonuses = shuffledPassives.slice(0, passivesCount);
@@ -433,6 +432,6 @@ export const createEnemy = (): CharacterStats => {
         shield: { hp: 0, element: null },
         isDodging: false,
         cooldowns: { strongSpell: 0, item: 0, prayer: 0, physical_attack: 0, heal_self: 0 },
-        isSetupComplete: true, // Enemy is always ready
+        isSetupComplete: true,
     };
 };
