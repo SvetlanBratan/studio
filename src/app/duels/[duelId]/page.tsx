@@ -95,10 +95,10 @@ export default function DuelPage() {
 
   useEffect(() => {
     const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
-    if (!isLocalSolo && user && duelData && !duelData.player2 && userRole === 'spectator' && shouldJoin) {
+    if (!isLocalSolo && user && duelData && !duelData.player2 && user.uid !== duelData.player1.id && shouldJoin) {
         joinDuel(duelId, user.uid, "Игрок 2");
     }
-  }, [isLocalSolo, user, duelData, duelId, userRole]);
+  }, [isLocalSolo, user, duelData, duelId]);
 
   const handleUpdateDuelState = useCallback((updatedDuel: Partial<DuelState>) => {
     if (isLocalSolo) {
@@ -331,6 +331,20 @@ export default function DuelPage() {
             turnLog.push(`Пассивная способность (Нимфилус): ОМ на нуле, ${activePlayer.name} теряет 10 ОЗ.`);
         }
         
+        actions.forEach(action => {
+            if (action.type === 'remove_effect') {
+                if (activePlayer.penalties.length > 0) {
+                    const removablePenalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД'));
+                    if (removablePenalties.length > 0) {
+                       const removedEffect = removablePenalties[0];
+                       activePlayer.penalties = activePlayer.penalties.filter(p => p !== removedEffect);
+                       turnLog.push(`${activePlayer.name} использует действие: "Снять эффект" и снимает с себя эффект: "${removedEffect}".`);
+                    }
+                }
+            }
+        });
+        actions = actions.filter(a => a.type !== 'remove_effect');
+
         // Handle "Frozen" effect by reducing actions
         const frozenIndex = activePlayer.penalties.findIndex(p => p.startsWith('Заморожен'));
         if (frozenIndex > -1) {
@@ -1195,14 +1209,7 @@ export default function DuelPage() {
                      }
                     break;
                 case 'remove_effect':
-                    if (activePlayer.penalties.length > 0) {
-                        const removablePenalties = activePlayer.penalties.filter(p => !p.startsWith('Штраф ОД'));
-                        if (removablePenalties.length > 0) {
-                           const removedEffect = removablePenalties[0];
-                           activePlayer.penalties = activePlayer.penalties.filter(p => p !== removedEffect);
-                           turnLog.push(`${activePlayer.name} снимает с себя эффект: "${removedEffect}".`);
-                        }
-                    }
+                    // This case is handled at the start of the turn now
                     break;
                 case 'racial_ability':
                     const abilityName = action.payload.name;
@@ -1866,17 +1873,15 @@ export default function DuelPage() {
     return `Ход оппонента: ${activePlayer.name}`;
   }
   
-  // Calculate scaling and gap based on distance
-  const scalingStartDistance = 150; // The distance at which characters start to scale down
-  const maxGap = 48; // Corresponds to `gap-48` Tailwind class, you can adjust this
-  const maxVisualGapDistance = 50; // The distance at which gap stops increasing.
-  const minScale = 0.3; // The smallest size characters can be
-  const maxVisualDistance = 400; // The distance at which characters are smallest
+  const scalingStartDistance = 150;
+  const minScale = 0.3;
+  const maxVisualDistance = 400;
 
   let distanceScale = 1;
-  let distanceGap = (Math.min(duelData.distance, maxVisualGapDistance) / maxVisualGapDistance) * maxGap + (duelData.distance * 0.2);
+  let distanceGap = duelData.distance * 2;
   
   if (duelData.distance > scalingStartDistance) {
+      distanceGap = scalingStartDistance * 2;
       const distancePastThreshold = duelData.distance - scalingStartDistance;
       const scalingRange = maxVisualDistance - scalingStartDistance;
       const scaleReduction = (distancePastThreshold / scalingRange) * (1 - minScale);
@@ -2031,3 +2036,4 @@ export default function DuelPage() {
     
 
     
+
