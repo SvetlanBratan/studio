@@ -50,18 +50,33 @@ export default function Labyrinth() {
     const [score, setScore] = useState(0);
 
     const drawPlayer = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number) => {
-        const tempContainer = document.createElement('div');
-        const root = createRoot(tempContainer);
-        root.render(<PixelCharacter />);
+        // This is a simplified version of PixelCharacter's drawing logic
+        const playerX = x * CELL_SIZE;
+        const playerY = y * CELL_SIZE;
+        const pixel = 2; // scale factor
 
-        setTimeout(() => {
-            const svgString = new XMLSerializer().serializeToString(tempContainer.querySelector('div') as Node);
-            const img = new Image();
-            img.onload = () => {
-                ctx.drawImage(img, x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-            };
-            img.src = "data:image/svg+xml;base64," + btoa(svgString);
-        }, 100);
+        const drawRect = (color: string, rectX: number, rectY: number, w: number, h: number) => {
+            ctx.fillStyle = color;
+            ctx.fillRect(playerX + rectX * pixel, playerY + rectY * pixel, w * pixel, h * pixel);
+        };
+
+        // Hat
+        drawRect('#444', 2, 0, 6, 1);
+        drawRect('#444', 3, -1, 4, 1);
+
+        // Head
+        drawRect('#f2d5ab', 2, 1, 6, 3);
+        // Eyes
+        drawRect('#222', 3, 2, 1, 1);
+        drawRect('#666', 6, 2, 1, 1);
+
+        // Body
+        drawRect('#6b4f3b', 2, 4, 6, 5);
+        drawRect('#4a382b', 3, 9, 4, 1);
+        
+        // Legs
+        drawRect('#4a382b', 2, 10, 2, 4);
+        drawRect('#4a382b', 6, 10, 2, 4);
     }, []);
     
      const drawEnemies = useCallback((ctx: CanvasRenderingContext2D) => {
@@ -105,12 +120,9 @@ export default function Labyrinth() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawMap(ctx);
         drawEnemies(ctx);
-        
-        // Use a placeholder for player drawing for now
-        ctx.fillStyle = '#4169E1'; // Player color
-        ctx.fillRect(playerRef.current.x * CELL_SIZE + 8, playerRef.current.y * CELL_SIZE + 8, 16, 16);
+        drawPlayer(ctx, playerRef.current.x, playerRef.current.y);
 
-    }, [drawMap, drawEnemies]);
+    }, [drawMap, drawEnemies, drawPlayer]);
 
     useEffect(() => {
         const savedState = sessionStorage.getItem('labyrinthState');

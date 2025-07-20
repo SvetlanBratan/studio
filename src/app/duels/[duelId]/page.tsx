@@ -25,6 +25,7 @@ import { deepClone } from '@/lib/utils';
 import DuelLog from '@/components/duel-log';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 
 const getPhysicalCondition = (oz: number, maxOz: number): string => {
