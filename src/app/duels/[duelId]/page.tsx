@@ -1901,11 +1901,11 @@ export default function DuelPage() {
   }
 
   if (!duelData.duelStarted) {
-      if ((isLocalSolo || isPvE)) {
+      if (isPvE) {
           if (!duelData.player1.isSetupComplete) {
             return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
           }
-      } else { // Online PvP
+      } else if (!isLocalSolo) { // Online PvP
           if (userRole === 'spectator') {
               return (
                   <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-4 text-center">
