@@ -205,7 +205,7 @@ export default function Labyrinth() {
         draw();
     }, [router, saveState, draw]);
 
-    // This effect runs only once on initial mount to load or initialize the game state.
+    // Effect for initializing the game state ONCE
     useEffect(() => {
         const savedStateJson = sessionStorage.getItem('labyrinthState');
         if (savedStateJson) {
@@ -215,18 +215,17 @@ export default function Labyrinth() {
                 enemiesRef.current = savedState.enemies;
                 setScore(savedState.score);
                 setCharacter(savedState.character);
-                setIsSetupComplete(true);
             } catch (e) {
-                console.error("Failed to parse saved state, starting new game.", e);
-                sessionStorage.removeItem('labyrinthState');
+                console.error("Failed to parse saved state, creating new character.", e);
                 setCharacter(initialPlayerStats('labyrinth-player', 'Искатель приключений'));
+                sessionStorage.removeItem('labyrinthState');
             }
         } else {
             setCharacter(initialPlayerStats('labyrinth-player', 'Искатель приключений'));
         }
     }, []);
 
-    // This effect runs ONLY when returning from a duel (when searchParams change).
+    // Effect for handling return from a duel
     useEffect(() => {
         const defeatedEnemyId = searchParams.get('defeated');
 
@@ -239,8 +238,6 @@ export default function Labyrinth() {
                 const updatedScore = savedState.score + 100;
                 
                 enemiesRef.current = updatedEnemies;
-                playerPosRef.current = savedState.playerPos;
-                setCharacter(savedState.character);
                 setScore(updatedScore);
                 
                 // Immediately save the updated state back to sessionStorage
@@ -250,15 +247,14 @@ export default function Labyrinth() {
                     score: updatedScore
                 };
                 sessionStorage.setItem('labyrinthState', JSON.stringify(newState));
+                sessionStorage.setItem('labyrinthCharacter', JSON.stringify(newState.character));
 
                 // Clean up URL to prevent re-processing on refresh
                 const newUrl = window.location.pathname;
                 window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-                
-                draw();
             }
         }
-    }, [searchParams, draw]);
+    }, [searchParams]);
 
 
     const movePlayer = useCallback((dx: number, dy: number) => {
@@ -379,3 +375,5 @@ export default function Labyrinth() {
         </div>
     );
 }
+
+    
