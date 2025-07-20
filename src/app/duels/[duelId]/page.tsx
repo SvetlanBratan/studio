@@ -1895,11 +1895,11 @@ export default function DuelPage() {
   };
 
   const handleLeave = () => {
+      router.push('/duels');
       if (fromLabyrinth) {
           sessionStorage.removeItem('labyrinthState');
           sessionStorage.removeItem('labyrinthCharacter');
       }
-      router.push('/duels');
   }
 
 
