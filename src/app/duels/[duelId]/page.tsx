@@ -86,7 +86,7 @@ export default function DuelPage() {
 
   const userRole: 'player1' | 'player2' | 'spectator' | null = React.useMemo(() => {
     if (!user || !duelData) return null;
-    if (isLocalSolo) return 'player1'; // In solo, user controls both
+    if (isLocalSolo) return 'player1';
     if (user.uid === duelData.player1.id) return 'player1';
     if (duelData.player2 && user.uid === duelData.player2.id) return 'player2';
     return 'spectator';
@@ -94,13 +94,16 @@ export default function DuelPage() {
 
 
   useEffect(() => {
-    if (userRole === 'spectator' && !isLocalSolo && user && onlineDuel && !onlineDuel.player2 && onlineDuel.player1.id !== user.uid) {
+    // This effect handles a user joining an online duel as player 2.
+    // It checks if the user is not player 1, if player 2 slot is empty,
+    // and if the URL has the `join=true` query parameter.
+    if (!isLocalSolo && user && duelData && !duelData.player2 && user.uid !== duelData.player1.id) {
         const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
         if (shouldJoin) {
             joinDuel(duelId, user.uid, "Игрок 2");
         }
     }
-  }, [userRole, isLocalSolo, user, onlineDuel, duelId]);
+  }, [isLocalSolo, user, duelData, duelId]);
 
   const handleUpdateDuelState = useCallback((updatedDuel: Partial<DuelState>) => {
     if (isLocalSolo) {
@@ -2018,6 +2021,7 @@ export default function DuelPage() {
 
 
     
+
 
 
 
