@@ -87,72 +87,86 @@ export default function DuelPage() {
     // Enemy AI turn logic
     useEffect(() => {
         if (isPvE && duelData && duelData.duelStarted && duelData.activePlayerId === 'player2' && !duelData.winner && duelData.player2) {
-            const enemy = duelData.player2;
-            const player = duelData.player1;
-            const distance = duelData.distance;
-            const weapon = WEAPONS[enemy.weapon];
+            
+            const performEnemyTurn = () => {
+                const enemyActions: Action[] = [];
+                let tempEnemyState = deepClone(duelData.player2!);
+                let tempDistance = duelData.distance;
 
-            const spellRange = RULES.SPELL_RANGES[enemy.reserve];
-            const hasMagic = enemy.elementalKnowledge.length > 0;
-            const canUseMagic = hasMagic && distance <= spellRange;
+                // AI tries to perform up to 2 actions
+                for (let i = 0; i < RULES.MAX_ACTIONS_PER_TURN; i++) {
+                    const enemy = tempEnemyState;
+                    const weapon = WEAPONS[enemy.weapon];
+                    const spellRange = RULES.SPELL_RANGES[enemy.reserve];
+                    const hasMagic = enemy.elementalKnowledge.length > 0;
+                    const canUseMagic = hasMagic && tempDistance <= spellRange;
 
-            let enemyAction: Action | null = null;
+                    let chosenAction: Action | null = null;
 
-            // Priority: Magic > Weapon > Move
-            if (canUseMagic) {
-                const spells = [
-                    { type: 'strong_spell', cost: RULES.RITUAL_COSTS.strong, cooldown: enemy.cooldowns.strongSpell },
-                    { type: 'medium_spell', cost: RULES.RITUAL_COSTS.medium, cooldown: 0 }, // no cooldown
-                    { type: 'small_spell', cost: RULES.RITUAL_COSTS.small, cooldown: 0 }, // no cooldown
-                ] as const;
-                
-                for (const spell of spells) {
-                    if (enemy.om >= spell.cost && (spell.cooldown || 0) <= 0) {
-                        const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
-                        enemyAction = { type: spell.type, payload: { element: randomElement } };
-                        break; 
+                    // Priority 1: Magic
+                    if (canUseMagic) {
+                        const spells = [
+                            { type: 'strong_spell', cost: RULES.RITUAL_COSTS.strong, cooldown: enemy.cooldowns.strongSpell },
+                            { type: 'medium_spell', cost: RULES.RITUAL_COSTS.medium, cooldown: 0 },
+                            { type: 'small_spell', cost: RULES.RITUAL_COSTS.small, cooldown: 0 },
+                        ] as const;
+                        
+                        for (const spell of spells) {
+                            if (enemy.om >= spell.cost && (spell.cooldown || 0) <= 0) {
+                                const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
+                                chosenAction = { type: spell.type, payload: { element: randomElement } };
+                                tempEnemyState.om -= spell.cost;
+                                if(spell.type === 'strong_spell') tempEnemyState.cooldowns.strongSpell = RULES.COOLDOWNS.strongSpell;
+                                break; 
+                            }
+                        }
+                    }
+                    
+                    // Priority 2: Weapon Attack
+                    if (!chosenAction && tempDistance <= weapon.range) {
+                        if(enemy.od >= RULES.NON_MAGIC_COSTS.physical_attack) {
+                            chosenAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
+                            tempEnemyState.od -= RULES.NON_MAGIC_COSTS.physical_attack;
+                        }
+                    }
+
+                    // Priority 3: Move closer
+                    if (!chosenAction) {
+                        let distanceToClose = 0;
+                        if (hasMagic && tempDistance > spellRange) {
+                            distanceToClose = tempDistance - spellRange;
+                        } else if (tempDistance > weapon.range) {
+                            distanceToClose = tempDistance - weapon.range;
+                        }
+                        
+                        if (distanceToClose > 0) {
+                           const moveCost = Math.abs(distanceToClose) * RULES.NON_MAGIC_COSTS.move_per_meter;
+                           if (enemy.od >= moveCost) {
+                               chosenAction = { type: 'move', payload: { distance: -distanceToClose } };
+                               tempEnemyState.od -= moveCost;
+                               tempDistance -= distanceToClose;
+                           }
+                        }
+                    }
+
+                    // Priority 4: Rest
+                    if (!chosenAction) {
+                        chosenAction = { type: 'rest', payload: {} };
+                    }
+                    
+                    if (chosenAction) {
+                        enemyActions.push(chosenAction);
                     }
                 }
-            }
-            
-            if (!enemyAction && distance <= weapon.range) {
-                 if(enemy.od >= RULES.NON_MAGIC_COSTS.physical_attack) {
-                    enemyAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
-                 }
-            }
 
-            if (!enemyAction) {
-                // If still no action, try to move closer
-                let distanceToClose = 0;
-                if (hasMagic && distance > spellRange) {
-                    // if has magic, prioritize getting into spell range
-                    distanceToClose = distance - spellRange;
-                } else if (distance > weapon.range) {
-                    // if no magic, prioritize getting into weapon range
-                     distanceToClose = distance - weapon.range;
+                if (enemyActions.length > 0) {
+                    setTimeout(() => {
+                        executeTurn(enemyActions);
+                    }, 1000); 
                 }
-                
-                if (distanceToClose < 0) distanceToClose = 0; // Don't move if already in range
-
-                if (distanceToClose > 0) {
-                   const moveCost = Math.abs(distanceToClose) * RULES.NON_MAGIC_COSTS.move_per_meter;
-                   if (enemy.od >= moveCost) {
-                       enemyAction = { type: 'move', payload: { distance: -distanceToClose } };
-                   }
-                }
-            }
-
-            if (!enemyAction) {
-                // If still no action (e.g. not enough OD/OM for attacks, or already in range), rest.
-                enemyAction = { type: 'rest', payload: {} };
-            }
+            };
             
-            // Execute turn after a short delay for visual feedback
-            if (enemyAction) {
-                setTimeout(() => {
-                    executeTurn([enemyAction!]);
-                }, 1000); 
-            }
+            performEnemyTurn();
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isPvE, duelData?.activePlayerId, duelData?.duelStarted, duelData?.winner]);
@@ -1241,13 +1255,19 @@ export default function DuelPage() {
                     activePlayer.cooldowns.heal_self = RULES.COOLDOWNS.heal_self;
                     break;
                 }
-                case 'shield':
-                    activePlayer.om -= RULES.RITUAL_COSTS.medium;
+                case 'shield': {
+                    const omCost = RULES.RITUAL_COSTS.medium;
+                    if (activePlayer.om < omCost) {
+                        turnLog.push(`Действие "Создать щит" не удалось: недостаточно ОМ (требуется ${omCost}, есть ${activePlayer.om}).`);
+                        return;
+                    }
+                    activePlayer.om -= omCost;
                     activePlayer.shield.hp += RULES.BASE_SHIELD_VALUE;
                     activePlayer.shield.element = action.payload?.element || null;
                     const shieldType = activePlayer.shield.element ? `${activePlayer.shield.element} щит` : "Физический щит";
-                    turnLog.push(`${activePlayer.name} создает ${shieldType} прочностью ${RULES.BASE_SHIELD_VALUE}.`);
+                    turnLog.push(`${activePlayer.name} создает ${shieldType} прочностью ${RULES.BASE_SHIELD_VALUE} за ${omCost} ОМ.`);
                     break;
+                }
                 case 'dodge':
                     {
                         let baseCost = RULES.NON_MAGIC_COSTS.dodge;
@@ -2196,3 +2216,6 @@ export default function DuelPage() {
     </div>
   );
 }
+
+
+    
