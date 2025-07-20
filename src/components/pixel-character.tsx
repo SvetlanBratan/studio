@@ -15,6 +15,7 @@ interface PixelCharacterProps {
   penalties?: string[];
   oz?: number;
   maxOz?: number;
+  scale?: number;
 }
 
 const ELEMENT_COLORS: Record<string, string> = {
@@ -49,6 +50,7 @@ export default function PixelCharacter({
   penalties = [],
   oz = 100,
   maxOz = 100,
+  scale = 1,
 }: PixelCharacterProps) {
   const pixelSize = '6px'; // Controls the size of each "pixel"
 
@@ -56,7 +58,7 @@ export default function PixelCharacter({
     width: `calc(10 * ${pixelSize})`,
     height: `calc(16 * ${pixelSize})`,
     position: 'relative',
-    transform: isFlipped ? 'scaleX(-1)' : 'none',
+    transform: `${isFlipped ? 'scaleX(-1)' : 'none'}`,
     filter: isActive ? 'drop-shadow(0 0 8px hsl(var(--accent)))' : 'none',
     transition: 'filter 0.3s ease-in-out',
   };
@@ -202,6 +204,7 @@ export default function PixelCharacter({
   }
 
   const renderHealthBar = () => {
+    if (oz === undefined || maxOz === undefined) return null;
     const healthPercentage = (oz / maxOz) * 100;
     
     return (
@@ -251,7 +254,7 @@ export default function PixelCharacter({
     return (
         <>
             {/* Hat */}
-            {createPixel(2, 0, hatColor, 10, 1)} 
+            {createPixel(2, 0, hatColor, 10, 1)}
             {createPixel(1, 1, hatColor, 8, 1)}
             {createPixel(0, 2, hatColor, 6, 1)}
             {createPixel(-1, 3, hatColor, 4, 1)}
@@ -277,6 +280,14 @@ export default function PixelCharacter({
     )
   }
 
+  const wrapperStyle: React.CSSProperties = {
+    '--character-scale': scale,
+    transform: `scale(var(--character-scale))`,
+    transformOrigin: 'bottom',
+    transition: 'transform 0.5s ease-in-out',
+  };
+
+
   return (
     <div
       className={cn(
@@ -286,16 +297,19 @@ export default function PixelCharacter({
       )}
       style={lungeStyle}
     >
-      <div style={characterStyles}>
-        {renderHealthBar()}
-        {renderPose()}
-        <div style={shieldStyles} />
-        {renderSpellProjectile()}
-        {renderStatusEffects()}
+      <div style={wrapperStyle}>
+          <div style={characterStyles}>
+            {renderHealthBar()}
+            {renderPose()}
+            <div style={shieldStyles} />
+            {renderSpellProjectile()}
+            {renderStatusEffects()}
+          </div>
       </div>
     </div>
   );
 }
+
 
 
 

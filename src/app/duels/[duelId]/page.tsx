@@ -97,13 +97,13 @@ export default function DuelPage() {
     // This effect handles a user joining an online duel as player 2.
     // It checks if the user is not player 1, if player 2 slot is empty,
     // and if the URL has the `join=true` query parameter.
-    if (!isLocalSolo && user && duelData && !duelData.player2 && user.uid !== duelData.player1.id) {
+    if (!isLocalSolo && user && duelData && userRole === 'spectator' && !duelData.player2) {
         const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
         if (shouldJoin) {
             joinDuel(duelId, user.uid, "Игрок 2");
         }
     }
-  }, [isLocalSolo, user, duelData, duelId]);
+  }, [isLocalSolo, user, duelData, duelId, userRole]);
 
   const handleUpdateDuelState = useCallback((updatedDuel: Partial<DuelState>) => {
     if (isLocalSolo) {
@@ -1870,6 +1870,15 @@ export default function DuelPage() {
     return `Ход оппонента: ${activePlayer.name}`;
   }
 
+  // Calculate scaling based on distance
+  const maxVisualDistance = 200; // The distance at which characters are smallest
+  const minScale = 0.3; // The smallest size characters can be
+  const distanceScale = Math.max(
+    minScale, 
+    1 - (Math.min(duelData.distance, maxVisualDistance) / maxVisualDistance) * (1 - minScale)
+  );
+
+
   // --- Main Duel Interface ---
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1940,12 +1949,7 @@ export default function DuelPage() {
                 </CardHeader>
                 <CardContent>
                 
-                <div 
-                  className="mb-4 p-4 bg-muted/50 rounded-lg flex justify-center items-end h-48 relative overflow-hidden"
-                  style={{
-                    gap: `${Math.max(0, duelData.distance) * 5}px` // Adjust multiplier for visual effect
-                  }}
-                >
+                <div className="mb-4 p-4 bg-muted/50 rounded-lg flex justify-between items-end h-48 relative overflow-hidden">
                     <PixelCharacter
                       pose={duelData.animationState?.player1 || 'idle'}
                       weapon={duelData.player1.weapon}
@@ -1955,6 +1959,7 @@ export default function DuelPage() {
                       penalties={duelData.player1.penalties}
                       oz={duelData.player1.oz}
                       maxOz={duelData.player1.maxOz}
+                      scale={distanceScale}
                     />
                     <PixelCharacter
                       pose={duelData.animationState?.player2 || 'idle'}
@@ -1966,6 +1971,7 @@ export default function DuelPage() {
                       penalties={duelData.player2.penalties}
                       oz={duelData.player2.oz}
                       maxOz={duelData.player2.maxOz}
+                      scale={distanceScale}
                     />
                 </div>
 
@@ -2021,6 +2027,7 @@ export default function DuelPage() {
 
 
     
+
 
 
 
