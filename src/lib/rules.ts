@@ -114,6 +114,7 @@ export const RACES: Race[] = [
     { name: 'Оборотни', passiveBonuses: ['Инстинкт (-10 от этого урона)', 'Взрыв ярости (+10 урона по врагу в случае, если ОЗ ниже 100)'], activeAbilities: [{ name: 'Полный Зверь', description: 'наносит 50 урона.', cost: { om: 30 } }] },
     { name: 'Огненные крыланы (Фениксы)', passiveBonuses: ['Теплокровность (+50 иммунитет к огню)', 'Перерождение (+50 ОЗ при падении ниже 30 ОЗ)'], activeAbilities: [{ name: 'Крылья пламени', description: 'наносят 60 урона огнём.', cost: { om: 40 } }] },
     { name: 'Оприты', passiveBonuses: ['Электроустойчивость (-50 урона от атак стихии молний)'], activeAbilities: [{ name: 'Электрический разряд', description: 'наносит 50 урона стихией молний и врагу, и себе.', cost: { om: 30 } }] },
+    { name: 'Орк', passiveBonuses: ['Расовая ярость (+10 к урону)'], activeAbilities: [] },
     { name: 'Пересмешники', passiveBonuses: ['Смена облика (-10 урона от первой атаки противника)'], activeAbilities: [{ name: 'Кража лица', description: 'лишает врага одного действия.', cost: { om: 30 } }] },
     { name: 'Полукоты', passiveBonuses: ['Девять жизней (+50 ОЗ при падении ниже 10 ОЗ)', 'Уверенность в прыжке (+10 к физическим атакам)'], activeAbilities: [{ name: 'Когти судьбы', description: 'наносит 40 урона.', cost: { om: 30 } }] },
     { name: 'Полузаи', passiveBonuses: ['Усиленный слух (-5 урона от звуковых атак)', 'Воздушное ускорение (-5 ОД на действия, связанные с перемещением)'], activeAbilities: [{ name: 'Вихрь эфира', description: 'накладывает эффект удержания.', cost: { om: 30 } }] },
@@ -364,6 +365,40 @@ export const initialPlayerStats = (id: string, name: string): CharacterStats => 
         isDodging: false,
         cooldowns: { strongSpell: 0, item: 0, prayer: 0, physical_attack: 0, heal_self: 0 },
         isSetupComplete: false,
+    };
+};
+
+export const createMonster = (): CharacterStats => {
+    const race = RACES.find(r => r.name === 'Орк');
+    if (!race) throw new Error("Could not find 'Орк' race.");
+
+    let bonuses = [...race.passiveBonuses];
+    
+    return {
+        id: 'MONSTER_ID',
+        name: 'Орк-воин',
+        race: race.name,
+        reserve: 'Неофит',
+        elementalKnowledge: [],
+        faithLevel: 0,
+        faithLevelName: 'Равнодушие',
+        physicalCondition: 'В полном здравии',
+        bonuses,
+        penalties: [],
+        statuses: [],
+        inventory: [],
+        weapon: 'Топор',
+        armor: 'Кольчуга',
+        oz: 200,
+        maxOz: 200,
+        om: 50,
+        maxOm: 50,
+        od: 150,
+        maxOd: 150,
+        shield: { hp: 0, element: null },
+        isDodging: false,
+        cooldowns: { strongSpell: 0, item: 0, prayer: 0, physical_attack: 0, heal_self: 0 },
+        isSetupComplete: true, // Monster is always ready
     };
 };
 

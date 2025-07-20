@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler, Eye, ScrollText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS, WEAPONS, ARMORS, ITEMS } from '@/lib/rules';
+import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS, WEAPONS, ARMORS, ITEMS, createMonster } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { updateDuel, joinDuel } from '@/lib/firestore';
@@ -42,20 +42,21 @@ export default function DuelPage() {
   const router = useRouter();
   const duelId = params.duelId as string;
   const isLocalSolo = duelId === 'solo';
+  const isPvE = duelId === 'monster';
 
   const [localDuelState, setLocalDuelState] = useState<DuelState | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const duelRef = isLocalSolo ? null : doc(firestore, 'duels', duelId);
+  const duelRef = isLocalSolo || isPvE ? null : doc(firestore, 'duels', duelId);
   const [onlineDuel, onlineDuelLoading, onlineDuelError] = useDocumentData(duelRef);
 
-  const duelData = isLocalSolo ? localDuelState : (onlineDuel as DuelState | undefined);
-  const duelLoading = authLoading || (isLocalSolo ? false : onlineDuelLoading);
+  const duelData = isLocalSolo || isPvE ? localDuelState : (onlineDuel as DuelState | undefined);
+  const duelLoading = authLoading || (isLocalSolo || isPvE ? false : onlineDuelLoading);
 
   useEffect(() => {
-    if (isLocalSolo && !localDuelState && user) {
+    if ((isLocalSolo || isPvE) && !localDuelState && user) {
         const player1 = initialPlayerStats(user.uid, 'Игрок 1');
-        const player2 = initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
+        const player2 = isPvE ? createMonster() : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
         setLocalDuelState({
             player1,
             player2,
@@ -70,7 +71,7 @@ export default function DuelPage() {
             animationState: { player1: 'idle', player2: 'idle' },
         });
     }
-  }, [isLocalSolo, localDuelState, user]);
+  }, [isLocalSolo, isPvE, localDuelState, user]);
   
     useEffect(() => {
         if (duelData?.duelStarted && duelData.currentTurn === 1 && duelData.turnHistory.length === 0 && !duelData.log.some(l => l.includes('Первый ход'))) {
@@ -83,33 +84,47 @@ export default function DuelPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [duelData?.duelStarted]);
 
+    // Monster AI turn logic
+    useEffect(() => {
+        if (isPvE && duelData && duelData.duelStarted && duelData.activePlayerId === 'player2' && !duelData.winner) {
+            // Simple AI: Monster always attacks
+            const monsterAttack: Action = { type: 'physical_attack', payload: { weapon: duelData.player2?.weapon } };
+            
+            // Execute turn after a short delay for visual feedback
+            setTimeout(() => {
+                executeTurn([monsterAttack]);
+            }, 1000); 
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPvE, duelData?.activePlayerId, duelData?.duelStarted, duelData?.winner]);
+
 
   const userRole: 'player1' | 'player2' | 'spectator' | null = React.useMemo(() => {
     if (!user || !duelData) return null;
-    if (isLocalSolo) return 'player1';
+    if (isLocalSolo || isPvE) return 'player1';
     if (user.uid === duelData.player1.id) return 'player1';
     if (duelData.player2 && user.uid === duelData.player2.id) return 'player2';
     return 'spectator';
-  }, [user, duelData, isLocalSolo]);
+  }, [user, duelData, isLocalSolo, isPvE]);
 
 
   useEffect(() => {
     const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
-    if (userRole === 'spectator' && duelData && !duelData.player2 && shouldJoin) {
+    if (userRole === 'spectator' && duelData && !duelData.player2 && shouldJoin && !isLocalSolo && !isPvE) {
       joinDuel(duelId, user!.uid, "Игрок 2");
     }
-  }, [userRole, duelData, duelId, user]);
+  }, [userRole, duelData, duelId, user, isLocalSolo, isPvE]);
 
 
   const handleUpdateDuelState = useCallback((updatedDuel: Partial<DuelState>) => {
-    if (isLocalSolo) {
+    if (isLocalSolo || isPvE) {
         setLocalDuelState(prev => prev ? { ...prev, ...updatedDuel } as DuelState : null);
     } else {
         if (duelId) {
             updateDuel(duelId, updatedDuel);
         }
     }
-  }, [isLocalSolo, duelId]);
+  }, [isLocalSolo, isPvE, duelId]);
 
   const handleCharacterUpdate = (updatedCharacter: CharacterStats) => {
     if (!duelData) return;
@@ -1750,7 +1765,7 @@ export default function DuelPage() {
     return null;
   }
   
-  if (onlineDuelError && !isLocalSolo) {
+  if (onlineDuelError && !isLocalSolo && !isPvE) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
           <p className="text-destructive">Не удалось загрузить дуэль. Возможно, ID неверный.</p>
@@ -1773,14 +1788,22 @@ export default function DuelPage() {
   // --- STAGE LOGIC ---
   const isPlayer1 = userRole === 'player1';
   const isPlayer2 = userRole === 'player2';
-
-  // 1. Solo duel setup
-  if (isLocalSolo && !duelData.duelStarted) {
-    return <SoloSetupForm player1={duelData.player1} player2={duelData.player2!} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
+  
+  // 1. PVE and Solo setup
+  if ((isLocalSolo || isPvE) && !duelData.duelStarted) {
+      if (isPvE) {
+          // For PvE, only the player sets up their character
+          if (!duelData.player1.isSetupComplete) {
+              return <CharacterSetupModal character={duelData.player1} onSave={(char) => handleCharacterUpdate(char)} onCancel={() => router.push('/duels')} />;
+          }
+      } else {
+          // For Solo, both players are set up
+          return <SoloSetupForm player1={duelData.player1} player2={duelData.player2!} onSave={handleSoloSetupComplete} onCancel={() => router.push('/duels')} />;
+      }
   }
   
   // --- Online Duel Flow ---
-  if (!isLocalSolo && !duelData.duelStarted) {
+  if (!isLocalSolo && !isPvE && !duelData.duelStarted) {
       // Spectator waiting view
       if (userRole === 'spectator') {
           return (
@@ -1875,10 +1898,11 @@ export default function DuelPage() {
 
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
   const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
-  const isMyTurn = isLocalSolo || userRole === (duelData.activePlayerId === 'player1' ? 'player1' : 'player2');
+  const isMyTurn = isLocalSolo || isPvE || userRole === (duelData.activePlayerId === 'player1' ? 'player1' : 'player2');
 
   const turnStatusText = () => {
     if (isLocalSolo) return "Ваш ход";
+    if (isPvE) return activePlayer.id === user?.uid ? "Ваш ход" : `Ход монстра: ${activePlayer.name}`;
     if (userRole === 'spectator') return `Ход игрока ${activePlayer.name}`;
     if (isMyTurn) return "Ваш ход";
     return `Ход оппонента: ${activePlayer.name}`;
@@ -2001,7 +2025,7 @@ export default function DuelPage() {
                 </div>
 
 
-                {isMyTurn && userRole !== 'spectator' ? (
+                {isMyTurn && userRole !== 'spectator' && (!isPvE || activePlayer.id === user?.uid) ? (
                     <TurnForm
                         player={activePlayer}
                         opponent={currentOpponent}
@@ -2043,12 +2067,3 @@ export default function DuelPage() {
     </div>
   );
 }
-
-    
-
-    
-
-
-
-
-    

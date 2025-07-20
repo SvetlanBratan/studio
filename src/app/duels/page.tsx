@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dices, LogIn, LogOut, Swords, User as UserIcon, Eye } from 'lucide-react';
+import { Dices, LogIn, LogOut, Swords, User as UserIcon, Eye, ShieldQuestion } from 'lucide-react';
 
 export default function DuelsPage() {
   const { user, loading, signOut } = useAuth();
@@ -54,6 +54,10 @@ export default function DuelsPage() {
     router.push(`/duels/solo`);
   };
 
+  const handleCreateMonsterDuel = () => {
+    router.push(`/duels/monster`);
+  };
+
   const handleJoinDuel = (e: React.FormEvent, asSpectator = false) => {
     e.preventDefault();
     if (joinDuelId.trim()) {
@@ -91,13 +95,17 @@ export default function DuelsPage() {
                     <CardDescription>Создайте новую дуэль или войдите в существующую по ID.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Button onClick={handleCreateDuel} disabled={isCreating} className="w-full" size="lg">
+                    <Button onClick={handleCreateDuel} disabled={isCreating} className="w-full">
                         <Dices className="mr-2" />
-                        {isCreating ? 'Создание...' : 'Создать новую дуэль (Онлайн)'}
+                        {isCreating ? 'Создание...' : 'Создать дуэль (Онлайн)'}
                     </Button>
-                    <Button onClick={handleCreateSoloDuel} className="w-full" size="lg" variant="outline">
+                    <Button onClick={handleCreateSoloDuel} className="w-full" variant="secondary">
                         <UserIcon className="mr-2" />
                         Создать пробную дуэль (Соло)
+                    </Button>
+                     <Button onClick={handleCreateMonsterDuel} className="w-full" variant="secondary">
+                        <ShieldQuestion className="mr-2" />
+                        Битва с монстром (PvE)
                     </Button>
                     
                     <div className="relative">
