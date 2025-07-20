@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Swords, Settings2, ShieldAlert, Check, ClipboardCopy, ArrowLeft, Ruler, Eye, ScrollText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS, WEAPONS, ARMORS, ITEMS, createMonster } from '@/lib/rules';
+import { RULES, getActionLabel, RACES, initialPlayerStats, ELEMENTS, WEAPONS, ARMORS, ITEMS, createEnemy } from '@/lib/rules';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/useAuth';
 import { updateDuel, joinDuel } from '@/lib/firestore';
@@ -56,7 +56,7 @@ export default function DuelPage() {
   useEffect(() => {
     if ((isLocalSolo || isPvE) && !localDuelState && user) {
         const player1 = initialPlayerStats(user.uid, 'Игрок 1');
-        const player2 = isPvE ? createMonster() : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
+        const player2 = isPvE ? createEnemy() : initialPlayerStats('SOLO_PLAYER_2', 'Игрок 2');
         setLocalDuelState({
             player1,
             player2,
@@ -84,15 +84,26 @@ export default function DuelPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [duelData?.duelStarted]);
 
-    // Monster AI turn logic
+    // Enemy AI turn logic
     useEffect(() => {
-        if (isPvE && duelData && duelData.duelStarted && duelData.activePlayerId === 'player2' && !duelData.winner) {
-            // Simple AI: Monster always attacks
-            const monsterAttack: Action = { type: 'physical_attack', payload: { weapon: duelData.player2?.weapon } };
+        if (isPvE && duelData && duelData.duelStarted && duelData.activePlayerId === 'player2' && !duelData.winner && duelData.player2) {
+            const enemy = duelData.player2;
+            const weapon = WEAPONS[enemy.weapon];
+            
+            let enemyAction: Action;
+
+            if (duelData.distance <= weapon.range) {
+                // Attack if in range
+                enemyAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
+            } else {
+                // Move closer if out of range
+                const distanceToClose = duelData.distance - weapon.range;
+                enemyAction = { type: 'move', payload: { distance: -distanceToClose } };
+            }
             
             // Execute turn after a short delay for visual feedback
             setTimeout(() => {
-                executeTurn([monsterAttack]);
+                executeTurn([enemyAction]);
             }, 1000); 
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,7 +112,8 @@ export default function DuelPage() {
 
   const userRole: 'player1' | 'player2' | 'spectator' | null = React.useMemo(() => {
     if (!user || !duelData) return null;
-    if (isLocalSolo || isPvE) return 'player1';
+    if (isLocalSolo) return 'player1';
+    if (isPvE) return user.uid === duelData.player1.id ? 'player1' : 'spectator';
     if (user.uid === duelData.player1.id) return 'player1';
     if (duelData.player2 && user.uid === duelData.player2.id) return 'player2';
     return 'spectator';
@@ -1898,11 +1910,11 @@ export default function DuelPage() {
 
   const activePlayer = duelData.activePlayerId === 'player1' ? duelData.player1 : duelData.player2;
   const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
-  const isMyTurn = isLocalSolo || isPvE || userRole === (duelData.activePlayerId === 'player1' ? 'player1' : 'player2');
+  const isMyTurn = isLocalSolo || (isPvE && userRole === 'player1') || userRole === (duelData.activePlayerId === 'player1' ? 'player1' : 'player2');
 
   const turnStatusText = () => {
     if (isLocalSolo) return "Ваш ход";
-    if (isPvE) return activePlayer.id === user?.uid ? "Ваш ход" : `Ход монстра: ${activePlayer.name}`;
+    if (isPvE) return activePlayer.id === user?.uid ? "Ваш ход" : `Ход противника: ${activePlayer.name}`;
     if (userRole === 'spectator') return `Ход игрока ${activePlayer.name}`;
     if (isMyTurn) return "Ваш ход";
     return `Ход оппонента: ${activePlayer.name}`;

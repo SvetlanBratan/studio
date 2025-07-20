@@ -368,18 +368,33 @@ export const initialPlayerStats = (id: string, name: string): CharacterStats => 
     };
 };
 
-export const createMonster = (): CharacterStats => {
-    const race = RACES.find(r => r.name === 'Орк');
-    if (!race) throw new Error("Could not find 'Орк' race.");
+export const createEnemy = (): CharacterStats => {
+    const race = RACES.find(r => r.name === 'Человек');
+    if (!race) throw new Error("Could not find 'Человек' race.");
 
-    let bonuses = [...race.passiveBonuses];
+    const reserveLevels = Object.keys(RESERVE_LEVELS).filter(level => level !== 'Божественный сын') as ReserveLevel[];
+    const randomReserve = reserveLevels[Math.floor(Math.random() * reserveLevels.length)];
+
+    const allElements = Object.keys(ELEMENTS);
+    const shuffledElements = allElements.sort(() => 0.5 - Math.random());
+    const randomElementsCount = Math.floor(Math.random() * 6); // 0 to 5
+    const randomElements = shuffledElements.slice(0, randomElementsCount);
+
+    const weaponTypes = Object.keys(WEAPONS) as WeaponType[];
+    const randomWeapon = weaponTypes[Math.floor(Math.random() * weaponTypes.length)];
     
+    const armorTypes = Object.keys(ARMORS) as ArmorType[];
+    const randomArmor = armorTypes[Math.floor(Math.random() * armorTypes.length)];
+
+    const maxOm = getOmFromReserve(randomReserve);
+    let bonuses = [...race.passiveBonuses];
+
     return {
-        id: 'MONSTER_ID',
-        name: 'Орк-воин',
+        id: 'ENEMY_ID',
+        name: 'Враг',
         race: race.name,
-        reserve: 'Неофит',
-        elementalKnowledge: [],
+        reserve: randomReserve,
+        elementalKnowledge: randomElements,
         faithLevel: 0,
         faithLevelName: 'Равнодушие',
         physicalCondition: 'В полном здравии',
@@ -387,18 +402,17 @@ export const createMonster = (): CharacterStats => {
         penalties: [],
         statuses: [],
         inventory: [],
-        weapon: 'Топор',
-        armor: 'Кольчуга',
+        weapon: randomWeapon,
+        armor: randomArmor,
         oz: 200,
         maxOz: 200,
-        om: 50,
-        maxOm: 50,
-        od: 150,
-        maxOd: 150,
+        om: maxOm,
+        maxOm,
+        od: RULES.STARTING_OD,
+        maxOd: RULES.STARTING_OD,
         shield: { hp: 0, element: null },
         isDodging: false,
         cooldowns: { strongSpell: 0, item: 0, prayer: 0, physical_attack: 0, heal_self: 0 },
-        isSetupComplete: true, // Monster is always ready
+        isSetupComplete: true, // Enemy is always ready
     };
 };
-

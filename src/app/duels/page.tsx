@@ -105,7 +105,7 @@ export default function DuelsPage() {
                     </Button>
                      <Button onClick={handleCreateMonsterDuel} className="w-full" variant="secondary">
                         <ShieldQuestion className="mr-2" />
-                        Битва с монстром (PvE)
+                        Битва с врагом (PvE)
                     </Button>
                     
                     <div className="relative">
