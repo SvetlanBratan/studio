@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -25,6 +24,7 @@ import { updateDuel, joinDuel } from '@/lib/firestore';
 import { deepClone } from '@/lib/utils';
 import DuelLog from '@/components/duel-log';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 
 const getPhysicalCondition = (oz: number, maxOz: number): string => {
@@ -94,9 +94,6 @@ export default function DuelPage() {
 
 
   useEffect(() => {
-    // This effect handles a user joining an online duel as player 2.
-    // It checks if the user is not player 1, if player 2 slot is empty,
-    // and if the URL has the `join=true` query parameter.
     if (!isLocalSolo && user && duelData && userRole === 'spectator' && !duelData.player2) {
         const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
         if (shouldJoin) {
@@ -1869,15 +1866,23 @@ export default function DuelPage() {
     if (isMyTurn) return "Ваш ход";
     return `Ход оппонента: ${activePlayer.name}`;
   }
-
-  // Calculate scaling based on distance
-  const maxVisualDistance = 200; // The distance at which characters are smallest
+  
+  // Calculate scaling and gap based on distance
+  const scalingStartDistance = 150; // The distance at which characters start to scale down
+  const maxGap = 48; // Corresponds to `gap-48` Tailwind class, you can adjust this
   const minScale = 0.3; // The smallest size characters can be
-  const distanceScale = Math.max(
-    minScale, 
-    1 - (Math.min(duelData.distance, maxVisualDistance) / maxVisualDistance) * (1 - minScale)
-  );
+  const maxVisualDistance = 400; // The distance at which characters are smallest
 
+  let distanceScale = 1;
+  let distanceGap = (duelData.distance / scalingStartDistance) * maxGap;
+  
+  if (duelData.distance > scalingStartDistance) {
+      distanceGap = maxGap;
+      const distancePastThreshold = duelData.distance - scalingStartDistance;
+      const scalingRange = maxVisualDistance - scalingStartDistance;
+      const scaleReduction = (distancePastThreshold / scalingRange) * (1 - minScale);
+      distanceScale = Math.max(minScale, 1 - scaleReduction);
+  }
 
   // --- Main Duel Interface ---
   return (
@@ -1949,7 +1954,12 @@ export default function DuelPage() {
                 </CardHeader>
                 <CardContent>
                 
-                <div className="mb-4 p-4 bg-muted/50 rounded-lg flex justify-between items-end h-48 relative overflow-hidden">
+                <div 
+                    className={cn(
+                        "mb-4 p-4 bg-muted/50 rounded-lg flex justify-center items-end h-48 relative overflow-hidden"
+                    )}
+                    style={{ gap: `${distanceGap}px` }}
+                >
                     <PixelCharacter
                       pose={duelData.animationState?.player1 || 'idle'}
                       weapon={duelData.player1.weapon}
@@ -2020,15 +2030,3 @@ export default function DuelPage() {
 }
 
     
-
-
-
-
-
-
-    
-
-
-
-
-
