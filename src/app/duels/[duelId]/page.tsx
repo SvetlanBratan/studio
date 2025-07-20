@@ -94,11 +94,9 @@ export default function DuelPage() {
 
 
   useEffect(() => {
-    if (!isLocalSolo && user && duelData && userRole === 'spectator' && !duelData.player2) {
-        const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
-        if (shouldJoin) {
-            joinDuel(duelId, user.uid, "Игрок 2");
-        }
+    const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
+    if (!isLocalSolo && user && duelData && !duelData.player2 && userRole === 'spectator' && shouldJoin) {
+        joinDuel(duelId, user.uid, "Игрок 2");
     }
   }, [isLocalSolo, user, duelData, duelId, userRole]);
 
@@ -1870,14 +1868,14 @@ export default function DuelPage() {
   // Calculate scaling and gap based on distance
   const scalingStartDistance = 150; // The distance at which characters start to scale down
   const maxGap = 48; // Corresponds to `gap-48` Tailwind class, you can adjust this
+  const maxVisualGapDistance = 50; // The distance at which gap stops increasing.
   const minScale = 0.3; // The smallest size characters can be
   const maxVisualDistance = 400; // The distance at which characters are smallest
 
   let distanceScale = 1;
-  let distanceGap = (duelData.distance / scalingStartDistance) * maxGap;
+  let distanceGap = (Math.min(duelData.distance, maxVisualGapDistance) / maxVisualGapDistance) * maxGap;
   
   if (duelData.distance > scalingStartDistance) {
-      distanceGap = maxGap;
       const distancePastThreshold = duelData.distance - scalingStartDistance;
       const scalingRange = maxVisualDistance - scalingStartDistance;
       const scaleReduction = (distancePastThreshold / scalingRange) * (1 - minScale);
@@ -2028,5 +2026,7 @@ export default function DuelPage() {
     </div>
   );
 }
+
+    
 
     
