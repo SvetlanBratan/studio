@@ -2086,14 +2086,16 @@ export default function DuelPage() {
   const currentOpponent = duelData.activePlayerId === 'player1' ? duelData.player2 : duelData.player1;
   
   const isMyTurn = useMemo(() => {
+    if (!duelData) return false;
     if (userRole === 'spectator') return false;
     if (isLocalSolo || isPvE) {
         return duelData.activePlayerId === 'player1';
     }
     return userRole === duelData.activePlayerId;
-  }, [userRole, isLocalSolo, isPvE, duelData.activePlayerId]);
+  }, [userRole, isLocalSolo, isPvE, duelData]);
 
   const turnStatusText = () => {
+    if (!duelData || !activePlayer) return "";
     if (isLocalSolo) return "Ваш ход";
     if (isPvE) return isMyTurn ? "Ваш ход" : `Ход противника: ${activePlayer.name}`;
     if (userRole === 'spectator') return `Ход игрока ${activePlayer.name}`;
@@ -2273,3 +2275,5 @@ export default function DuelPage() {
     </div>
   );
 }
+
+    
