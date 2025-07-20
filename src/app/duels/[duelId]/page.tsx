@@ -107,7 +107,7 @@ export default function DuelPage() {
                 ] as const;
                 
                 for (const spell of spells) {
-                    if (enemy.om >= spell.cost && spell.cooldown <= 0) {
+                    if (enemy.om >= spell.cost && (spell.cooldown || 0) <= 0) {
                         const randomElement = enemy.elementalKnowledge[Math.floor(Math.random() * enemy.elementalKnowledge.length)];
                         enemyAction = { type: spell.type, payload: { element: randomElement } };
                         break; 
@@ -116,29 +116,35 @@ export default function DuelPage() {
             }
             
             if (!enemyAction && distance <= weapon.range) {
-                // If no magic action was chosen, try to attack with weapon
-                enemyAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
+                 if(enemy.od >= RULES.NON_MAGIC_COSTS.physical_attack) {
+                    enemyAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
+                 }
             }
 
             if (!enemyAction) {
-                // If still no action, move closer
+                // If still no action, try to move closer
                 let distanceToClose = 0;
-                if (hasMagic && weapon.range > spellRange) {
-                    // if weapon range is bigger than spell range, but cant use magic, move to weapon range
-                    distanceToClose = distance - weapon.range;
-                } else {
-                    // Prioritize getting into spell range
+                if (hasMagic && distance > spellRange) {
+                    // if has magic, prioritize getting into spell range
                     distanceToClose = distance - spellRange;
+                } else if (!hasMagic && distance > weapon.range) {
+                    // if no magic, prioritize getting into weapon range
+                     distanceToClose = distance - weapon.range;
                 }
-
+                
                 if (distanceToClose < 0) distanceToClose = 0; // Don't move if already in range
 
                 if (distanceToClose > 0) {
-                   enemyAction = { type: 'move', payload: { distance: -distanceToClose } };
-                } else {
-                   // Fallback if already in range but can't attack (e.g. not enough OD)
-                   enemyAction = { type: 'physical_attack', payload: { weapon: enemy.weapon } };
+                   const moveCost = Math.abs(distanceToClose) * RULES.NON_MAGIC_COSTS.move_per_meter;
+                   if (enemy.od >= moveCost) {
+                       enemyAction = { type: 'move', payload: { distance: -distanceToClose } };
+                   }
                 }
+            }
+
+            if (!enemyAction) {
+                // If still no action (e.g. not enough OD/OM for attacks, or already in range), rest.
+                enemyAction = { type: 'rest', payload: {} };
             }
             
             // Execute turn after a short delay for visual feedback
@@ -163,10 +169,10 @@ export default function DuelPage() {
 
   useEffect(() => {
     const shouldJoin = new URLSearchParams(window.location.search).get('join') === 'true';
-    if (userRole === 'spectator' && duelData && !duelData.player2 && shouldJoin && !isLocalSolo && !isPvE && user) {
-      joinDuel(duelId, user.uid, "Игрок 2");
+    if (userRole === 'spectator' && duelData?.player1 && !duelData.player2 && shouldJoin && user) {
+        joinDuel(duelId, user.uid, "Игрок 2");
     }
-  }, [userRole, duelData, duelId, user, isLocalSolo, isPvE]);
+  }, [userRole, duelData, duelId, user]);
 
 
   const handleUpdateDuelState = useCallback((updatedDuel: Partial<DuelState>) => {
